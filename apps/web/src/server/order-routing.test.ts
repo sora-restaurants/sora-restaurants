@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import type { PGlite } from "@electric-sql/pglite";
 import { freshDb } from "../../../../supabase/tests/db";
-import { BUNNY_CHOW, DEMO, OTHER, ROOIBOS } from "../../../../supabase/tests/fixtures";
+import { BUNNY_CHOW, DEMO, DEMO_USER, OTHER, ROOIBOS } from "../../../../supabase/tests/fixtures";
 import type { Deps } from "./deps";
 import { kitchenStream } from "./kitchen-stream";
 import { readEvents } from "./sse-test-helpers";
@@ -116,6 +116,33 @@ describe("kitchen board", () => {
     expect(snapshot.data.orders).toEqual([]);
     expect(pushed.event).toBe("order");
     expect(pushed.data.publicRef).toBe(placed.ok && placed.publicRef);
+  });
+
+  it("served order is removed from the board", async () => {
+    const placed = await submitOrder(T4(), deps);
+    const reading = readEvents(await board(DEMO, "token-A"), 2);
+    await new Promise((r) => setTimeout(r, 100));
+    const { rows } = await db.query<{ id: string }>("select id from orders");
+    for (const status of ["accepted", "preparing", "ready", "served"]) {
+      await deps.db.asUser(DEMO_USER, "select advance_order($1, $2)", [rows[0].id, status]);
+    }
+    const [snapshot, removed] = await reading;
+    expect(snapshot.data.orders[0].publicRef).toBe(placed.ok && placed.publicRef);
+    expect(removed).toEqual({ event: "order_removed", data: { id: rows[0].id, status: "served" } });
+  });
+
+  it("stops polling after abort", async () => {
+    let calls = 0;
+    const asUser = deps.db.asUser;
+    deps.db.asUser = (...args) => { calls++; return asUser(...args); };
+    const controller = new AbortController();
+    const res = await board(DEMO, "token-A", controller.signal);
+    await readEvents(res, 1);
+    controller.abort();
+    await new Promise((r) => setTimeout(r, deps.pollMs * 2));
+    const afterAbort = calls;
+    await new Promise((r) => setTimeout(r, deps.pollMs * 4));
+    expect(calls).toBe(afterAbort);
   });
 
   it("no or bad token is 401", async () => {
