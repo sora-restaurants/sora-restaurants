@@ -21,8 +21,8 @@ const supabaseStub = `
     $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
   grant usage on schema public, auth to authenticated, service_role;
   grant execute on function auth.uid() to authenticated, service_role;
-  grant select on all tables in schema public to authenticated;
-  alter default privileges in schema public grant select on tables to authenticated;
+  -- Mirrors Supabase: API roles get ALL on new public tables unless a migration revokes it.
+  alter default privileges in schema public grant all on tables to anon, authenticated, service_role;
 `;
 
 export async function freshDb(): Promise<PGlite> {

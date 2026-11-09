@@ -112,6 +112,8 @@ create table waiter_calls (
   foreign key (restaurant_id, table_id) references tables(restaurant_id, id)
 );
 
+create unique index waiter_calls_one_open on waiter_calls (table_id) where status = 'open';
+
 create table print_jobs (
   id uuid primary key default gen_random_uuid(),
   restaurant_id uuid not null,
@@ -184,17 +186,19 @@ create function submit_order(p_table_token text, p_idempotency_key text, p_items
 language plpgsql security definer set search_path = public as $$
 declare
   v_table tables;
-  v_hash text := md5(p_items::text);
+  v_hash text;
   v_key idempotency_keys;
   v_order orders;
   v_line jsonb;
   v_item menu_items;
   v_qty int;
-  v_subtotal int := 0;
+  v_subtotal bigint := 0;
 begin
   select tb.* into v_table from tables tb join restaurants t on t.id = tb.restaurant_id
     where tb.qr_token = p_table_token and tb.active and t.status = 'active';
   if not found then raise exception 'table_not_found'; end if;
+  -- Table is part of the request, so a key replayed from another table is a conflict, not a replay.
+  v_hash := md5(v_table.id::text || p_items::text);
 
   if jsonb_typeof(p_items) <> 'array' or jsonb_array_length(p_items) = 0 or jsonb_array_length(p_items) > 50 then
     raise exception 'invalid_items';
@@ -223,7 +227,8 @@ begin
     insert into order_items (restaurant_id, order_id, menu_item_id, name_snapshot, unit_price_cents, quantity, notes)
       values (v_table.restaurant_id, v_order.id, v_item.id, v_item.name, v_item.price_cents, v_qty,
               left(coalesce(v_line->>'notes', ''), 200));
-    v_subtotal := v_subtotal + v_item.price_cents * v_qty;
+    v_subtotal := v_subtotal + v_item.price_cents::bigint * v_qty;
+    if v_subtotal > 100000000 then raise exception 'order_too_large'; end if; -- R1m cap
   end loop;
 
   -- Prices are VAT-inclusive, so VAT is the embedded portion: total * rate / (1 + rate).
@@ -255,9 +260,8 @@ begin
     where tb.qr_token = p_table_token and tb.active and t.status = 'active';
   if not found then raise exception 'table_not_found'; end if;
   -- One open call per table is enough; repeated taps do not spam staff.
-  if not exists (select 1 from waiter_calls where table_id = v_table.id and status = 'open') then
-    insert into waiter_calls (restaurant_id, table_id) values (v_table.restaurant_id, v_table.id);
-  end if;
+  insert into waiter_calls (restaurant_id, table_id) values (v_table.restaurant_id, v_table.id)
+    on conflict (table_id) where status = 'open' do nothing;
 end $$;
 
 -- ---------- Staff commands (called with the staff member's own session) ----------
@@ -307,3 +311,9 @@ end $$;
 revoke execute on all functions in schema public from public, anon, authenticated;
 grant execute on function get_table_menu, submit_order, get_order_status, call_waiter to service_role;
 grant execute on function advance_order, acknowledge_waiter_call, set_print_job_status, is_member to authenticated;
+
+-- Supabase grants API roles ALL on public tables by default (incl. TRUNCATE, which RLS does not cover).
+-- Staff only read; every write goes through the functions above.
+revoke all on all tables in schema public from anon, authenticated;
+grant select on all tables in schema public to authenticated;
+alter default privileges in schema public revoke all on tables from anon, authenticated;
