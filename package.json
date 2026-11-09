@@ -14,6 +14,7 @@
     "db:start": "supabase start",
     "db:stop": "supabase stop",
     "db:reset": "supabase db reset",
+    "bench:kitchen": "node --experimental-strip-types scripts/kitchen-index-bench.mjs",
     "demo:isolation": "node scripts/isolation-demo.mjs",
     "demo:pipeline": "node --experimental-strip-types scripts/simulate-order.mjs",
     "simulate:order": "node --experimental-strip-types scripts/simulate-order.mjs --url http://localhost:3000"

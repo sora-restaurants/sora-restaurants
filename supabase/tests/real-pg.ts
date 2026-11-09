@@ -23,7 +23,7 @@ const CLUSTER_ROLES = `
 `;
 
 // Per-database part of Supabase: the auth schema the seed writes to and auth.uid() as Supabase defines it.
-const DATABASE_STUB = `
+export const DATABASE_STUB = `
   create extension pgcrypto;
   create schema auth;
   create table auth.users (instance_id uuid, id uuid primary key, aud text, role text, email text,

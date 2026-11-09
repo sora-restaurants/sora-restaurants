@@ -17,6 +17,12 @@ const orderQuery = (condition: string) => `
   where o.restaurant_id = $1 and ${condition}
   order by o.created_at`;
 
+// The status list is written into the SQL, not passed as a parameter: only then can Postgres prove the
+// query matches idx_active_kitchen_orders' WHERE clause when it reuses a cached (generic) plan.
+export const SNAPSHOT_SQL = orderQuery(`o.status in (${ACTIVE.map((s) => `'${s}'`).join(", ")})`);
+// No status filter, so orders leaving the active set are seen; served by idx_orders_board_poll.
+export const POLL_SQL = orderQuery(`o.updated_at > $2::timestamptz - ${OVERLAP}`);
+
 type OrderRow = {
   id: string;
   public_ref: string;
@@ -81,7 +87,7 @@ export async function kitchenStream(req: Request, restaurantId: string, deps: De
       const [{ now }] = await asUser<{ now: Date }>("select now()", []);
       let cursor = new Date(now);
       const sent = new Map<string, number>(); // order id -> updated_at last sent
-      const snapshot = await asUser<OrderRow>(orderQuery("o.status = any($2)"), [restaurantId, ACTIVE]);
+      const snapshot = await asUser<OrderRow>(SNAPSHOT_SQL, [restaurantId]);
       for (const row of snapshot) sent.set(row.id, new Date(row.updated_at).getTime());
       send("snapshot", { orders: snapshot.map(toOrder) });
 
@@ -99,7 +105,7 @@ export async function kitchenStream(req: Request, restaurantId: string, deps: De
             return;
           }
           // No status filter here, so orders leaving the active set are seen and removed from the board.
-          const rows = await asUser<OrderRow>(orderQuery(`o.updated_at > $2::timestamptz - ${OVERLAP}`), [
+          const rows = await asUser<OrderRow>(POLL_SQL, [
             restaurantId,
             cursor.toISOString(),
           ]);
