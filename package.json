@@ -15,6 +15,7 @@
     "db:start": "supabase start",
     "db:stop": "supabase stop",
     "db:reset": "supabase db reset",
+    "demo": "node scripts/demo.mjs",
     "db:local": "node --experimental-strip-types scripts/local-db.mjs",
     "bench:kitchen": "node --experimental-strip-types scripts/kitchen-index-bench.mjs",
     "demo:isolation": "node scripts/isolation-demo.mjs",
