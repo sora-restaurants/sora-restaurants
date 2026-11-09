@@ -65,7 +65,8 @@ docs/
 | Command | Does |
 |---|---|
 | `pnpm install` | install everything |
-| `pnpm dev` | web app on http://localhost:3000 (needs `.env.local`, see `.env.example`) |
+| `pnpm dev` | web app on http://localhost:3000 (needs `apps/web/.env.local`, see `docs/setup-mac.md`) |
+| `pnpm dev:lan` | same, reachable from a phone on the same Wi-Fi |
 | `pnpm test` / `pnpm test:realpg` | test suite on PGlite / on a real PostgreSQL 17 server |
 | `pnpm demo:pipeline` | QR order → kitchen stream, in memory, no server |
 | `pnpm db:start`, `pnpm db:reset` | local Supabase (needs Docker) |
