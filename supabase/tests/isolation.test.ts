@@ -60,3 +60,15 @@ describe("cross-restaurant isolation", () => {
     ).rejects.toThrow(/foreign key/);
   });
 });
+
+describe.runIf(process.env.DB_ENGINE === "postgres")("real server connection", () => {
+  it("staff queries log in as authenticator and run as authenticated, not as a superuser", async () => {
+    const db = await freshDb();
+    const [who] = await asStaff<{ session_user: string; current_user: string; superuser: boolean }>(
+      db,
+      DEMO_USER,
+      "select session_user, current_user, (select rolsuper from pg_roles where rolname = session_user) superuser",
+    );
+    expect(who).toEqual({ session_user: "authenticator", current_user: "authenticated", superuser: false });
+  });
+});

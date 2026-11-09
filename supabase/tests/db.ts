@@ -1,6 +1,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { PGlite } from "@electric-sql/pglite";
+import { createRealDb } from "./real-pg";
 
 const dir = join(__dirname, "..");
 
@@ -26,13 +27,22 @@ const supabaseStub = `
 `;
 
 export async function freshDb(): Promise<PGlite> {
-  const db = await PGlite.create();
+  const db = process.env.DB_ENGINE === "postgres" ? await createRealDb() : await PGlite.create();
+  if (process.env.DB_ENGINE === "postgres") {
+    // Real server: roles, auth schema and pgcrypto already come from real-pg.ts.
+    await loadSchema(db);
+    return db;
+  }
   await db.exec(supabaseStub);
+  await loadSchema(db);
+  return db;
+}
+
+async function loadSchema(db: PGlite) {
   for (const file of readdirSync(join(dir, "migrations")).sort()) {
     await db.exec(readFileSync(join(dir, "migrations", file), "utf8"));
   }
   await db.exec(readFileSync(join(dir, "seed.sql"), "utf8"));
-  return db;
 }
 
 export async function asStaff<T>(db: PGlite, userId: string, sql: string, params: unknown[] = []): Promise<T[]> {

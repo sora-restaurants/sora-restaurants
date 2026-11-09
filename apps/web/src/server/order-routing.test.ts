@@ -120,12 +120,14 @@ describe("kitchen board", () => {
 
   it("served order is removed from the board", async () => {
     const placed = await submitOrder(T4(), deps);
-    const reading = readEvents(await board(DEMO, "token-A"), 2);
-    await new Promise((r) => setTimeout(r, 100));
     const { rows } = await db.query<{ id: string }>("select id from orders");
-    for (const status of ["accepted", "preparing", "ready", "served"]) {
+    // Take it to "ready" before the board opens, so the only change the board can see is the move to "served".
+    for (const status of ["accepted", "preparing", "ready"]) {
       await deps.db.asUser(DEMO_USER, "select advance_order($1, $2)", [rows[0].id, status]);
     }
+    const reading = readEvents(await board(DEMO, "token-A"), 2);
+    await new Promise((r) => setTimeout(r, 100));
+    await deps.db.asUser(DEMO_USER, "select advance_order($1, $2)", [rows[0].id, "served"]);
     const [snapshot, removed] = await reading;
     expect(snapshot.data.orders[0].publicRef).toBe(placed.ok && placed.publicRef);
     expect(removed).toEqual({ event: "order_removed", data: { id: rows[0].id, status: "served" } });
