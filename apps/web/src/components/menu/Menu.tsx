@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { submitOrderAction } from "../../app/actions/submit-order.ts";
+import { newIdempotencyKey } from "../../lib/idempotency-key.ts";
 import { formatRand } from "../../lib/money.ts";
 import type { ThemeId } from "../../themes/themes.ts";
 import type { MenuItem, TableMenu } from "./types.ts";
@@ -47,7 +48,7 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
   };
 
   async function placeOrder() {
-    idempotencyKey.current ??= crypto.randomUUID();
+    idempotencyKey.current ??= newIdempotencyKey();
     setStatus({ kind: "sending" });
     if (preview) {
       setStatus({ kind: "placed", publicRef: "PREVIEW" });
