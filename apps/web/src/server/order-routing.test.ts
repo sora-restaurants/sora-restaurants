@@ -57,6 +57,16 @@ describe("checkout", () => {
     expect(await orderCount()).toBe(0);
   });
 
+  it("quantity outside 1-50 is rejected", async () => {
+    for (const quantity of [0, -5, 51, 1_000_000, 2.5]) {
+      const input = { ...T4(), items: [{ menuItemId: BUNNY_CHOW, quantity }] };
+      expect(await submitOrder(input, deps), String(quantity)).toEqual({
+        ok: false, httpStatus: 400, error: "invalid_items",
+      });
+    }
+    expect(await orderCount()).toBe(0);
+  });
+
   it("unknown QR token is 404", async () => {
     expect(await submitOrder({ ...T4(), qrToken: "nope" }, deps)).toEqual({
       ok: false, httpStatus: 404, error: "table_not_found",
