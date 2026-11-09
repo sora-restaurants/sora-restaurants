@@ -2,11 +2,11 @@
 
 import { useRef, useState } from "react";
 import { submitOrderAction } from "../../app/actions/submit-order.ts";
+import { formatRand } from "../../lib/money.ts";
 import type { ThemeId } from "../../themes/themes.ts";
 import type { MenuItem, TableMenu } from "./types.ts";
 
-const rand = new Intl.NumberFormat("en-ZA", { style: "currency", currency: "ZAR" });
-const formatCents = (cents: number) => rand.format(cents / 100);
+const formatCents = formatRand;
 
 type Props = {
   menu: TableMenu;
