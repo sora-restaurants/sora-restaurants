@@ -8,8 +8,12 @@ const TOKENS: Record<string, string> = { "token-A": DEMO_USER, "token-B": OTHER_
 export function testDeps(db: PGlite): Deps {
   return {
     db: {
-      // The database owner stands in for Supabase's service_role, which also bypasses RLS.
-      asService: async (sql, params = []) => (await db.query<never>(sql, params)).rows,
+      // Same as prodDeps: switch to service_role, so missing grants show up in tests, not in the demo.
+      asService: (sql, params = []) =>
+        db.transaction(async (tx) => {
+          await tx.exec("set local role service_role");
+          return (await tx.query<never>(sql, params)).rows;
+        }),
       asUser: (userId, sql, params = []) => asStaff(db, userId, sql, params),
     },
     verifyStaffToken: async (bearer) => TOKENS[bearer] ?? null,

@@ -50,7 +50,8 @@ export async function submitOrder(input: unknown, deps: Deps): Promise<SubmitRes
   const { qrToken, idempotencyKey, items } = parsed.data;
   try {
     const [row] = await deps.db.asService<{ r: { statusToken: string; publicRef: string; replayed: boolean } }>(
-      "select submit_order($1, $2, $3::jsonb) r",
+      // ::text first: postgres.js would JSON-encode a string bound straight to jsonb a second time.
+      "select submit_order($1, $2, $3::text::jsonb) r",
       [qrToken, idempotencyKey, JSON.stringify(items)],
     );
     return { ok: true, ...row.r };

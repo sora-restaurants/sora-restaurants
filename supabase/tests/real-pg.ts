@@ -14,7 +14,7 @@ const AUTHENTICATOR = { user: "authenticator", password: "authenticator-local-te
 
 // Cluster-wide roles, set up the way Supabase does: API roles cannot log in, service_role bypasses RLS,
 // and the API connects as the non-superuser `authenticator` and switches into them.
-const CLUSTER_ROLES = `
+export const CLUSTER_ROLES = `
   create role anon nologin noinherit;
   create role authenticated nologin noinherit;
   create role service_role nologin noinherit bypassrls;
@@ -24,7 +24,12 @@ const CLUSTER_ROLES = `
 
 // Per-database part of Supabase: the auth schema the seed writes to and auth.uid() as Supabase defines it.
 export const DATABASE_STUB = `
-  create extension pgcrypto;
+  -- Like Supabase: extensions in their own schema, on everyone's search_path.
+  create schema extensions;
+  create extension pgcrypto with schema extensions;
+  grant usage on schema extensions to anon, authenticated, service_role;
+  set search_path = public, extensions;
+  do $$ begin execute format('alter database %I set search_path = public, extensions', current_database()); end $$;
   create schema auth;
   create table auth.users (instance_id uuid, id uuid primary key, aud text, role text, email text,
     encrypted_password text, email_confirmed_at timestamptz, raw_app_meta_data jsonb, raw_user_meta_data jsonb,
@@ -38,6 +43,7 @@ export const DATABASE_STUB = `
   $$;
   grant usage on schema public, auth to anon, authenticated, service_role;
   grant execute on function auth.uid() to anon, authenticated, service_role;
+  grant select on auth.users to service_role; -- server-side dev staff login checks passwords
   alter default privileges in schema public grant all on tables to anon, authenticated, service_role;
 `;
 
@@ -78,6 +84,8 @@ export async function createRealDb(): Promise<PGlite> {
   // One live database per worker is enough; close the previous test's connections.
   await Promise.all(open.splice(0).map((c) => c.end().catch(() => {})));
   const name = `t_${process.pid}_${++counter}`;
+  // Lets a test point the production database code (prodDeps, postgres.js) at this same database.
+  process.env.REAL_PG_LAST_DB_URL = `postgresql://${SUPERUSER.user}:${SUPERUSER.password}@127.0.0.1:${REAL_PG_PORT}/${name}`;
   const connect = async (login: { user: string; password: string }, database: string) => {
     const client = new pg.Client({ ...login, host: "127.0.0.1", port: REAL_PG_PORT, database });
     await client.connect();

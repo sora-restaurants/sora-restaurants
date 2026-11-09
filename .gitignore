@@ -7,3 +7,4 @@ supabase/.branches
 next-env.d.ts
 *.tsbuildinfo
 .superpowers
+.local-pg

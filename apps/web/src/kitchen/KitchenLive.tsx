@@ -1,55 +1,50 @@
 "use client";
 
-import { createClient, type Session, type SupabaseClient } from "@supabase/supabase-js";
-import { type FormEvent, useCallback, useEffect, useState } from "react";
+import { type FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import type { KitchenOrder } from "../server/deps.ts";
 import { KitchenBoard, LEAVES_BOARD, type Target } from "./KitchenBoard.tsx";
+import { type StaffAuth, staffAuth } from "./staff-auth.ts";
 import { useKitchenStream } from "./useKitchenStream.ts";
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-let client: SupabaseClient | undefined;
-// Created on first use in the browser, never at import, so a build without env vars still succeeds.
-const supabase = () => (client ??= createClient(SUPABASE_URL!, SUPABASE_ANON_KEY!));
+type Restaurant = { id: string; name: string };
 
 /** Kitchen tablet: sign in, pick up the staff member's restaurant, show its live board. */
 export function KitchenLive() {
-  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-    return <Screen>Kitchen board is not configured: set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.</Screen>;
+  const auth = useMemo(staffAuth, []);
+  if (!auth) {
+    return <Screen>Kitchen board is not configured: set the Supabase variables, or the dev login for a local demo.</Screen>;
   }
-  return <KitchenSession />;
+  return <KitchenSession auth={auth} />;
 }
 
-function KitchenSession() {
-  const [session, setSession] = useState<Session | null | undefined>(undefined);
-  const [restaurant, setRestaurant] = useState<{ id: string; name: string } | null>(null);
+function KitchenSession({ auth }: { auth: StaffAuth }) {
+  const [token, setToken] = useState<string | null | undefined>(undefined);
+  const [restaurant, setRestaurant] = useState<Restaurant | null | "none">(null);
 
   useEffect(() => {
-    supabase().auth.getSession().then(({ data }) => setSession(data.session));
-    const { data } = supabase().auth.onAuthStateChange((_event, next) => setSession(next));
-    return () => data.subscription.unsubscribe();
-  }, []);
+    const refresh = () => auth.getToken().then(setToken);
+    refresh();
+    return auth.onChange(refresh);
+  }, [auth]);
 
   useEffect(() => {
-    if (!session) return;
-    // RLS returns only restaurants this user works at.
-    supabase()
-      .from("restaurants")
-      .select("id, name")
-      .order("name")
-      .limit(1)
-      .then(({ data }) => setRestaurant(data?.[0] ?? null));
-  }, [session]);
+    if (!token) return;
+    // The server applies RLS and the kitchen-role check; a waiter gets an empty list.
+    fetch("/api/kitchen/me", { headers: { authorization: `Bearer ${token}` } })
+      .then((res) => (res.ok ? res.json() : { restaurants: [] }))
+      .then(({ restaurants }: { restaurants: Restaurant[] }) => setRestaurant(restaurants[0] ?? "none"));
+  }, [token]);
 
-  if (session === undefined) return <Screen>Loading…</Screen>;
-  if (!session) return <SignIn />;
+  if (token === undefined) return <Screen>Loading…</Screen>;
+  if (!token) return <SignIn auth={auth} />;
+  if (restaurant === "none") return <Screen>This account has no kitchen access.</Screen>;
   if (!restaurant) return <Screen>Finding your restaurant…</Screen>;
-  return <LiveBoard restaurant={restaurant} />;
+  return <LiveBoard restaurant={restaurant} auth={auth} />;
 }
 
-function LiveBoard({ restaurant }: { restaurant: { id: string; name: string } }) {
-  // Always the current access token, so reconnects after a refresh keep working.
-  const getToken = useCallback(async () => (await supabase().auth.getSession()).data.session?.access_token ?? null, []);
+function LiveBoard({ restaurant, auth }: { restaurant: Restaurant; auth: StaffAuth }) {
+  // Always the current token, so reconnects after a refresh keep working.
+  const getToken = useCallback(() => auth.getToken(), [auth]);
   const { board, connection, dispatch } = useKitchenStream(restaurant.id, getToken);
 
   const advance = useCallback(
@@ -76,7 +71,7 @@ function LiveBoard({ restaurant }: { restaurant: { id: string; name: string } })
   return <KitchenBoard restaurant={restaurant.name} board={board} connection={connection} onAdvance={advance} />;
 }
 
-function SignIn() {
+function SignIn({ auth }: { auth: StaffAuth }) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -84,12 +79,9 @@ function SignIn() {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     setBusy(true);
-    const { error } = await supabase().auth.signInWithPassword({
-      email: String(form.get("email")),
-      password: String(form.get("password")),
-    });
+    const failure = await auth.signIn(String(form.get("email")), String(form.get("password")));
     setBusy(false);
-    setError(error ? "That email and password did not match." : null);
+    setError(failure);
   }
 
   const field = "min-h-16 w-full border-4 border-white bg-black px-4 text-2xl text-white";
@@ -97,6 +89,11 @@ function SignIn() {
     <Screen>
       <form onSubmit={submit} className="flex w-full max-w-md flex-col gap-4 text-left">
         <h1 className="text-4xl uppercase">Kitchen sign in</h1>
+        {auth.mode === "dev" ? (
+          <p className="border-4 border-[oklch(82%_0.17_78)] p-3 text-xl text-[oklch(82%_0.17_78)]">
+            Local demo login. Seeded staff accounts only.
+          </p>
+        ) : null}
         <label className="flex flex-col gap-2 text-xl uppercase">
           Email
           <input name="email" type="email" autoComplete="username" required className={field} />

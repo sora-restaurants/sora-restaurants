@@ -7,10 +7,13 @@ const dir = join(__dirname, "..");
 
 // Stand-in for the parts of Supabase the migration and seed touch; local Supabase provides the real ones.
 const supabaseStub = `
-  create role anon; create role authenticated; create role service_role;
+  create role anon; create role authenticated; create role service_role bypassrls;
+  -- Like Supabase: extensions in their own schema, so migrations revoking public functions leave them alone.
+  create schema extensions; set search_path = public, extensions;
+  grant usage on schema extensions to anon, authenticated, service_role;
   -- PGlite has no pgcrypto; the seed only needs these to hash test passwords.
-  create function gen_salt(text) returns text language sql as $$ select 'stub' $$;
-  create function crypt(text, text) returns text language sql as $$ select md5($1 || $2) $$;
+  create function extensions.gen_salt(text) returns text language sql as $$ select 'stub' $$;
+  create function extensions.crypt(text, text) returns text language sql as $$ select 'stub$' || md5($1) $$;
   create schema auth;
   create table auth.users (instance_id uuid, id uuid primary key, aud text, role text, email text,
     encrypted_password text, email_confirmed_at timestamptz, raw_app_meta_data jsonb, raw_user_meta_data jsonb,
@@ -22,6 +25,7 @@ const supabaseStub = `
     $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
   grant usage on schema public, auth to authenticated, service_role;
   grant execute on function auth.uid() to authenticated, service_role;
+  grant select on auth.users to service_role;
   -- Mirrors Supabase: API roles get ALL on new public tables unless a migration revokes it.
   alter default privileges in schema public grant all on tables to anon, authenticated, service_role;
 `;

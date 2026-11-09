@@ -70,6 +70,7 @@ docs/
 | `pnpm test` / `pnpm test:realpg` | test suite on PGlite / on a real PostgreSQL 17 server |
 | `pnpm demo:pipeline` | QR order → kitchen stream, in memory, no server |
 | `pnpm db:start`, `pnpm db:reset` | local Supabase (needs Docker) |
+| `pnpm db:local` | local demo database, no Docker, with dev-only staff login (`docs/local-demo.md`) |
 
 ## Who owns what
 

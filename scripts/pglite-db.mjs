@@ -9,9 +9,12 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 // Minimal stand-in for what Supabase provides: API roles, auth tables the seed writes to,
 // and auth.uid() reading the JWT claims. PGlite has no pgcrypto, so crypt/gen_salt are stubs (seed passwords only).
 const SUPABASE_STUB = `
-  create role anon; create role authenticated; create role service_role;
-  create function gen_salt(text) returns text language sql as $$ select 'stub' $$;
-  create function crypt(text, text) returns text language sql as $$ select md5($1 || $2) $$;
+  create role anon; create role authenticated; create role service_role bypassrls;
+  -- Like Supabase: extensions in their own schema, so migrations revoking public functions leave them alone.
+  create schema extensions; set search_path = public, extensions;
+  grant usage on schema extensions to anon, authenticated, service_role;
+  create function extensions.gen_salt(text) returns text language sql as $$ select 'stub' $$;
+  create function extensions.crypt(text, text) returns text language sql as $$ select 'stub$' || md5($1) $$;
   create schema auth;
   create table auth.users (instance_id uuid, id uuid primary key, aud text, role text, email text,
     encrypted_password text, email_confirmed_at timestamptz, raw_app_meta_data jsonb, raw_user_meta_data jsonb,
@@ -25,6 +28,7 @@ const SUPABASE_STUB = `
   $$;
   grant usage on schema public, auth to anon, authenticated, service_role;
   grant execute on function auth.uid() to anon, authenticated, service_role;
+  grant select on auth.users to service_role;
   alter default privileges in schema public grant all on tables to anon, authenticated, service_role;
 `;
 
