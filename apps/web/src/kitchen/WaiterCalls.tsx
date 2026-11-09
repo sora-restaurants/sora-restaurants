@@ -1,10 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { formatRand } from "../lib/money.ts";
 import { Screen, SignIn } from "./StaffSignIn.tsx";
 import { type StaffAuth, staffAuth } from "./staff-auth.ts";
 
 type Call = { id: string; table: string; createdAt: string };
+type Unpaid = { id: string; publicRef: string; table: string; status: string; totalCents: number };
 const POLL_MS = 3_000;
 
 /** Floor staff screen: tables asking for a waiter, oldest first, one big tap to answer. */
@@ -29,6 +31,7 @@ function WaiterSession({ auth }: { auth: StaffAuth }) {
 
 function CallList({ token }: { token: string }) {
   const [calls, setCalls] = useState<Call[] | null>(null);
+  const [unpaid, setUnpaid] = useState<Unpaid[]>([]);
   const [offline, setOffline] = useState(false);
   const [now, setNow] = useState(() => Date.now());
 
@@ -37,6 +40,8 @@ function CallList({ token }: { token: string }) {
       const res = await fetch("/api/staff/calls", { headers: { authorization: `Bearer ${token}` }, cache: "no-store" });
       if (!res.ok) throw new Error(String(res.status));
       setCalls((await res.json()).calls);
+      const owed = await fetch("/api/staff/unpaid", { headers: { authorization: `Bearer ${token}` }, cache: "no-store" });
+      if (owed.ok) setUnpaid((await owed.json()).orders);
       setOffline(false);
     } catch {
       setOffline(true);
@@ -53,6 +58,11 @@ function CallList({ token }: { token: string }) {
   async function answer(call: Call) {
     setCalls((list) => list?.filter((c) => c.id !== call.id) ?? null); // the next poll brings the truth either way
     await fetch(`/api/staff/calls/${call.id}/ack`, { method: "POST", headers: { authorization: `Bearer ${token}` } }).catch(() => {});
+  }
+
+  async function settle(order: Unpaid) {
+    setUnpaid((list) => list.filter((o) => o.id !== order.id));
+    await fetch(`/api/staff/orders/${order.id}/paid`, { method: "POST", headers: { authorization: `Bearer ${token}` } }).catch(() => {});
   }
 
   return (
@@ -85,6 +95,48 @@ function CallList({ token }: { token: string }) {
           })}
         </ol>
       )}
+
+      {/* Walk-out protection: everything still to collect, oldest first. */}
+      <h2 className="mb-3 mt-8 border-b-4 border-white pb-2 text-3xl uppercase">
+        Unpaid <span className="tabular-nums">{unpaid.length}</span>
+      </h2>
+      {unpaid.length === 0 ? (
+        <p className="text-2xl text-[oklch(75%_0_0)]">Nothing to collect.</p>
+      ) : (
+        <ol className="grid gap-3 sm:grid-cols-2">
+          {unpaid.map((order) => (
+            <UnpaidRow key={order.id} order={order} onPaid={() => settle(order)} />
+          ))}
+        </ol>
+      )}
     </main>
+  );
+}
+
+function UnpaidRow({ order, onPaid }: { order: Unpaid; onPaid: () => void }) {
+  const [confirming, setConfirming] = useState(false);
+  // A wrong "paid" tap would hide a walk-out, so it needs a second tap within 4 s.
+  useEffect(() => {
+    if (!confirming) return;
+    const id = setTimeout(() => setConfirming(false), 4_000);
+    return () => clearTimeout(id);
+  }, [confirming]);
+  return (
+    <li className="flex flex-col gap-3 border-4 border-white p-4">
+      <div className="flex items-baseline justify-between gap-3">
+        <p className="truncate text-4xl">{order.table}</p>
+        <p className="shrink-0 text-3xl tabular-nums">{formatRand(order.totalCents)}</p>
+      </div>
+      <p className="text-xl uppercase text-[oklch(75%_0_0)]">
+        #{order.publicRef} · {order.status === "served" ? "served" : "still in the kitchen"}
+      </p>
+      <button
+        type="button"
+        onClick={() => (confirming ? onPaid() : setConfirming(true))}
+        className={`min-h-16 text-3xl uppercase active:scale-[0.97] ${confirming ? "bg-[oklch(80%_0.21_145)] text-black" : "bg-white text-black"}`}
+      >
+        {confirming ? "Tap again: paid" : "Mark paid"}
+      </button>
+    </li>
   );
 }
