@@ -17,7 +17,7 @@ type Props = {
   preview?: boolean;
 };
 
-type Status = { kind: "idle" } | { kind: "sending" } | { kind: "placed"; publicRef: string } | { kind: "error"; message: string };
+type Status = { kind: "idle" } | { kind: "sending" } | { kind: "placed"; publicRef: string; statusToken?: string } | { kind: "error"; message: string };
 
 const ERRORS: Record<string, string> = {
   item_unavailable: "Something in your order just sold out. Please check the menu and try again.",
@@ -61,7 +61,7 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
         items: lines.map((item) => ({ menuItemId: item.id, quantity: cart[item.id] })),
       });
       if (result.ok) {
-        setStatus({ kind: "placed", publicRef: result.publicRef });
+        setStatus({ kind: "placed", publicRef: result.publicRef, statusToken: result.statusToken });
         setCart({});
         idempotencyKey.current = null;
       } else {
@@ -183,6 +183,11 @@ function OrderBar({
           <p>
             <span className="display block text-xl">Order sent to the kitchen</span>
             <span className="text-sm text-muted">Reference {status.publicRef}</span>
+            {status.statusToken ? (
+              <a href={`/o/${status.statusToken}`} className="mt-1 inline-flex min-h-tap items-center font-semibold text-accent underline underline-offset-4">
+                Track my order
+              </a>
+            ) : null}
           </p>
           <button
             type="button"
