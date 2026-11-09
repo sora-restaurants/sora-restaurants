@@ -46,11 +46,17 @@ await waitFor(app, 'Ready', 'App');
 app.stderr.on('data', (d) => process.stderr.write(d));
 app.stdout.on('data', (d) => { if (/error|⨯/i.test(d)) process.stdout.write(d); });
 
+// The till simulator: prints a docket here whenever an order reaches the "till".
+const pos = run(['--experimental-strip-types', 'scripts/pos-worker.mjs']);
+pos.stdout.on('data', (d) => process.stdout.write(d));
+pos.stderr.on('data', (d) => { if (!/ExperimentalWarning|MODULE_TYPELESS|Reparsing|eliminate this warning|trace-warnings/.test(d)) process.stderr.write(d); });
+
 console.log(`
   Sora demo is running.
 
   Open on this computer:   http://localhost:3000/demo
 ${lanIp ? `  Or from a phone/tablet:  http://${lanIp}:3000/demo   (same Wi-Fi)\n` : ''}
   The demo page has the Table 4 QR code, the kitchen link and the logins.
+  Orders also go to a simulated till; its dockets print below.
   Press Ctrl-C here to stop everything.
 `);
