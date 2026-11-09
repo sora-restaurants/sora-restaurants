@@ -1,9 +1,9 @@
 import type { PGlite } from "@electric-sql/pglite";
 import { asStaff } from "../../../../supabase/tests/db";
-import { DEMO_USER, OTHER_USER, WAITER_USER } from "../../../../supabase/tests/fixtures";
+import { DEMO_USER, OTHER_USER, OWNER_USER, WAITER_USER } from "../../../../supabase/tests/fixtures";
 import type { Deps } from "./deps";
 
-const TOKENS: Record<string, string> = { "token-A": DEMO_USER, "token-B": OTHER_USER, "token-waiter": WAITER_USER };
+const TOKENS: Record<string, string> = { "token-A": DEMO_USER, "token-B": OTHER_USER, "token-waiter": WAITER_USER, "token-owner": OWNER_USER };
 
 export function testDeps(db: PGlite): Deps {
   return {

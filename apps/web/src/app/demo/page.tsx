@@ -11,6 +11,7 @@ const TABLE_PATH = "/t/demo-table-4-token";
 const LOGINS = [
   { who: "Kitchen, Demo Bistro", email: "kitchen@demo.test", password: "demo-kitchen-pass", note: "Use this one" },
   { who: "Kitchen, Other Grill", email: "kitchen@other.test", password: "other-kitchen-pass", note: "Must NOT see Demo Bistro's orders" },
+  { who: "Owner, Demo Bistro", email: "owner@demo.test", password: "demo-owner-pass", note: "Owner dashboard (QR orders only)" },
   { who: "Waiter, Demo Bistro", email: "waiter@demo.test", password: "demo-waiter-pass", note: "Waiter screen yes, kitchen board no" },
 ];
 
@@ -75,6 +76,9 @@ export default async function DemoPage() {
           </a>
           <a href="/waiter" target="_blank" className="inline-flex min-h-12 items-center justify-center rounded-xl border-2 border-current px-5 font-bold">
             Open the waiter screen (sign in as the waiter)
+          </a>
+          <a href="/owner" target="_blank" className="inline-flex min-h-12 items-center justify-center rounded-xl border-2 border-current px-5 font-bold">
+            Open the owner dashboard (sign in as the owner)
           </a>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">

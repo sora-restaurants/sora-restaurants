@@ -20,3 +20,4 @@ export async function submitOrder(db: PGlite, tableToken: string, key: string, i
 
 export const ROOIBOS = "a2000000-0000-0000-0000-000000000003";
 export const WAITER_USER = "c0000000-0000-0000-0000-000000000003";
+export const OWNER_USER = "c0000000-0000-0000-0000-000000000004";

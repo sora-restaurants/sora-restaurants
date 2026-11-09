@@ -2,6 +2,7 @@
 -- Test logins (local only): kitchen@demo.test / demo-kitchen-pass  (Demo Bistro)
 --                           kitchen@other.test / other-kitchen-pass (Other Grill)
 --                           waiter@demo.test / demo-waiter-pass (Demo Bistro, waiter)
+--                           owner@demo.test / demo-owner-pass (Demo Bistro, owner)
 
 insert into restaurants (id, name, slug, vat_registered, theme) values
   ('a0000000-0000-0000-0000-000000000001', 'Demo Bistro', 'demo-bistro', true, 'rustic-traditional'),
@@ -32,13 +33,15 @@ select '00000000-0000-0000-0000-000000000000', u.id, 'authenticated', 'authentic
 from (values
   ('c0000000-0000-0000-0000-000000000001'::uuid, 'kitchen@demo.test', 'demo-kitchen-pass'),
   ('c0000000-0000-0000-0000-000000000002'::uuid, 'kitchen@other.test', 'other-kitchen-pass'),
-  ('c0000000-0000-0000-0000-000000000003'::uuid, 'waiter@demo.test', 'demo-waiter-pass')) u(id, email, pass);
+  ('c0000000-0000-0000-0000-000000000003'::uuid, 'waiter@demo.test', 'demo-waiter-pass'),
+  ('c0000000-0000-0000-0000-000000000004'::uuid, 'owner@demo.test', 'demo-owner-pass')) u(id, email, pass);
 
 insert into auth.identities (id, user_id, provider_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
 select gen_random_uuid(), id, id::text, jsonb_build_object('sub', id::text, 'email', email), 'email', now(), now(), now()
-from auth.users where email in ('kitchen@demo.test', 'kitchen@other.test', 'waiter@demo.test');
+from auth.users where email in ('kitchen@demo.test', 'kitchen@other.test', 'waiter@demo.test', 'owner@demo.test');
 
 insert into staff_memberships (restaurant_id, user_id, role) values
   ('a0000000-0000-0000-0000-000000000001', 'c0000000-0000-0000-0000-000000000001', 'kitchen'),
   ('b0000000-0000-0000-0000-000000000001', 'c0000000-0000-0000-0000-000000000002', 'kitchen'),
-  ('a0000000-0000-0000-0000-000000000001', 'c0000000-0000-0000-0000-000000000003', 'waiter');
+  ('a0000000-0000-0000-0000-000000000001', 'c0000000-0000-0000-0000-000000000003', 'waiter'),
+  ('a0000000-0000-0000-0000-000000000001', 'c0000000-0000-0000-0000-000000000004', 'owner');
