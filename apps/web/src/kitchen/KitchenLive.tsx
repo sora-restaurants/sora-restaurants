@@ -9,6 +9,23 @@ import { useKitchenStream } from "./useKitchenStream.ts";
 
 type Restaurant = { id: string; name: string };
 
+const CHOICE_KEY = "sora-kitchen-restaurant";
+// Storage can be blocked (private mode); the picker then simply asks again.
+function readChoice() {
+  try {
+    return typeof localStorage === "undefined" ? null : localStorage.getItem(CHOICE_KEY);
+  } catch {
+    return null;
+  }
+}
+function saveChoice(id: string) {
+  try {
+    localStorage.setItem(CHOICE_KEY, id);
+  } catch {
+    // not remembered; harmless
+  }
+}
+
 /** Kitchen tablet: sign in, pick up the staff member's restaurant, show its live board. */
 export function KitchenLive() {
   const auth = useMemo(staffAuth, []);
@@ -20,7 +37,8 @@ export function KitchenLive() {
 
 function KitchenSession({ auth }: { auth: StaffAuth }) {
   const [token, setToken] = useState<string | null | undefined>(undefined);
-  const [restaurant, setRestaurant] = useState<Restaurant | null | "none">(null);
+  const [restaurants, setRestaurants] = useState<Restaurant[] | null>(null);
+  const [chosen, setChosen] = useState<string | null>(() => readChoice());
 
   useEffect(() => {
     const refresh = () => auth.getToken().then(setToken);
@@ -33,13 +51,37 @@ function KitchenSession({ auth }: { auth: StaffAuth }) {
     // The server applies RLS and the kitchen-role check; a waiter gets an empty list.
     fetch("/api/kitchen/me", { headers: { authorization: `Bearer ${token}` } })
       .then((res) => (res.ok ? res.json() : { restaurants: [] }))
-      .then(({ restaurants }: { restaurants: Restaurant[] }) => setRestaurant(restaurants[0] ?? "none"));
+      .then(({ restaurants }: { restaurants: Restaurant[] }) => setRestaurants(restaurants));
   }, [token]);
 
   if (token === undefined) return <Screen>Loading…</Screen>;
   if (!token) return <SignIn auth={auth} />;
-  if (restaurant === "none") return <Screen>This account has no kitchen access.</Screen>;
-  if (!restaurant) return <Screen>Finding your restaurant…</Screen>;
+  if (!restaurants) return <Screen>Finding your restaurant…</Screen>;
+  if (restaurants.length === 0) return <Screen>This account has no kitchen access.</Screen>;
+  // One restaurant: straight in. Several: this tablet remembers which kitchen it stands in.
+  const restaurant = restaurants.length === 1 ? restaurants[0] : restaurants.find((r) => r.id === chosen);
+  if (!restaurant) {
+    return (
+      <Screen>
+        <div className="flex w-full max-w-md flex-col gap-4">
+          <h1 className="text-4xl uppercase">Which kitchen is this?</h1>
+          {restaurants.map((r) => (
+            <button
+              key={r.id}
+              type="button"
+              onClick={() => {
+                saveChoice(r.id);
+                setChosen(r.id);
+              }}
+              className="min-h-16 bg-white px-4 text-3xl uppercase text-black"
+            >
+              {r.name}
+            </button>
+          ))}
+        </div>
+      </Screen>
+    );
+  }
   return <LiveBoard restaurant={restaurant} auth={auth} />;
 }
 

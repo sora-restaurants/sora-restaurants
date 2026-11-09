@@ -40,9 +40,15 @@ apps/web/                         Next.js app (package "web")
     api/orders/route.ts           checkout over HTTP (16 KB body cap)
     api/kitchen/[restaurantId]/stream/route.ts     kitchen SSE stream
     api/kitchen/orders/[orderId]/advance/route.ts  kitchen status changes
-    kitchen/page.tsx              kitchen tablet (Supabase sign-in + live board)
+    kitchen/page.tsx              kitchen tablet (sign-in + live board; picker if staff run several kitchens)
+    o/[token]/page.tsx            customer order tracking (private status link)
+    waiter/page.tsx               waiter calls for floor staff
+    owner/page.tsx                owner dashboard, QR orders only
+    menu-admin/page.tsx           edit dishes and prices (owner/manager), sold out (also kitchen)
+    demo/page.tsx                 local demo hub: Table 4 QR, links, test logins (dev only)
     preview/[theme], preview/kitchen   dev-only design previews, 404 in production
-  src/server/                     framework-free handlers + their tests (submit-order, kitchen-stream, advance-order)
+  src/server/                     framework-free handlers + tests (checkout, kitchen stream/moves, order status,
+                                  waiter calls, owner stats, menu admin, dev login, pos/ sync + adapters)
   src/kitchen/                    board UI, board state reducer, SSE parser, stream hook
   src/components/menu/            customer menu UI
   src/themes/                     theme ids (must match the database check constraint)

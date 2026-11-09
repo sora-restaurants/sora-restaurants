@@ -82,6 +82,16 @@ describe("dev login keeps every real check", () => {
     });
   });
 
+  it("someone who runs two kitchens gets both restaurants to choose from", async () => {
+    await db.query("insert into staff_memberships (restaurant_id, user_id, role) values ($1, 'c0000000-0000-0000-0000-000000000001', 'kitchen')", [OTHER]);
+    expect(await me(await tokenFor("kitchen@demo.test", "demo-kitchen-pass"))).toEqual({
+      restaurants: [
+        { id: DEMO, name: "Demo Bistro" },
+        { id: OTHER, name: "Other Grill" },
+      ],
+    });
+  });
+
   it("a waiter finds no kitchen and is refused the board", async () => {
     const waiter = await tokenFor("waiter@demo.test", "demo-waiter-pass");
     expect(await me(waiter)).toEqual({ restaurants: [] });
