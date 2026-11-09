@@ -3,9 +3,9 @@
 --                           kitchen@other.test / other-kitchen-pass (Other Grill)
 --                           waiter@demo.test / demo-waiter-pass (Demo Bistro, waiter)
 
-insert into restaurants (id, name, slug, vat_registered) values
-  ('a0000000-0000-0000-0000-000000000001', 'Demo Bistro', 'demo-bistro', true),
-  ('b0000000-0000-0000-0000-000000000001', 'Other Grill', 'other-grill', false);
+insert into restaurants (id, name, slug, vat_registered, theme) values
+  ('a0000000-0000-0000-0000-000000000001', 'Demo Bistro', 'demo-bistro', true, 'rustic-traditional'),
+  ('b0000000-0000-0000-0000-000000000001', 'Other Grill', 'other-grill', false, 'fast-casual-vibrant');
 
 insert into tables (restaurant_id, label, qr_token) values
   ('a0000000-0000-0000-0000-000000000001', 'Table 1', 'demo-table-1-token'),
