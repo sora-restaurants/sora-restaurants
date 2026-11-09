@@ -61,6 +61,35 @@ describe("advanceOrder", () => {
     expect(await status()).toBe("preparing");
   });
 
+  it("Start is all-or-nothing: if the second step fails, the ticket stays new", async () => {
+    await db.exec(`
+      create function fail_on_preparing() returns trigger language plpgsql as $$
+        begin if new.status = 'preparing' then raise exception 'simulated failure'; end if; return new; end $$;
+      create trigger fail_on_preparing before update on orders for each row execute function fail_on_preparing();`);
+    expect((await advance("preparing")).status).toBe(500);
+    expect(await status()).toBe("submitted");
+  });
+
+  it("a new ticket can be rejected; a cooking or ready one can be cancelled", async () => {
+    expect((await advance("rejected")).status).toBe(200);
+    expect(await status()).toBe("rejected");
+  });
+
+  it("cancel works from cooking and from ready, never after served", async () => {
+    await advance("preparing");
+    expect((await advance("cancelled")).status).toBe(200);
+    expect(await status()).toBe("cancelled");
+  });
+
+  it("reject only applies to new tickets; served is final", async () => {
+    await advance("preparing");
+    expect((await advance("rejected")).status).toBe(409);
+    await advance("ready");
+    await advance("served");
+    expect((await advance("cancelled")).status).toBe(409);
+    expect(await status()).toBe("served");
+  });
+
   it("Restaurant B staff get 404 and change nothing", async () => {
     const res = await advance("preparing", "token-B");
     expect(res.status).toBe(404);

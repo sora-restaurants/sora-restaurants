@@ -23,7 +23,8 @@ Phone /t/<qr_token>  ──► get_table_menu(token)        restaurant, table, t
 Menu "Place order"   ──► submitOrderAction (Server Action) ─► submitOrder() ─► submit_order() SQL
                          same core also at POST /api/orders     prices, VAT, idempotency, print job
 Kitchen /kitchen     ──► GET /api/kitchen/<restaurant>/stream   SSE: snapshot, order, order_removed, revoked
-"Start/Ready/Served" ──► POST /api/kitchen/orders/<id>/advance  advance_order() SQL, forward only
+Start/Ready/Served,      POST /api/kitchen/orders/<id>/advance  kitchen_move() SQL: one transaction per tap;
+Reject/Cancel (2 taps) ──►                                       forward only, reject = new, cancel = cooking/ready
 ```
 
 The browser never sends a trusted restaurant, table or price. Restaurant comes from the QR token (customers)

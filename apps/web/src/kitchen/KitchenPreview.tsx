@@ -3,7 +3,7 @@
 import { useReducer } from "react";
 import type { KitchenOrder } from "../server/deps.ts";
 import { applyBoardEvent, EMPTY_BOARD } from "./board-state.ts";
-import { KitchenBoard, type Target } from "./KitchenBoard.tsx";
+import { KitchenBoard, LEAVES_BOARD, type Target } from "./KitchenBoard.tsx";
 
 const DISHES = [
   "Boerewors Roll with Chakalaka and Extra Cheese",
@@ -41,7 +41,7 @@ export function KitchenPreview() {
   );
   const advance = async (order: KitchenOrder, to: Target) => {
     await new Promise((r) => setTimeout(r, 250));
-    dispatch(to === "served" ? { event: "order_removed", data: { id: order.id } } : { event: "order", data: { ...order, status: to } });
+    dispatch(LEAVES_BOARD.includes(to) ? { event: "order_removed", data: { id: order.id } } : { event: "order", data: { ...order, status: to } });
   };
   return <KitchenBoard restaurant="Braai Spot Johannesburg" board={board} connection="live" onAdvance={advance} />;
 }

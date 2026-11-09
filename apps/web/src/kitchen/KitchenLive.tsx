@@ -3,7 +3,7 @@
 import { createClient, type Session, type SupabaseClient } from "@supabase/supabase-js";
 import { type FormEvent, useCallback, useEffect, useState } from "react";
 import type { KitchenOrder } from "../server/deps.ts";
-import { KitchenBoard, type Target } from "./KitchenBoard.tsx";
+import { KitchenBoard, LEAVES_BOARD, type Target } from "./KitchenBoard.tsx";
 import { useKitchenStream } from "./useKitchenStream.ts";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -64,7 +64,7 @@ function LiveBoard({ restaurant }: { restaurant: { id: string; name: string } })
       // 409 means another tablet already moved it; the stream brings the true state either way.
       if (res.ok) {
         dispatch(
-          to === "served"
+          LEAVES_BOARD.includes(to)
             ? { event: "order_removed", data: { id: order.id, status: to } }
             : { event: "order", data: { ...order, status: to } },
         );

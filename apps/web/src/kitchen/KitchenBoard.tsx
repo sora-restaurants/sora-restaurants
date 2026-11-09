@@ -5,13 +5,21 @@ import type { KitchenOrder } from "../server/deps.ts";
 import { type BoardState, type ColumnId, columns } from "./board-state.ts";
 
 export type Connection = "connecting" | "live" | "reconnecting" | "denied";
-export type Target = "preparing" | "ready" | "served";
+export type Target = "preparing" | "ready" | "served" | "rejected" | "cancelled";
+/** Moves that take a ticket off the board. */
+export const LEAVES_BOARD: Target[] = ["served", "rejected", "cancelled"];
 
 // One tap per column. Labels are verbs a chef reads at a glance.
 const ACTION: Record<ColumnId, { to: Target; label: string }> = {
   new: { to: "preparing", label: "Start" },
   cooking: { to: "ready", label: "Ready" },
   ready: { to: "served", label: "Served" },
+};
+// The destructive move per column; always needs a second tap.
+const STOP: Record<ColumnId, { to: Target; label: string }> = {
+  new: { to: "rejected", label: "Reject" },
+  cooking: { to: "cancelled", label: "Cancel" },
+  ready: { to: "cancelled", label: "Cancel" },
 };
 
 // Solid, high-contrast blocks (WCAG: amber/green carry black text, blue carries white).
@@ -82,13 +90,23 @@ export function KitchenBoard({ restaurant, board, connection, onAdvance }: Props
 
 function Ticket({ order, column, now, onAdvance }: { order: KitchenOrder; column: ColumnId; now: number; onAdvance: Props["onAdvance"] }) {
   const [state, setState] = useState<"idle" | "sending" | "failed">("idle");
+  const [confirming, setConfirming] = useState(false);
   const minutes = Math.max(0, Math.floor((now - Date.parse(order.createdAt)) / 60_000));
   const action = ACTION[column];
+  const stop = STOP[column];
 
-  async function tap() {
+  // A destructive tap only arms the button; a second tap within 4 s confirms. Wet hands, crowded counter.
+  useEffect(() => {
+    if (!confirming) return;
+    const id = setTimeout(() => setConfirming(false), 4_000);
+    return () => clearTimeout(id);
+  }, [confirming]);
+
+  async function send(to: Target) {
     setState("sending");
+    setConfirming(false);
     try {
-      await onAdvance(order, action.to);
+      await onAdvance(order, to);
       setState("idle");
     } catch {
       setState("failed");
@@ -116,14 +134,27 @@ function Ticket({ order, column, now, onAdvance }: { order: KitchenOrder; column
           </li>
         ))}
       </ul>
-      <button
-        type="button"
-        onClick={tap}
-        disabled={state === "sending"}
-        className={`min-h-16 w-full min-w-16 text-3xl uppercase transition-transform active:scale-[0.97] disabled:opacity-60 focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-white ${BUTTON[column]}`}
-      >
-        {state === "sending" ? "…" : state === "failed" ? `Retry ${action.label}` : action.label}
-      </button>
+      <div className="flex flex-col gap-3">
+        <button
+          type="button"
+          onClick={() => send(action.to)}
+          disabled={state === "sending" || confirming}
+          className={`min-h-16 min-w-16 w-full text-3xl uppercase transition-transform active:scale-[0.97] disabled:opacity-60 focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-white ${BUTTON[column]}`}
+        >
+          {state === "sending" ? "…" : state === "failed" ? `Retry ${action.label}` : action.label}
+        </button>
+        <button
+          type="button"
+          onClick={() => (confirming ? send(stop.to) : setConfirming(true))}
+          disabled={state === "sending"}
+          aria-label={confirming ? `Tap again to ${stop.label.toLowerCase()} ${order.table}` : `${stop.label} ${order.table}`}
+          className={`min-h-16 min-w-16 w-full border-4 px-3 text-2xl uppercase transition-transform active:scale-[0.97] disabled:opacity-60 focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-white ${
+            confirming ? "border-white bg-[oklch(50%_0.22_28)] text-white" : "border-current bg-transparent"
+          }`}
+        >
+          {confirming ? `Tap again to ${stop.label}` : `✕ ${stop.label}`}
+        </button>
+      </div>
     </li>
   );
 }
