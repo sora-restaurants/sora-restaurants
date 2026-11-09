@@ -1,0 +1,15 @@
+
+> restaurant-saas@ demo:pipeline C:\Users\Juan\Desktop\Sora
+> node --experimental-strip-types scripts/simulate-order.mjs
+
+⚡ In-memory order pipeline (PGlite, real checkout + real kitchen stream)
+
+🛡️  Refused negative quantity → 400 invalid_items
+🛡️  Refused quantity above 50 → 400 invalid_items
+🛡️  Refused forged price → 400 unexpected_field
+🛡️  Refused Restaurant B's staff on Demo Bistro's board → 403
+
+🛒 Guest scans Table 4: 2× Bunny chow, 1× Rooibos iced tea
+🍳 Kitchen received F4787B · Table 4 · R285.00 (incl. R37.17 VAT) · 2× Bunny chow, 1× Rooibos iced tea
+
+🎉 Pipeline verified.

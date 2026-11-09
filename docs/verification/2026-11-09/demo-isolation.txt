@@ -1,0 +1,23 @@
+
+> restaurant-saas@ demo:isolation C:\Users\Juan\Desktop\Sora
+> node scripts/isolation-demo.mjs
+
+⚡ Initialising In-Process PostgreSQL Isolation Test Suite...
+
+📦 Discovering and combining database migrations...
+   ↳ Reading migration: 20261109000000_phase0.sql
+   ↳ Reading migration: 20261109000100_kitchen_partial_index.sql
+   ↳ Reading migration: 20261109000200_restaurant_theme.sql
+   ↳ Reading migration: 20261109000300_board_poll_index.sql
+✅ Base schema, indexes, and RLS rules loaded successfully.
+✅ Mock tenant datasets seeded successfully.
+
+🧪 Testing the Tester: momentarily disabling Row-Level Security...
+✅ Script caught cross-tenant reads when RLS was removed.
+
+🔒 Running Production Security Assertions...
+🛡️  Check 1 Passed: Braai Spot staff see 0 Stellenbosch Winery tickets.
+📦 Check 2 Passed: Winery staff see their own ticket.
+🔒 Check 3 Passed: Sessions without a user see no orders.
+
+🎉 Verification Complete: multi-tenant isolation confirmed.

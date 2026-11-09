@@ -1,0 +1,72 @@
+
+> restaurant-saas@ test C:\Users\Juan\Desktop\Sora
+> vitest run
+
+
+ RUN  v3.2.4 C:/Users/Juan/Desktop/Sora
+
+ ✓ apps/web/src/server/advance-order.test.ts (6 tests) 8838ms
+   ✓ advanceOrder > one tap takes a new ticket straight to preparing  3028ms
+   ✓ advanceOrder > then ready, then served  1273ms
+   ✓ advanceOrder > refuses to skip or go backwards  1150ms
+   ✓ advanceOrder > Restaurant B staff get 404 and change nothing  1180ms
+   ✓ advanceOrder > waiters cannot run the kitchen board  1153ms
+   ✓ advanceOrder > no token is 401, a garbage id is 404  1053ms
+ ✓ supabase/tests/isolation.test.ts (7 tests | 1 skipped) 8985ms
+   ✓ cross-restaurant isolation > staff see own restaurant only  2927ms
+   ✓ cross-restaurant isolation > other staff cannot read or advance  1358ms
+   ✓ cross-restaurant isolation > inactive membership sees nothing  1207ms
+   ✓ cross-restaurant isolation > suspended restaurant sees nothing  1269ms
+   ✓ cross-restaurant isolation > anon and authenticated cannot call customer functions  1143ms
+   ✓ cross-restaurant isolation > cross-restaurant FK impossible  1079ms
+ ✓ supabase/tests/schema.test.ts (4 tests) 5851ms
+   ✓ schema > migration and seed load  2412ms
+   ✓ schema > every public table has RLS  1212ms
+   ✓ schema > only the partial kitchen index exists  1187ms
+   ✓ schema > restaurant currency is locked to ZAR  1037ms
+ ✓ supabase/tests/orders.test.ts (5 tests) 7352ms
+   ✓ submit_order > VAT-inclusive total at 15%  2542ms
+   ✓ submit_order > no VAT when not registered  1189ms
+   ✓ submit_order > foreign menu item rejected  1193ms
+   ✓ submit_order > same key replays  1073ms
+   ✓ submit_order > same key different cart conflicts  1353ms
+ ✓ supabase/tests/review-fixes.test.ts (4 tests) 6558ms
+   ✓ review fixes > staff cannot truncate or write tables directly  2076ms
+   ✓ review fixes > only one open waiter call per table  1816ms
+   ✓ review fixes > idempotency key replayed from another table conflicts  1165ms
+   ✓ review fixes > huge order gets a stable error, not overflow  1499ms
+ ✓ scripts/simulate-order.test.ts (4 tests) 4841ms
+   ✓ simulate-order.mjs > demo:pipeline runs end to end in memory  2391ms
+ ✓ apps/web/src/server/order-routing.test.ts (17 tests) 25713ms
+   ✓ checkout > Table 4 at Restaurant A places a multi-item order  3044ms
+   ✓ checkout > client-supplied price is rejected  1234ms
+   ✓ checkout > client-supplied restaurant or table is rejected  1170ms
+   ✓ checkout > quantity outside 1-50 is rejected  1164ms
+   ✓ checkout > unknown QR token is 404  1139ms
+   ✓ checkout > malformed body is 400  1051ms
+   ✓ kitchen board > A's board shows Table 4's order  1315ms
+   ✓ kitchen board > Restaurant B credentials on A's board get 403 and no data  1992ms
+   ✓ kitchen board > B's own board does not include A's order  1173ms
+   ✓ kitchen board > new order is pushed to an open board  1278ms
+   ✓ kitchen board > served order is removed from the board  1184ms
+   ✓ kitchen board > stops polling after abort  1874ms
+   ✓ kitchen board > open board is revoked when staff are deactivated  1824ms
+   ✓ kitchen board > no or bad token is 401  1319ms
+   ✓ kitchen board > inactive staff are refused  1398ms
+   ✓ kitchen board > waiter is refused  1415ms
+   ✓ kitchen board > garbage restaurant id is 403  2134ms
+ ✓ apps/web/src/kitchen/board-state.test.ts (4 tests) 18ms
+ ✓ supabase/tests/theme.test.ts (2 tests) 5399ms
+   ✓ restaurant theme > defaults to fast-casual-vibrant and rejects unknown themes  2916ms
+   ✓ restaurant theme > the QR menu carries the restaurant's theme  2480ms
+ ✓ apps/web/src/server/http.test.ts (2 tests) 8ms
+ ✓ apps/web/src/themes/themes.test.ts (3 tests) 4ms
+ ✓ supabase/tests/board-plans.test.ts (2 tests) 4062ms
+   ✓ kitchen board query plans > snapshot uses the partial active-orders index even with a generic plan  2752ms
+   ✓ kitchen board query plans > poll uses the (restaurant_id, updated_at) index  1308ms
+
+ Test Files  12 passed (12)
+      Tests  59 passed | 1 skipped (60)
+   Start at  15:17:27
+   Duration  31.16s (transform 575ms, setup 0ms, collect 2.43s, tests 77.63s, environment 3ms, prepare 3.33s)
+
