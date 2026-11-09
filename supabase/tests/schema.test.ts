@@ -16,6 +16,16 @@ describe("schema", () => {
     expect(rows).toEqual([]);
   });
 
+  it("only the partial kitchen index exists", async () => {
+    const db = await freshDb();
+    const { rows } = await db.query<{ indexname: string; indexdef: string }>(
+      "select indexname, indexdef from pg_indexes where tablename = 'orders' and indexname in ('orders_kitchen', 'idx_active_kitchen_orders')",
+    );
+    expect(rows.map((r) => r.indexname)).toEqual(["idx_active_kitchen_orders"]);
+    expect(rows[0].indexdef).toContain("(restaurant_id, status)");
+    expect(rows[0].indexdef).toContain("WHERE");
+  });
+
   it("restaurant currency is locked to ZAR", async () => {
     const db = await freshDb();
     await expect(db.query("insert into restaurants (name, slug, currency) values ('X', 'x', 'USD')")).rejects.toThrow();
