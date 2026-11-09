@@ -116,6 +116,28 @@
   }
 }
 
+/* Kitchen board: new tickets pulse a thick white ring so they are seen across the kitchen. */
+@keyframes kds-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 oklch(100% 0 0);
+  }
+  50% {
+    box-shadow: 0 0 0 8px oklch(100% 0 0);
+  }
+}
+.kds-new {
+  animation: kds-pulse 1.6s ease-in-out infinite;
+  margin: 8px; /* room for the ring inside the scrolling column */
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kds-new {
+    animation: none;
+    box-shadow: 0 0 0 8px oklch(100% 0 0);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
