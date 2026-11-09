@@ -80,6 +80,9 @@ export default async function DemoPage() {
           <a href="/owner" target="_blank" className="inline-flex min-h-12 items-center justify-center rounded-xl border-2 border-current px-5 font-bold">
             Open the owner dashboard (sign in as the owner)
           </a>
+          <a href="/menu-admin" target="_blank" className="inline-flex min-h-12 items-center justify-center rounded-xl border-2 border-current px-5 font-bold">
+            Edit the menu / mark dishes sold out (owner or kitchen)
+          </a>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead>
