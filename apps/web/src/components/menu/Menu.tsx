@@ -78,6 +78,7 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
         <div className="mx-auto max-w-(--t-max) px-pad pb-pad pt-[calc(var(--t-pad)*2)]">
           <p className="text-sm text-muted">{menu.table}</p>
           <h1 className="display text-4xl leading-none">{menu.restaurant}</h1>
+          <CallWaiterButton qrToken={qrToken} preview={preview} />
         </div>
         <nav aria-label="Menu sections" className="mx-auto max-w-(--t-max) overflow-x-auto px-pad pb-pad">
           <ul className="flex gap-2">
@@ -112,6 +113,35 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
 
       <OrderBar count={count} estimate={estimate} status={status} onPlace={placeOrder} onDismiss={() => setStatus({ kind: "idle" })} />
     </div>
+  );
+}
+
+function CallWaiterButton({ qrToken, preview }: { qrToken: string; preview: boolean }) {
+  const [state, setState] = useState<"idle" | "sending" | "called" | "failed">("idle");
+
+  async function call() {
+    setState("sending");
+    const ok =
+      preview ||
+      (await fetch("/api/tables/call-waiter", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ qrToken }),
+      }).then((r) => r.ok, () => false));
+    setState(ok ? "called" : "failed");
+    // Let them call again later if nobody came.
+    if (ok) setTimeout(() => setState("idle"), 60_000);
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={call}
+      disabled={state === "sending" || state === "called"}
+      className="border-theme mt-3 inline-flex min-h-tap items-center rounded-theme px-4 font-semibold disabled:opacity-70 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-accent"
+    >
+      {state === "called" ? "✓ Waiter called" : state === "failed" ? "Try calling again" : state === "sending" ? "Calling…" : "Call waiter"}
+    </button>
   );
 }
 

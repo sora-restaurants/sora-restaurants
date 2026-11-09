@@ -11,7 +11,7 @@ const TABLE_PATH = "/t/demo-table-4-token";
 const LOGINS = [
   { who: "Kitchen, Demo Bistro", email: "kitchen@demo.test", password: "demo-kitchen-pass", note: "Use this one" },
   { who: "Kitchen, Other Grill", email: "kitchen@other.test", password: "other-kitchen-pass", note: "Must NOT see Demo Bistro's orders" },
-  { who: "Waiter, Demo Bistro", email: "waiter@demo.test", password: "demo-waiter-pass", note: "Must be refused the kitchen board" },
+  { who: "Waiter, Demo Bistro", email: "waiter@demo.test", password: "demo-waiter-pass", note: "Waiter screen yes, kitchen board no" },
 ];
 
 const TRY = [
@@ -22,6 +22,8 @@ const TRY = [
   "Tap Place order twice fast: only one ticket should appear.",
   "In a private window, sign in as Other Grill: Demo Bistro's tickets must not show.",
   "Sign in as the waiter: the board should say there is no kitchen access.",
+  "On the menu, tap Call waiter. It appears on the waiter screen; tap On my way to clear it.",
+  "After ordering, tap Track my order and watch it change as the kitchen moves the ticket.",
 ];
 
 /** Address a phone on the same Wi-Fi can reach this computer at. */
@@ -70,6 +72,9 @@ export default async function DemoPage() {
           <h2 className="text-2xl font-extrabold">2. Be the kitchen</h2>
           <a href="/kitchen" target="_blank" className="inline-flex min-h-14 items-center justify-center rounded-xl bg-[oklch(18%_0.02_260)] px-5 text-lg font-bold text-white">
             Open the kitchen board
+          </a>
+          <a href="/waiter" target="_blank" className="inline-flex min-h-12 items-center justify-center rounded-xl border-2 border-current px-5 font-bold">
+            Open the waiter screen (sign in as the waiter)
           </a>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
