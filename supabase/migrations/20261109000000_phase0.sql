@@ -226,7 +226,11 @@ begin
     v_subtotal := v_subtotal + v_item.price_cents * v_qty;
   end loop;
 
-  update orders set subtotal_cents = v_subtotal, total_cents = v_subtotal where id = v_order.id;
+  -- Prices are VAT-inclusive, so VAT is the embedded portion: total * rate / (1 + rate).
+  update orders o set subtotal_cents = v_subtotal, total_cents = v_subtotal,
+    vat_cents = case when r.vat_registered
+      then round(v_subtotal::numeric * r.vat_rate_bp / (10000 + r.vat_rate_bp))::int else 0 end
+    from restaurants r where o.id = v_order.id and r.id = o.restaurant_id;
   update idempotency_keys set order_id = v_order.id where restaurant_id = v_table.restaurant_id and key = p_idempotency_key;
   insert into order_events (restaurant_id, order_id, to_status) values (v_table.restaurant_id, v_order.id, 'submitted');
   insert into print_jobs (restaurant_id, order_id) values (v_table.restaurant_id, v_order.id);
