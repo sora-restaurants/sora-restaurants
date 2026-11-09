@@ -1,0 +1,74 @@
+
+> restaurant-saas@ test:realpg C:\Users\Juan\Desktop\Sora
+> vitest run -c vitest.realpg.config.ts
+
+
+ RUN  v3.2.4 C:/Users/Juan/Desktop/Sora
+
+[real-pg] PostgreSQL 17.10 on x86_64-windows, compiled by msvc-19.44.35226, 64-bit
+ ✓ apps/web/src/server/order-routing.test.ts (17 tests) 13087ms
+   ✓ checkout > Table 4 at Restaurant A places a multi-item order  542ms
+   ✓ checkout > client-supplied price is rejected  812ms
+   ✓ checkout > client-supplied restaurant or table is rejected  826ms
+   ✓ checkout > quantity outside 1-50 is rejected  534ms
+   ✓ checkout > unknown QR token is 404  663ms
+   ✓ checkout > malformed body is 400  743ms
+   ✓ kitchen board > A's board shows Table 4's order  634ms
+   ✓ kitchen board > Restaurant B credentials on A's board get 403 and no data  643ms
+   ✓ kitchen board > B's own board does not include A's order  756ms
+   ✓ kitchen board > new order is pushed to an open board  749ms
+   ✓ kitchen board > served order is removed from the board  768ms
+   ✓ kitchen board > stops polling after abort  1141ms
+   ✓ kitchen board > open board is revoked when staff are deactivated  732ms
+   ✓ kitchen board > no or bad token is 401  710ms
+   ✓ kitchen board > inactive staff are refused  619ms
+   ✓ kitchen board > waiter is refused  1132ms
+   ✓ kitchen board > garbage restaurant id is 403  1080ms
+ ✓ supabase/tests/isolation.test.ts (7 tests) 7478ms
+   ✓ cross-restaurant isolation > staff see own restaurant only  864ms
+   ✓ cross-restaurant isolation > other staff cannot read or advance  993ms
+   ✓ cross-restaurant isolation > inactive membership sees nothing  892ms
+   ✓ cross-restaurant isolation > suspended restaurant sees nothing  880ms
+   ✓ cross-restaurant isolation > anon and authenticated cannot call customer functions  927ms
+   ✓ cross-restaurant isolation > cross-restaurant FK impossible  945ms
+   ✓ real server connection > staff queries log in as authenticator and run as authenticated, not as a superuser  1976ms
+ ✓ apps/web/src/server/advance-order.test.ts (6 tests) 5824ms
+   ✓ advanceOrder > one tap takes a new ticket straight to preparing  912ms
+   ✓ advanceOrder > then ready, then served  894ms
+   ✓ advanceOrder > refuses to skip or go backwards  930ms
+   ✓ advanceOrder > Restaurant B staff get 404 and change nothing  925ms
+   ✓ advanceOrder > waiters cannot run the kitchen board  985ms
+   ✓ advanceOrder > no token is 401, a garbage id is 404  1177ms
+ ✓ supabase/tests/orders.test.ts (5 tests) 4439ms
+   ✓ submit_order > VAT-inclusive total at 15%  753ms
+   ✓ submit_order > no VAT when not registered  1020ms
+   ✓ submit_order > foreign menu item rejected  772ms
+   ✓ submit_order > same key replays  979ms
+   ✓ submit_order > same key different cart conflicts  913ms
+ ✓ supabase/tests/review-fixes.test.ts (4 tests) 3543ms
+   ✓ review fixes > staff cannot truncate or write tables directly  705ms
+   ✓ review fixes > only one open waiter call per table  969ms
+   ✓ review fixes > idempotency key replayed from another table conflicts  914ms
+   ✓ review fixes > huge order gets a stable error, not overflow  954ms
+ ✓ supabase/tests/schema.test.ts (4 tests) 3626ms
+   ✓ schema > migration and seed load  1162ms
+   ✓ schema > every public table has RLS  928ms
+   ✓ schema > only the partial kitchen index exists  700ms
+   ✓ schema > restaurant currency is locked to ZAR  835ms
+ ✓ supabase/tests/theme.test.ts (2 tests) 1846ms
+   ✓ restaurant theme > defaults to fast-casual-vibrant and rejects unknown themes  1058ms
+   ✓ restaurant theme > the QR menu carries the restaurant's theme  786ms
+ ✓ scripts/simulate-order.test.ts (4 tests) 3155ms
+   ✓ simulate-order.mjs > demo:pipeline runs end to end in memory  1947ms
+ ✓ supabase/tests/board-plans.test.ts (2 tests) 1568ms
+   ✓ kitchen board query plans > snapshot uses the partial active-orders index even with a generic plan  817ms
+   ✓ kitchen board query plans > poll uses the (restaurant_id, updated_at) index  748ms
+ ✓ apps/web/src/kitchen/board-state.test.ts (4 tests) 15ms
+ ✓ apps/web/src/server/http.test.ts (2 tests) 7ms
+ ✓ apps/web/src/themes/themes.test.ts (3 tests) 4ms
+
+ Test Files  12 passed (12)
+      Tests  60 passed (60)
+   Start at  15:18:03
+   Duration  59.12s (transform 195ms, setup 0ms, collect 1.71s, tests 44.59s, environment 2ms, prepare 1.94s)
+

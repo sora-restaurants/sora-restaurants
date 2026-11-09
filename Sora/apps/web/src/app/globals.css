@@ -1,0 +1,147 @@
+@import "tailwindcss";
+
+/*
+  Theme engine. A restaurant's row sets data-theme on the menu root; every component uses only these
+  semantic utilities (bg-bg, text-ink, bg-accent, font-display, gap-theme ...), so one attribute
+  swaps the whole design system. Colours are OKLCH so lightness stays predictable across hues.
+*/
+@theme inline {
+  --color-bg: var(--t-bg);
+  --color-surface: var(--t-surface);
+  --color-ink: var(--t-ink);
+  --color-muted: var(--t-muted);
+  --color-line: var(--t-line);
+  --color-accent: var(--t-accent);
+  --color-on-accent: var(--t-on-accent);
+  --color-highlight: var(--t-highlight);
+  --color-on-highlight: var(--t-on-highlight);
+  --font-display: var(--t-font-display);
+  --font-body: var(--t-font-body);
+  --radius-theme: var(--t-radius);
+  --spacing-theme: var(--t-gap);
+  --spacing-pad: var(--t-pad);
+  --spacing-tap: 3rem; /* 48px: minimum touch target on every control */
+}
+
+/* Stellenbosch winery: serif, generous air, muted earth. */
+[data-theme="luxury-minimal"] {
+  --t-bg: oklch(96.5% 0.012 80);
+  --t-surface: oklch(98.8% 0.006 80);
+  --t-ink: oklch(26% 0.02 50);
+  --t-muted: oklch(48% 0.025 60);
+  --t-line: oklch(87% 0.018 75);
+  --t-accent: oklch(40% 0.075 25);
+  --t-on-accent: oklch(97.5% 0.01 80);
+  --t-highlight: oklch(90% 0.03 85);
+  --t-on-highlight: oklch(30% 0.03 55);
+  --t-font-display: var(--font-cormorant), Georgia, serif;
+  --t-font-body: var(--font-source-serif), Georgia, serif;
+  --t-radius: 0;
+  --t-gap: 2.5rem;
+  --t-max: 36rem;
+  --t-pad: 1.5rem;
+  --t-display-weight: 500;
+  --t-display-case: none;
+  --t-display-tracking: 0.01em;
+  --t-border: 1px;
+}
+
+/* Urban coffee shop: clean sans, high contrast, primary blue with a yellow pop. */
+[data-theme="fast-casual-vibrant"] {
+  --t-bg: oklch(99% 0.003 250);
+  --t-surface: oklch(100% 0 0);
+  --t-ink: oklch(17% 0.02 260);
+  --t-muted: oklch(44% 0.02 260);
+  --t-line: oklch(17% 0.02 260);
+  --t-accent: oklch(50% 0.22 262);
+  --t-on-accent: oklch(100% 0 0);
+  --t-highlight: oklch(89% 0.17 95);
+  --t-on-highlight: oklch(17% 0.02 260);
+  --t-font-display: var(--font-manrope), system-ui, sans-serif;
+  --t-font-body: var(--font-manrope), system-ui, sans-serif;
+  --t-radius: 0.875rem;
+  --t-gap: 1.25rem;
+  --t-max: 42rem;
+  --t-pad: 1rem;
+  --t-display-weight: 800;
+  --t-display-case: none;
+  --t-display-tracking: -0.02em;
+  --t-border: 2px;
+}
+
+/* Local braai spot: dense, bold condensed type, ember and kraft. */
+[data-theme="rustic-traditional"] {
+  --t-bg: oklch(93% 0.03 70);
+  --t-surface: oklch(96.5% 0.022 75);
+  --t-ink: oklch(22% 0.04 40);
+  --t-muted: oklch(40% 0.05 45);
+  --t-line: oklch(30% 0.045 40);
+  --t-accent: oklch(47% 0.17 35);
+  --t-on-accent: oklch(97.5% 0.015 75);
+  --t-highlight: oklch(80% 0.13 75);
+  --t-on-highlight: oklch(22% 0.04 40);
+  --t-font-display: var(--font-barlow-condensed), Impact, sans-serif;
+  --t-font-body: var(--font-barlow), system-ui, sans-serif;
+  --t-radius: 0.25rem;
+  --t-gap: 0.75rem;
+  --t-max: 56rem;
+  --t-pad: 0.75rem;
+  --t-display-weight: 800;
+  --t-display-case: uppercase;
+  --t-display-tracking: 0.02em;
+  --t-border: 2px;
+}
+
+@layer components {
+  .display {
+    font-family: var(--t-font-display);
+    font-weight: var(--t-display-weight);
+    text-transform: var(--t-display-case);
+    letter-spacing: var(--t-display-tracking);
+  }
+  /* Mobile-first: one column; the dense braai layout goes two-up once there is room. */
+  .menu-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--t-gap);
+  }
+  @media (min-width: 40rem) {
+    [data-theme="rustic-traditional"] .menu-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  .border-theme {
+    border-width: var(--t-border);
+    border-color: var(--t-line);
+  }
+}
+
+/* Kitchen board: new tickets pulse a thick white ring so they are seen across the kitchen. */
+@keyframes kds-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 oklch(100% 0 0);
+  }
+  50% {
+    box-shadow: 0 0 0 8px oklch(100% 0 0);
+  }
+}
+.kds-new {
+  animation: kds-pulse 1.6s ease-in-out infinite;
+  margin: 8px; /* room for the ring inside the scrolling column */
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kds-new {
+    animation: none;
+    box-shadow: 0 0 0 8px oklch(100% 0 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -1,0 +1,22 @@
+
+> restaurant-saas@ bench:kitchen C:\Users\Juan\Desktop\Sora
+> node --experimental-strip-types scripts/kitchen-index-bench.mjs
+
+[real-pg] PostgreSQL 17.10 on x86_64-windows, compiled by msvc-19.44.35226, 64-bit
+Seeding 100 restaurants × 10,000 orders...
+  done in 50.5s
+
+┌─────────┬─────────────────────────────────────────────────┬──────────────────────────────────────────────────────┬───────────┬─────────┬──────┬───────────────────────────────────────┐
+│ (index) │ query                                           │ variant                                              │ median ms │ buffers │ rows │ uses                                  │
+├─────────┼─────────────────────────────────────────────────┼──────────────────────────────────────────────────────┼───────────┼─────────┼──────┼───────────────────────────────────────┤
+│ 0       │ 'Board snapshot (active tickets, oldest first)' │ 'no kitchen indexes'                                 │ '10.735'  │ 10085   │ 200  │ 'orders_restaurant_id_id_key'         │
+│ 1       │ 'Board poll (changes in the last 5 s)'          │ 'no kitchen indexes'                                 │ '10.507'  │ 10085   │ 0    │ 'orders_restaurant_id_id_key'         │
+│ 2       │ 'Board snapshot (active tickets, oldest first)' │ 'old full index (restaurant_id, status, created_at)' │ '0.225'   │ 208     │ 200  │ 'orders_kitchen'                      │
+│ 3       │ 'Board poll (changes in the last 5 s)'          │ 'old full index (restaurant_id, status, created_at)' │ '10.467'  │ 10064   │ 0    │ 'orders_kitchen'                      │
+│ 4       │ 'size of orders_kitchen'                        │ 'old full index (restaurant_id, status, created_at)' │ ''        │ ''      │ ''   │ '48 MB'                               │
+│ 5       │ 'Board snapshot (active tickets, oldest first)' │ 'current: partial active index + poll index'         │ '0.180'   │ 202     │ 200  │ 'idx_active_kitchen_orders'           │
+│ 6       │ 'Board poll (changes in the last 5 s)'          │ 'current: partial active index + poll index'         │ '0.013'   │ 3       │ 0    │ 'idx_orders_board_poll'               │
+│ 7       │ 'size of idx_active_kitchen_orders'             │ 'current: partial active index + poll index'         │ ''        │ ''      │ ''   │ '232 kB'                              │
+│ 8       │ 'size of idx_orders_board_poll'                 │ 'current: partial active index + poll index'         │ ''        │ ''      │ ''   │ '69 MB'                               │
+│ 9       │ "App's snapshot query, generic plan"            │ 'current'                                            │ '1.367'   │ ''      │ 200  │ 'SEQ SCAN, idx_active_kitchen_orders' │
+└─────────┴─────────────────────────────────────────────────┴──────────────────────────────────────────────────────┴───────────┴─────────┴──────┴───────────────────────────────────────┘
