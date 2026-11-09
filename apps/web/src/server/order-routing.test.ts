@@ -145,6 +145,14 @@ describe("kitchen board", () => {
     expect(calls).toBe(afterAbort);
   });
 
+  it("open board is revoked when staff are deactivated", async () => {
+    const reading = readEvents(await board(DEMO, "token-A"), 2);
+    await new Promise((r) => setTimeout(r, 100));
+    await db.query("update staff_memberships set status = 'inactive' where user_id = $1", [DEMO_USER]);
+    const [, revoked] = await reading;
+    expect(revoked).toEqual({ event: "revoked", data: { error: "forbidden" } });
+  });
+
   it("no or bad token is 401", async () => {
     expect((await board(DEMO)).status).toBe(401);
     expect((await board(DEMO, "nope")).status).toBe(401);

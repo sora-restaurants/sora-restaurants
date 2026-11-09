@@ -3,6 +3,7 @@ import type { Deps, KitchenOrder } from "./deps.ts";
 const ACTIVE = ["submitted", "accepted", "preparing", "ready"];
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const PING_MS = 15_000;
+const MEMBER_SQL = "select is_member($1, array['owner','manager','kitchen']) ok";
 // Re-read a short window behind the cursor so a transaction that committed late is not missed;
 // rows already sent with the same updated_at are skipped.
 const OVERLAP = "interval '5 seconds'";
@@ -48,9 +49,7 @@ export async function kitchenStream(req: Request, restaurantId: string, deps: De
   if (!UUID.test(restaurantId)) return json(403, { error: "forbidden" });
 
   const asUser = <T,>(sql: string, params: unknown[]) => deps.db.asUser<T>(userId, sql, params);
-  const [{ ok }] = await asUser<{ ok: boolean }>("select is_member($1, array['owner','manager','kitchen']) ok", [
-    restaurantId,
-  ]);
+  const [{ ok }] = await asUser<{ ok: boolean }>(MEMBER_SQL, [restaurantId]);
   if (!ok) return json(403, { error: "forbidden" });
 
   const encoder = new TextEncoder();
@@ -91,6 +90,14 @@ export async function kitchenStream(req: Request, restaurantId: string, deps: De
         if (polling || closed) return;
         polling = true;
         try {
+          // Re-check every poll: RLS alone would just go quiet, leaving a deactivated tablet showing a frozen board.
+          const [{ ok: stillMember }] = await asUser<{ ok: boolean }>(MEMBER_SQL, [restaurantId]);
+          if (!stillMember) {
+            send("revoked", { error: "forbidden" });
+            stop();
+            controller.close();
+            return;
+          }
           // No status filter here, so orders leaving the active set are seen and removed from the board.
           const rows = await asUser<OrderRow>(orderQuery(`o.updated_at > $2::timestamptz - ${OVERLAP}`), [
             restaurantId,
