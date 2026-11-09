@@ -11,7 +11,7 @@ export interface Deps {
 }
 
 export type SubmitResult =
-  | { ok: true; statusToken: string; publicRef: string; replayed: boolean }
+  | { ok: true; statusToken: string; publicRef: string; replayed: boolean; payNow: boolean }
   | { ok: false; httpStatus: 400 | 404 | 409 | 413 | 422 | 500; error: string };
 
 export type KitchenOrder = {
@@ -21,5 +21,9 @@ export type KitchenOrder = {
   status: string;
   totalCents: number;
   createdAt: string;
+  /** Paid in the app (pay now). */
+  paid: boolean;
+  /** Pay after dinner and not yet paid: staff collect at the table. */
+  payAtTable: boolean;
   items: { name: string; quantity: number; notes: string }[];
 };

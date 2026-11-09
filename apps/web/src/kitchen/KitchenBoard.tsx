@@ -121,7 +121,13 @@ function Ticket({ order, column, now, onAdvance }: { order: KitchenOrder; column
           {minutes}′
         </p>
       </div>
-      <p className="text-xl tabular-nums">#{order.publicRef}</p>
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-xl tabular-nums">#{order.publicRef}</p>
+        {/* Walk-out protection: staff see at a glance whether to collect payment. */}
+        <p className={`shrink-0 border-4 border-current px-2 text-lg uppercase ${order.paid ? "" : "bg-black text-white"}`}>
+          {order.paid ? "Paid" : "Pay at table"}
+        </p>
+      </div>
       <ul className="flex min-w-0 flex-col gap-2 border-y-4 border-current py-3">
         {order.items.map((item, i) => (
           <li key={i} className="min-w-0 text-2xl leading-tight">

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { Deps, SubmitResult } from "./deps.ts";
+import { payNowAvailable } from "./payments.ts";
 
 // .strict() rejects any field the client might use to steer price, restaurant or table.
 const Item = z
@@ -15,6 +16,9 @@ const Payload = z
     qrToken: z.string().min(1).max(100),
     idempotencyKey: z.string().min(8).max(100),
     items: z.array(Item).min(1).max(50),
+    paymentChoice: z.enum(["pay_later", "pay_now"]).default("pay_later"),
+    // Optional "email me a copy" (POPIA: used only for that email, cleared after 30 days).
+    email: z.string().trim().max(254).email().optional(),
   })
   .strict();
 
@@ -24,6 +28,8 @@ const SQL_ERRORS = {
   table_not_found: 404,
   idempotency_conflict: 409,
   order_too_large: 413,
+  payment_choice_not_allowed: 400,
+  pay_now_unavailable: 400,
   item_unavailable: 422,
 } as const;
 
@@ -31,7 +37,7 @@ type Failure = Extract<SubmitResult, { ok: false }>;
 const fail = (httpStatus: Failure["httpStatus"], error: string): Failure => ({ ok: false, httpStatus, error });
 
 /** Places a QR order. Restaurant, table and every price are resolved by the database, never the client. */
-export async function submitOrder(input: unknown, deps: Deps): Promise<SubmitResult> {
+export async function submitOrder(input: unknown, deps: Deps, env: Record<string, string | undefined> = process.env): Promise<SubmitResult> {
   let data = input;
   if (typeof input === "string") {
     try {
@@ -44,15 +50,16 @@ export async function submitOrder(input: unknown, deps: Deps): Promise<SubmitRes
   const parsed = Payload.safeParse(data);
   if (!parsed.success) {
     const forged = parsed.error.issues.some((issue) => issue.code === "unrecognized_keys");
-    return fail(400, forged ? "unexpected_field" : "invalid_items");
+    if (forged) return fail(400, "unexpected_field");
+    return fail(400, parsed.error.issues.some((issue) => issue.path[0] === "email") ? "invalid_email" : "invalid_items");
   }
 
-  const { qrToken, idempotencyKey, items } = parsed.data;
+  const { qrToken, idempotencyKey, items, paymentChoice, email } = parsed.data;
   try {
-    const [row] = await deps.db.asService<{ r: { statusToken: string; publicRef: string; replayed: boolean } }>(
+    const [row] = await deps.db.asService<{ r: { statusToken: string; publicRef: string; replayed: boolean; payNow: boolean } }>(
       // ::text first: postgres.js would JSON-encode a string bound straight to jsonb a second time.
-      "select submit_order($1, $2, $3::text::jsonb) r",
-      [qrToken, idempotencyKey, JSON.stringify(items)],
+      "select submit_order($1, $2, $3::text::jsonb, $4, $5, $6) r",
+      [qrToken, idempotencyKey, JSON.stringify(items), paymentChoice, email ?? null, payNowAvailable(env)],
     );
     return { ok: true, ...row.r };
   } catch (error) {

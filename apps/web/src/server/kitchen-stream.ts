@@ -9,7 +9,7 @@ const MEMBER_SQL = "select is_member($1, array['owner','manager','kitchen']) ok"
 const OVERLAP = "interval '5 seconds'";
 
 const orderQuery = (condition: string) => `
-  select o.id, o.public_ref, t.label, o.status, o.total_cents, o.created_at, o.updated_at,
+  select o.id, o.public_ref, t.label, o.status, o.total_cents, o.created_at, o.updated_at, o.payment_choice, o.payment_status,
     coalesce((select json_agg(json_build_object('name', oi.name_snapshot, 'quantity', oi.quantity, 'notes', oi.notes)
                               order by oi.name_snapshot)
               from order_items oi where oi.order_id = o.id), '[]') items
@@ -31,6 +31,8 @@ type OrderRow = {
   total_cents: number;
   created_at: Date;
   updated_at: Date;
+  payment_choice: string;
+  payment_status: string;
   items: KitchenOrder["items"] | string;
 };
 
@@ -41,6 +43,8 @@ const toOrder = (r: OrderRow): KitchenOrder => ({
   status: r.status,
   totalCents: r.total_cents,
   createdAt: new Date(r.created_at).toISOString(),
+  paid: r.payment_status === "paid",
+  payAtTable: r.payment_choice === "pay_later" && r.payment_status !== "paid",
   items: typeof r.items === "string" ? JSON.parse(r.items) : r.items,
 });
 

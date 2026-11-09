@@ -58,9 +58,13 @@ if (!fs.existsSync(ENV_FILE)) {
     'DEV_STAFF_LOGIN=1',
     'NEXT_PUBLIC_DEV_STAFF_LOGIN=1',
     `DEV_STAFF_LOGIN_SECRET=${randomBytes(32).toString('hex')}`,
+    'DEV_SIMULATED_PAYMENTS=1',
     '',
   ].join('\n'));
   console.log('  wrote apps/web/.env.local (dev login on; production builds refuse these settings)');
+} else if (!fs.readFileSync(ENV_FILE, 'utf8').includes('DEV_SIMULATED_PAYMENTS')) {
+  fs.appendFileSync(ENV_FILE, '\nDEV_SIMULATED_PAYMENTS=1\n');
+  console.log('  added DEV_SIMULATED_PAYMENTS=1 (test payments) to apps/web/.env.local');
 } else {
   console.log('  apps/web/.env.local already exists; for the local demo it needs:');
   console.log(`    DATABASE_URL=${databaseUrl}`);

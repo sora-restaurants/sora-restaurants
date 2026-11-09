@@ -27,6 +27,8 @@ function fridayNight(): KitchenOrder[] {
     status: i < 9 ? "submitted" : i < 16 ? (i % 2 ? "accepted" : "preparing") : "ready",
     totalCents: 12500,
     createdAt: new Date(start + i * 2 * 60_000).toISOString(),
+    paid: i % 3 === 0,
+    payAtTable: i % 3 !== 0,
     items: Array.from({ length: 1 + (i % 4) }, (_, j) => ({
       name: DISHES[(i + j) % DISHES.length],
       quantity: 1 + ((i + j) % 3),

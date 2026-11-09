@@ -15,7 +15,11 @@ type Props = {
   qrToken: string;
   /** Preview pages show the design without placing a real order. */
   preview?: boolean;
+  /** A payment provider is available, so "Pay now" can be offered. */
+  payNowAvailable?: boolean;
 };
+
+type PaymentChoice = "pay_later" | "pay_now";
 
 type Status = { kind: "idle" } | { kind: "sending" } | { kind: "placed"; publicRef: string; statusToken?: string } | { kind: "error"; message: string };
 
@@ -23,9 +27,18 @@ const ERRORS: Record<string, string> = {
   item_unavailable: "Something in your order just sold out. Please check the menu and try again.",
   table_not_found: "This table's QR code is no longer active. Please ask your waiter.",
   order_too_large: "That order is too large to send in one go. Please ask your waiter.",
+  invalid_email: "That email address doesn't look right. Check it, or untick the email copy.",
+  pay_now_unavailable: "Paying in the app isn't available right now. Please choose to pay after your meal.",
+  payment_choice_not_allowed: "Please choose another way to pay.",
 };
 
-export function Menu({ menu, theme, qrToken, preview = false }: Props) {
+export function Menu({ menu, theme, qrToken, preview = false, payNowAvailable = false }: Props) {
+  // Which payment choices this restaurant allows (walk-out protection is the restaurant's call).
+  const policy = menu.paymentPolicy ?? "customer_choice";
+  const choices: PaymentChoice[] =
+    policy === "pay_now_only" ? ["pay_now"] : policy === "pay_later_only" || !payNowAvailable ? ["pay_later"] : ["pay_later", "pay_now"];
+  const [paymentChoice, setPaymentChoice] = useState<PaymentChoice>(choices[0]);
+  const [email, setEmail] = useState<string | null>(null); // null = no copy wanted
   const [cart, setCart] = useState<Record<string, number>>({});
   const [status, setStatus] = useState<Status>({ kind: "idle" });
   // One key per order attempt, so a retry after a dropped connection cannot create a second order.
@@ -59,7 +72,14 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
         qrToken,
         idempotencyKey: idempotencyKey.current,
         items: lines.map((item) => ({ menuItemId: item.id, quantity: cart[item.id] })),
+        paymentChoice,
+        ...(email?.trim() ? { email: email.trim() } : {}),
       });
+      if (result.ok && result.payNow) {
+        // Not in the kitchen yet: it goes there once paid.
+        window.location.href = `/pay/${result.statusToken}`;
+        return;
+      }
       if (result.ok) {
         setStatus({ kind: "placed", publicRef: result.publicRef, statusToken: result.statusToken });
         setCart({});
@@ -111,7 +131,18 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
         ))}
       </main>
 
-      <OrderBar count={count} estimate={estimate} status={status} onPlace={placeOrder} onDismiss={() => setStatus({ kind: "idle" })} />
+      <OrderBar
+        count={count}
+        estimate={estimate}
+        status={status}
+        onPlace={placeOrder}
+        onDismiss={() => setStatus({ kind: "idle" })}
+        choices={choices}
+        paymentChoice={paymentChoice}
+        onPaymentChoice={setPaymentChoice}
+        email={email}
+        onEmail={setEmail}
+      />
     </div>
   );
 }
@@ -198,12 +229,22 @@ function OrderBar({
   estimate,
   status,
   onPlace,
+  choices,
+  paymentChoice,
+  onPaymentChoice,
+  email,
+  onEmail,
   onDismiss,
 }: {
   count: number;
   estimate: number;
   status: Status;
   onPlace: () => void;
+  choices: PaymentChoice[];
+  paymentChoice: PaymentChoice;
+  onPaymentChoice: (c: PaymentChoice) => void;
+  email: string | null;
+  onEmail: (e: string | null) => void;
   onDismiss: () => void;
 }) {
   if (status.kind === "placed") {
@@ -235,6 +276,37 @@ function OrderBar({
   return (
     <div className="border-theme fixed inset-x-0 bottom-0 border-0 border-t bg-surface pb-[env(safe-area-inset-bottom)]">
       <div className="mx-auto max-w-(--t-max) p-pad">
+        {choices.length > 1 ? (
+          <fieldset className="mb-2 grid grid-cols-2 gap-2">
+            <legend className="sr-only">When do you want to pay?</legend>
+            {choices.map((c) => (
+              <label
+                key={c}
+                className={`border-theme flex min-h-tap cursor-pointer items-center justify-center rounded-theme px-3 text-center font-semibold ${paymentChoice === c ? "bg-ink text-bg" : "bg-surface"}`}
+              >
+                <input type="radio" name="payment" value={c} checked={paymentChoice === c} onChange={() => onPaymentChoice(c)} className="sr-only" />
+                {c === "pay_now" ? "Pay now" : "Pay after my meal"}
+              </label>
+            ))}
+          </fieldset>
+        ) : null}
+        <label className="mb-2 flex min-h-tap items-center gap-3 text-sm">
+          <input type="checkbox" checked={email !== null} onChange={(e) => onEmail(e.target.checked ? "" : null)} className="size-5 accent-[var(--t-accent)]" />
+          Email me a copy of my order
+        </label>
+        {email !== null ? (
+          <input
+            type="email"
+            inputMode="email"
+            autoComplete="email"
+            value={email}
+            onChange={(e) => onEmail(e.target.value)}
+            placeholder="you@example.com"
+            aria-label="Email address for your order copy"
+            className="border-theme mb-1 min-h-tap w-full rounded-theme bg-surface px-3"
+          />
+        ) : null}
+        {email !== null ? <p className="mb-2 text-xs text-muted">Used only to send this copy, deleted after 30 days.</p> : null}
         {status.kind === "error" && (
           <p role="alert" className="mb-2 rounded-theme bg-highlight p-3 text-sm text-on-highlight">
             {status.message}
@@ -246,7 +318,7 @@ function OrderBar({
           disabled={status.kind === "sending"}
           className="flex min-h-14 w-full items-center justify-between gap-4 rounded-theme bg-accent px-5 font-semibold text-on-accent transition-transform active:scale-[0.98] disabled:opacity-70 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ink"
         >
-          <span>{status.kind === "sending" ? "Sending…" : `Place order · ${count} ${count === 1 ? "item" : "items"}`}</span>
+          <span>{status.kind === "sending" ? "Sending…" : `${paymentChoice === "pay_now" ? "Order & pay" : "Place order"} · ${count} ${count === 1 ? "item" : "items"}`}</span>
           <span className="tabular-nums">{formatCents(estimate)}</span>
         </button>
       </div>

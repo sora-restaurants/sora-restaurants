@@ -7,6 +7,12 @@ import { DEMO } from "./fixtures";
 // enable_seqscan=off removes the tiny-table shortcut, so the plan shows which indexes are usable at all.
 async function indexesUsed(sql: string, params: unknown[]) {
   const db = await freshDb();
+  // Realistic history so the planner chooses on real costs, not a tie between near-empty indexes.
+  await db.exec(`
+    insert into orders (restaurant_id, table_id, public_ref, status, subtotal_cents, total_cents, created_at, updated_at)
+      select restaurant_id, id, 'OLD', 'served', 100, 100, now() - n * interval '1 hour', now() - n * interval '1 hour'
+      from tables, generate_series(1, 1000) n;
+    analyze orders;`);
   await db.exec("set plan_cache_mode = force_generic_plan; set enable_seqscan = off");
   const types = params.map((p) => (p instanceof Date ? "timestamptz" : "uuid")).join(", ");
   await db.exec(`prepare q(${types}) as ${sql}`);

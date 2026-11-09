@@ -4,6 +4,8 @@ export type OrderProgress = {
   publicRef: string;
   status: string;
   totalCents: number;
+  paymentChoice?: string;
+  paymentStatus?: string;
   updatedAt: string;
   items: { name: string; quantity: number }[];
 };

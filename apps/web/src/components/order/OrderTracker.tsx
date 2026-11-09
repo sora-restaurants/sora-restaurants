@@ -43,6 +43,7 @@ export function OrderTracker({ token }: { token: string }) {
 
   const stepIndex = order ? STEPS.findIndex((s) => s.statuses.includes(order.status)) : -1;
   const stopped = order && (order.status === "rejected" || order.status === "cancelled");
+  const awaitingPayment = order?.status === "awaiting_payment";
 
   return (
     <main className="min-h-dvh bg-[oklch(98%_0.005_80)] px-4 py-8 font-[family-name:var(--font-manrope)] text-[oklch(18%_0.02_260)]">
@@ -56,10 +57,15 @@ export function OrderTracker({ token }: { token: string }) {
             <header>
               <p className="text-sm font-bold uppercase tracking-wide text-[oklch(45%_0.02_260)]">Order {order.publicRef}</p>
               <h1 role="status" aria-live="polite" className="text-4xl font-extrabold">
-                {stopped ? "Order cancelled" : STEPS[stepIndex]?.label}
+                {stopped ? "Order cancelled" : awaitingPayment ? "Waiting for payment" : STEPS[stepIndex]?.label}
               </h1>
             </header>
 
+            {awaitingPayment ? (
+              <a href={`/pay/${token}`} className="flex min-h-14 items-center justify-center rounded-xl bg-[oklch(18%_0.02_260)] text-lg font-bold text-white">
+                Pay now to send it to the kitchen
+              </a>
+            ) : null}
             {stopped ? (
               <p className="rounded-xl bg-[oklch(92%_0.06_30)] p-4 text-lg font-semibold">
                 The kitchen couldn&apos;t make this order. Please ask your waiter.
@@ -93,7 +99,7 @@ export function OrderTracker({ token }: { token: string }) {
                 ))}
               </ul>
               <p className="mt-3 border-t-2 border-[oklch(88%_0.01_260)] pt-3 font-bold tabular-nums">
-                Total {formatRand(order.totalCents)} · pay your waiter or at the till
+                Total {formatRand(order.totalCents)} · {order.paymentStatus === "paid" ? "paid, thank you" : "pay your waiter or at the till"}
               </p>
             </section>
           </>

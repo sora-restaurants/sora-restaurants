@@ -4,7 +4,7 @@ import { applyBoardEvent, columns, EMPTY_BOARD } from "./board-state.ts";
 import { createSseParser } from "./sse.ts";
 
 const order = (id: string, status: string, createdAt = "2026-11-09T18:00:00.000Z"): KitchenOrder => ({
-  id, publicRef: id.toUpperCase(), table: "Table 4", status, totalCents: 12500, createdAt, items: [],
+  id, publicRef: id.toUpperCase(), table: "Table 4", status, totalCents: 12500, createdAt, paid: false, payAtTable: true, items: [],
 });
 
 describe("applyBoardEvent", () => {
