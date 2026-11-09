@@ -1,47 +1,9 @@
 // Proves Restaurant A's staff cannot read Restaurant B's active kitchen tickets.
 // Runs the real migrations in PGlite (in-process Postgres). Exit code 0 = isolated, 1 = failure.
-import { PGlite } from '@electric-sql/pglite';
-import fs from 'node:fs';
-import path from 'node:path';
+import { loadDb, queryAs as queryAsRole } from './pglite-db.mjs';
 
-const db = new PGlite();
-
-// Minimal stand-in for what Supabase provides: API roles and auth.uid() reading the JWT claims.
-const SUPABASE_STUB = `
-  create role anon; create role authenticated; create role service_role;
-  create schema auth;
-  create function auth.uid() returns uuid language sql stable as $$
-    select nullif(coalesce(current_setting('request.jwt.claim.sub', true),
-                           nullif(current_setting('request.jwt.claims', true), '')::jsonb ->> 'sub'), '')::uuid
-  $$;
-  grant usage on schema public, auth to anon, authenticated, service_role;
-  grant execute on function auth.uid() to anon, authenticated, service_role;
-  alter default privileges in schema public grant all on tables to anon, authenticated, service_role;
-`;
-
-function getCombinedMigrations() {
-  const migrationsDir = path.resolve('supabase/migrations');
-  if (!fs.existsSync(migrationsDir)) throw new Error(`Migration directory not found at: ${migrationsDir}`);
-  return fs.readdirSync(migrationsDir)
-    .filter((file) => file.endsWith('.sql'))
-    .sort() // timestamped names = chronological order
-    .map((file) => {
-      console.log(`   ↳ Reading migration: ${file}`);
-      return fs.readFileSync(path.join(migrationsDir, file), 'utf8');
-    })
-    .join('\n');
-}
-
-// Runs as the given Supabase role. The default PGlite user is a superuser, and superusers bypass RLS,
-// so every check must drop to an API role or it proves nothing.
-async function queryAs(role, userId, sql, params = []) {
-  return db.transaction(async (tx) => {
-    await tx.query(`select set_config('request.jwt.claims', $1, true)`,
-      [userId ? JSON.stringify({ sub: userId, role }) : '']);
-    await tx.exec(`set local role ${role}`);
-    return tx.query(sql, params);
-  });
-}
+let db;
+const queryAs = (role, userId, sql, params) => queryAsRole(db, role, userId, sql, params);
 const queryAsUser = (userId, sql, params) => queryAs('authenticated', userId, sql, params);
 
 const ACTIVE_FOR = `select id from orders
@@ -51,8 +13,7 @@ async function runIsolationSuite() {
   console.log('⚡ Initialising In-Process PostgreSQL Isolation Test Suite...\n');
 
   console.log('📦 Discovering and combining database migrations...');
-  await db.exec(SUPABASE_STUB);
-  await db.exec(getCombinedMigrations());
+  db = await loadDb({ log: true });
   console.log('✅ Base schema, indexes, and RLS rules loaded successfully.');
 
   const insertRestaurant = async (name, slug, vatRegistered) => (await db.query(
