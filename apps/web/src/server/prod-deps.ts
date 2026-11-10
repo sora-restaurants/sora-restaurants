@@ -13,6 +13,12 @@ function env(name: string): string {
   return value;
 }
 
+function databaseUrl(): string {
+  // Supabase's Vercel integration names its pooled connection this way. Keep
+  // DATABASE_URL as the explicit override for local and other hosted setups.
+  return process.env.DATABASE_URL || env("POSTGRES_PRISMA_URL");
+}
+
 /** Staff identity: a Supabase Auth session, or a dev token on a local demo machine. */
 async function verifyStaffToken(bearer: string): Promise<string | null> {
   if (bearer.startsWith("dev.")) {
@@ -29,7 +35,7 @@ async function verifyStaffToken(bearer: string): Promise<string | null> {
 export function prodDeps(): Deps {
   assertNoDevLoginInProduction();
   // prepare: false keeps this working behind Supabase's transaction-mode connection pooler.
-  sql ??= postgres(env("DATABASE_URL"), { max: 10, prepare: false });
+  sql ??= postgres(databaseUrl(), { max: 10, prepare: false });
   const db = sql;
 
   return {
