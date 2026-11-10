@@ -23,6 +23,7 @@ const SQL_ERRORS = {
   invalid_items: 400,
   table_not_found: 404,
   idempotency_conflict: 409,
+  TABLE_SESSION_NOT_ACTIVE: 409,
   order_too_large: 413,
   item_unavailable: 422,
 } as const;

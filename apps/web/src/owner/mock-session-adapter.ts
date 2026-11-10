@@ -25,6 +25,7 @@ export function createMockSessionAdapter(seed = INITIAL_TABLES): TableSessionAda
         timezone: "Africa/Johannesburg",
         acceptedOrderValueCents: 284_550,
         tables: tables.map((table) => ({ ...table })),
+        menu: [],
       };
     },
     async openSession(tableId) { return update(tableId, "open"); },

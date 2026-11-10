@@ -22,8 +22,8 @@ describe("owner UI contracts", () => {
 
   it("gives customers an actionable inactive-session state", () => {
     const html = renderToStaticMarkup(createElement(OrderingUnavailable, { restaurant: "Sora Test Kitchen", table: "Table 2" }));
-    expect(html).toContain("Ordering is not open yet");
-    expect(html).toContain("ask a member of staff");
+    expect(html).toContain("This table isn’t taking orders right now");
+    expect(html).toContain("Ask a member of staff");
     expect(html).toContain("Try again");
   });
 });

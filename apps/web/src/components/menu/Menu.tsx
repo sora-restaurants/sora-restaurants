@@ -19,6 +19,7 @@ const ERRORS: Record<string, string> = {
   table_not_found: "This table's QR code is no longer active. Please ask your waiter.",
   order_too_large: "That order is too large to send in one go. Please ask your waiter.",
   idempotency_conflict: "Your basket changed while the order was sending. Please review it and try again.",
+  TABLE_SESSION_NOT_ACTIVE: "Ordering has closed for this table. Please ask a member of staff for help.",
 };
 
 export function Menu({ menu, theme, qrToken, preview = false }: Props) {
@@ -112,12 +113,13 @@ function EmptyMenu() {
 function MenuCard({ item, quantity, index, onChange }: { item: MenuItem; quantity: number; index: number; onChange: (id: string, q: number) => void }) {
   return (
     <li className="menu-card overflow-hidden rounded-theme border border-line/40 bg-surface shadow-[0_12px_40px_color-mix(in_oklch,var(--t-ink)_7%,transparent)]">
-      <div className={`dish-art dish-art-${index % 3}`} aria-hidden="true"><span>{String(index + 1).padStart(2, "0")}</span></div>
+      {item.imageUrl ? <div className="relative h-52 overflow-hidden"><img src={item.imageUrl} alt="" className="size-full object-cover" /><div className="absolute inset-x-0 bottom-0 h-20 bg-linear-to-t from-black/45 to-transparent" /></div> : <div className={`dish-art dish-art-${index % 3}`} aria-hidden="true"><span>{item.name.slice(0, 1)}</span></div>}
       <div className="flex min-h-40 flex-col p-5">
         <div className="flex items-start justify-between gap-3"><h3 className="display text-2xl leading-none">{item.name}</h3><p className="shrink-0 font-bold tabular-nums text-accent">{formatCents(item.priceCents)}</p></div>
         {item.description ? <p className="mt-3 text-sm leading-relaxed text-muted">{item.description}</p> : <p className="mt-3 text-sm italic text-muted">Made fresh to order</p>}
+        {item.dietaryTags?.length ? <ul aria-label="Dietary information" className="mt-3 flex flex-wrap gap-2">{item.dietaryTags.map((tag) => <li key={tag} className="rounded-full border border-line/40 px-2 py-1 text-[0.7rem] font-bold uppercase tracking-wide text-muted">{tag}</li>)}</ul> : null}
         <div className="mt-auto flex justify-end pt-5">
-          {quantity === 0 ? <button type="button" onClick={() => onChange(item.id, 1)} aria-label={`Add ${item.name}`} className="add-button focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ink"><span aria-hidden="true">＋</span> Add to order</button> : <QuantityControl item={item} quantity={quantity} onChange={onChange} />}
+          {item.soldOut ? <span className="inline-flex min-h-12 items-center rounded-full bg-highlight px-4 text-sm font-bold text-on-highlight">Sold out</span> : quantity === 0 ? <button type="button" onClick={() => onChange(item.id, 1)} aria-label={`Add ${item.name}`} className="add-button focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ink"><span aria-hidden="true">＋</span> Add to order</button> : <QuantityControl item={item} quantity={quantity} onChange={onChange} />}
         </div>
       </div>
     </li>

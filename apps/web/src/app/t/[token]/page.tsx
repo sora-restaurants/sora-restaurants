@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { Menu } from "../../../components/menu/Menu.tsx";
+import { OrderingUnavailable } from "../../../components/menu/OrderingUnavailable.tsx";
 import type { TableMenu } from "../../../components/menu/types.ts";
 import { prodDeps } from "../../../server/prod-deps.ts";
 import { resolveTheme } from "../../../themes/themes.ts";
@@ -12,5 +13,6 @@ export default async function TableMenuPage({ params }: { params: Promise<{ toke
   if (token.length > 100) notFound();
   const [row] = await prodDeps().db.asService<{ m: TableMenu | null }>("select get_table_menu($1) m", [token]);
   if (!row?.m) notFound();
+  if (row.m.orderingEnabled === false) return <OrderingUnavailable restaurant={row.m.restaurant} table={row.m.table} />;
   return <Menu menu={row.m} theme={resolveTheme(row.m.theme)} qrToken={token} />;
 }
