@@ -45,6 +45,7 @@ apps/web/                         Next.js app (package "web")
     waiter/page.tsx               waiter calls for floor staff
     owner/page.tsx                owner dashboard, QR orders only
     menu-admin/page.tsx           edit dishes and prices (owner/manager), sold out (also kitchen)
+    staff/page.tsx                staff list, invites, roles, removal and recent audit log (owner/manager)
     demo/page.tsx                 local demo hub: Table 4 QR, links, test logins (dev only)
     preview/[theme], preview/kitchen   dev-only design previews, 404 in production
   src/server/                     framework-free handlers + tests (checkout, kitchen stream/moves, order status,
