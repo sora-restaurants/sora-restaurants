@@ -34,7 +34,12 @@ insert into menu_items (id, restaurant_id, menu_id, name, description, price_cen
   ('a2000000-0000-0000-0000-000000000011', 'a0000000-0000-0000-0000-000000000001', 'a1000000-0000-0000-0000-000000000003', 'Flame-Grilled Beef Burger', 'Mature cheddar, caramelised onion, house pickles and smoked paprika mayo, served with hand-cut chips.', 14500, '/menu/flame-grilled-beef-burger.jpg', '{}', 2),
   ('a2000000-0000-0000-0000-000000000012', 'a0000000-0000-0000-0000-000000000001', 'a1000000-0000-0000-0000-000000000003', 'Charred Cauliflower', 'Tahini yoghurt, apricot harissa, toasted almonds and fresh herbs.', 12800, '/menu/charred-cauliflower.jpg', '{vegetarian}', 3),
   ('a2000000-0000-0000-0000-000000000013', 'a0000000-0000-0000-0000-000000000001', 'a1000000-0000-0000-0000-000000000004', 'Rooibos Crème Brûlée', 'Silky rooibos custard with a crisp caramel top and seasonal berries.', 8500, '/menu/rooibos-creme-brulee.jpg', '{vegetarian}', 1),
-  ('a2000000-0000-0000-0000-000000000014', 'a0000000-0000-0000-0000-000000000001', 'a1000000-0000-0000-0000-000000000002', 'Fresh Lemon & Mint Cooler', 'Fresh lemon, garden mint and sparkling water over ice.', 4800, null, '{vegan}', 0);
+  ('a2000000-0000-0000-0000-000000000014', 'a0000000-0000-0000-0000-000000000001', 'a1000000-0000-0000-0000-000000000002', 'Fresh Lemon & Mint Cooler', 'Fresh lemon, garden mint and sparkling water over ice.', 4800, '/menu/fresh-lemon-mint-cooler.jpg', '{vegan}', 0),
+  ('a2000000-0000-0000-0000-000000000015', 'a0000000-0000-0000-0000-000000000001', 'a1000000-0000-0000-0000-000000000002', 'Cape Citrus Tonic', 'Grapefruit, naartjie peel, thyme and premium tonic over ice.', 5600, '/menu/cape-citrus-tonic.jpg', '{vegan}', 2),
+  ('a2000000-0000-0000-0000-000000000016', 'a0000000-0000-0000-0000-000000000001', 'a1000000-0000-0000-0000-000000000002', 'South African Chenin Blanc', 'A chilled glass with bright stone fruit, citrus and a clean mineral finish.', 7800, '/menu/south-african-chenin-blanc.jpg', '{contains alcohol}', 3);
+
+update menu_items set image_url = '/menu/rooibos-iced-tea.jpg', description = 'House-brewed rooibos over ice with fresh orange and rosemary.'
+where id = 'a2000000-0000-0000-0000-000000000003';
 
 insert into auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
   raw_app_meta_data, raw_user_meta_data, created_at, updated_at,
