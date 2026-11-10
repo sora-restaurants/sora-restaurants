@@ -92,6 +92,41 @@
   --t-border: 2px;
 }
 
+.menu-shell[data-mode="dark"] {
+  --t-bg: oklch(18% 0.015 55);
+  --t-surface: oklch(24% 0.018 55);
+  --t-ink: oklch(96% 0.01 75);
+  --t-muted: oklch(78% 0.018 70);
+  --t-line: oklch(48% 0.025 55);
+  --t-highlight: oklch(38% 0.07 65);
+  --t-on-highlight: oklch(96% 0.01 75);
+}
+
+.owner-shell {
+  --owner-bg: #f4f1ec;
+  --owner-surface: #ffffff;
+  --owner-card: #faf7f2;
+  --owner-text: #1c1917;
+  --owner-muted: #57534e;
+  --owner-border: rgb(28 25 23 / 0.12);
+}
+.owner-shell[data-mode="dark"] {
+  --owner-bg: #171512;
+  --owner-surface: #25211d;
+  --owner-card: #2d2823;
+  --owner-text: #faf7f2;
+  --owner-muted: #c7c0b6;
+  --owner-border: rgb(250 247 242 / 0.16);
+  color-scheme: dark;
+}
+.owner-login input,
+.owner-login input:-webkit-autofill {
+  color: #1c1917 !important;
+  -webkit-text-fill-color: #1c1917 !important;
+  caret-color: #1c1917;
+  box-shadow: 0 0 0 1000px #fff inset;
+}
+
 @layer components {
   .display {
     font-family: var(--t-font-display);

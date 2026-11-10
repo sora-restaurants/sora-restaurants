@@ -4,6 +4,7 @@ import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { submitOrderAction } from "../../app/actions/submit-order.ts";
 import type { ThemeId } from "../../themes/themes.ts";
 import type { MenuItem, TableMenu } from "./types.ts";
+import { ColorModeToggle, useColorMode } from "../ColorModeToggle.tsx";
 
 const money = new Intl.NumberFormat("en-ZA", { style: "currency", currency: "ZAR" });
 const formatCents = (cents: number) => money.format(cents / 100);
@@ -23,6 +24,7 @@ const ERRORS: Record<string, string> = {
 };
 
 export function Menu({ menu, theme, qrToken, preview = false }: Props) {
+  const { mode, toggle } = useColorMode("sora-customer-color-mode");
   const [cart, setCart] = useState<Record<string, number>>({});
   const [status, setStatus] = useState<Status>({ kind: "idle" });
   const [basketOpen, setBasketOpen] = useState(false);
@@ -72,10 +74,10 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
   }
 
   return (
-    <div data-theme={theme} className="menu-shell min-h-dvh bg-bg font-body text-ink antialiased">
+    <div data-theme={theme} data-mode={mode} className="menu-shell min-h-dvh bg-bg font-body text-ink antialiased">
       <header className="menu-hero text-on-accent">
         <div className="mx-auto max-w-(--t-max) px-pad pb-7 pt-[calc(var(--t-pad)*2.25)]">
-          <div className="mb-8 flex items-center justify-between gap-4"><span className="restaurant-mark" aria-hidden="true">S</span><span className="table-pill">{menu.table}</span></div>
+          <div className="mb-8 flex items-center justify-between gap-3"><span className="restaurant-mark" aria-hidden="true">S</span><div className="flex items-center gap-2"><ColorModeToggle mode={mode} onToggle={toggle} className="border-white/35 text-white" /><span className="table-pill">{menu.table}</span></div></div>
           <p className="mb-2 text-xs font-bold uppercase tracking-[0.2em] opacity-80">Welcome to</p>
           <h1 className="display max-w-lg text-4xl leading-[0.95] sm:text-5xl">{menu.restaurant}</h1>
           <p className="mt-4 max-w-sm text-sm leading-relaxed opacity-80">Order at your own pace. Your selections go straight to the kitchen.</p>

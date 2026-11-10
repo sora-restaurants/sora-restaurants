@@ -2,6 +2,7 @@
 
 import { type FormEvent, useEffect, useMemo, useState } from "react";
 import { type StaffAuth, staffAuth } from "../kitchen/staff-auth.ts";
+import { ColorModeToggle, useColorMode } from "../components/ColorModeToggle.tsx";
 import { OwnerDashboard } from "./OwnerDashboard.tsx";
 import type { ManagedTable, OwnerDashboardSnapshot, SessionCommandResult, TableSessionAdapter } from "./session-contract.ts";
 
@@ -64,13 +65,14 @@ async function post(auth: StaffAuth, body: object) {
 }
 
 function OwnerSignIn({ auth }: { auth: StaffAuth }) {
+  const { mode, toggle } = useColorMode("sora-owner-color-mode");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); const form = new FormData(event.currentTarget); setBusy(true);
     setError(await auth.signIn(String(form.get("email")), String(form.get("password")))); setBusy(false);
   }
-  return <OwnerScreen><form onSubmit={submit} className="w-full max-w-md space-y-4 text-left"><h1 className="text-4xl font-black">Owner sign in</h1>{auth.mode === "dev" && <p className="rounded-xl bg-cyan-100 p-3 text-sm text-slate-900">Local demo: owner@demo.test / demo-owner-pass</p>}<label className="block font-bold">Email<input name="email" type="email" autoComplete="username" required className="mt-2 min-h-14 w-full rounded-xl border px-4 text-slate-950" /></label><label className="block font-bold">Password<input name="password" type="password" autoComplete="current-password" required className="mt-2 min-h-14 w-full rounded-xl border px-4 text-slate-950" /></label>{error && <p role="alert">{error}</p>}<button disabled={busy} className="min-h-14 w-full rounded-xl bg-cyan-300 font-black text-slate-950">{busy ? "Signing in…" : "Sign in"}</button></form></OwnerScreen>;
+  return <main data-mode={mode} className="owner-shell owner-login grid min-h-dvh place-items-center bg-[var(--owner-bg)] p-6 text-[var(--owner-text)]"><form onSubmit={submit} className="w-full max-w-md space-y-4 rounded-3xl bg-[var(--owner-surface)] p-6 text-left shadow-xl sm:p-8"><div className="flex items-start justify-between gap-4"><h1 className="text-4xl font-black">Owner sign in</h1><ColorModeToggle mode={mode} onToggle={toggle} className="border-[var(--owner-border)]" /></div>{auth.mode === "dev" && <p className="rounded-xl bg-[#F5DFC1] p-3 text-sm text-[#70420F]">Local demo: owner@demo.test / demo-owner-pass</p>}<label className="block font-bold">Email<input name="email" type="email" autoComplete="username" required className="mt-2 min-h-14 w-full rounded-xl border border-[var(--owner-border)] bg-white px-4 text-[#1C1917] caret-[#1C1917]" /></label><label className="block font-bold">Password<input name="password" type="password" autoComplete="current-password" required className="mt-2 min-h-14 w-full rounded-xl border border-[var(--owner-border)] bg-white px-4 text-[#1C1917] caret-[#1C1917]" /></label>{error && <p role="alert" className="rounded-xl bg-[#F5DFC1] p-3 text-[#70420F]">{error}</p>}<button disabled={busy} className="min-h-14 w-full rounded-xl bg-[#C45C26] font-black text-white">{busy ? "Signing in…" : "Sign in"}</button></form></main>;
 }
 
 function OwnerScreen({ children }: { children: React.ReactNode }) {
