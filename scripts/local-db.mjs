@@ -9,9 +9,9 @@ import EmbeddedPostgres from 'embedded-postgres';
 import pg from 'pg';
 import { CLUSTER_ROLES, DATABASE_STUB } from '../supabase/tests/real-pg.ts';
 
-const PORT = 54330;
+const PORT = Number(process.env.SORA_DB_PORT ?? 54330); // e2e tests run a second, throwaway cluster
 const DATABASE = 'sora';
-const DATA_DIR = path.resolve('.local-pg');
+const DATA_DIR = path.resolve(process.env.SORA_DB_DIR ?? '.local-pg');
 const ENV_FILE = path.resolve('apps/web/.env.local');
 const SUPERUSER = { user: 'postgres', password: 'postgres' }; // local-only cluster on 127.0.0.1
 

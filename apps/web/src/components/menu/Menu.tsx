@@ -21,7 +21,15 @@ type Props = {
 
 type PaymentChoice = "pay_later" | "pay_now";
 
-type Status = { kind: "idle" } | { kind: "sending" } | { kind: "placed"; publicRef: string; statusToken?: string } | { kind: "error"; message: string };
+type Status =
+  | { kind: "idle" }
+  | { kind: "sending" }
+  | { kind: "placed"; publicRef: string; statusToken?: string; replayed?: boolean }
+  | { kind: "error"; message: string };
+
+// A Server Action cannot be aborted; after this long we stop waiting and let the customer retry with the same key.
+const SUBMIT_TIMEOUT_MS = 15_000;
+const NOT_SENT = "No connection. Your order was not sent yet — please try again.";
 
 const ERRORS: Record<string, string> = {
   item_unavailable: "Something in your order just sold out. Please check the menu and try again.",
@@ -30,6 +38,7 @@ const ERRORS: Record<string, string> = {
   invalid_email: "That email address doesn't look right. Check it, or untick the email copy.",
   pay_now_unavailable: "Paying in the app isn't available right now. Please choose to pay after your meal.",
   payment_choice_not_allowed: "Please choose another way to pay.",
+  idempotency_conflict: "This order was already sent. Ask your waiter if you want to change it.",
 };
 
 export function Menu({ menu, theme, qrToken, preview = false, payNowAvailable = false }: Props) {
@@ -43,6 +52,9 @@ export function Menu({ menu, theme, qrToken, preview = false, payNowAvailable = 
   const [status, setStatus] = useState<Status>({ kind: "idle" });
   // One key per order attempt, so a retry after a dropped connection cannot create a second order.
   const idempotencyKey = useRef<string | null>(null);
+  // Set synchronously so a second tap before React re-renders the disabled button cannot send twice.
+  const sending = useRef(false);
+  const attempt = useRef(0);
 
   const items = menu.categories.flatMap((c) => c.items);
   const lines = items.filter((item) => cart[item.id]);
@@ -61,9 +73,19 @@ export function Menu({ menu, theme, qrToken, preview = false, payNowAvailable = 
   };
 
   async function placeOrder() {
+    if (sending.current) return;
+    sending.current = true;
+    const thisAttempt = ++attempt.current;
     idempotencyKey.current ??= newIdempotencyKey();
     setStatus({ kind: "sending" });
+    const timer = setTimeout(() => {
+      if (attempt.current !== thisAttempt) return;
+      sending.current = false;
+      setStatus({ kind: "error", message: "This is taking too long. Your order may not have been sent — tap to try again (it won't be sent twice)." });
+    }, SUBMIT_TIMEOUT_MS);
     if (preview) {
+      clearTimeout(timer);
+      sending.current = false;
       setStatus({ kind: "placed", publicRef: "PREVIEW" });
       return;
     }
@@ -75,20 +97,29 @@ export function Menu({ menu, theme, qrToken, preview = false, payNowAvailable = 
         paymentChoice,
         ...(email?.trim() ? { email: email.trim() } : {}),
       });
+      // A newer retry owns the screen; its answer (same key) is the one to show.
+      if (attempt.current !== thisAttempt) return;
       if (result.ok && result.payNow) {
         // Not in the kitchen yet: it goes there once paid.
         window.location.href = `/pay/${result.statusToken}`;
         return;
       }
       if (result.ok) {
-        setStatus({ kind: "placed", publicRef: result.publicRef, statusToken: result.statusToken });
+        setStatus({ kind: "placed", publicRef: result.publicRef, statusToken: result.statusToken, replayed: result.replayed });
+        setCart({});
+        idempotencyKey.current = null;
+      } else if (result.error === "idempotency_conflict") {
+        setStatus({ kind: "error", message: ERRORS.idempotency_conflict });
         setCart({});
         idempotencyKey.current = null;
       } else {
         setStatus({ kind: "error", message: ERRORS[result.error] ?? "We couldn't send your order. Please try again." });
       }
     } catch {
-      setStatus({ kind: "error", message: "No connection. Your order was not sent yet — please try again." });
+      if (attempt.current === thisAttempt) setStatus({ kind: "error", message: NOT_SENT });
+    } finally {
+      clearTimeout(timer);
+      if (attempt.current === thisAttempt) sending.current = false;
     }
   }
 
@@ -253,7 +284,10 @@ function OrderBar({
         <div className="mx-auto flex max-w-(--t-max) items-center justify-between gap-4 p-pad">
           <p>
             <span className="display block text-xl">Order sent to the kitchen</span>
-            <span className="text-sm text-muted">Reference {status.publicRef}</span>
+            <span className="text-sm text-muted">
+              Reference {status.publicRef}
+              {status.replayed ? " · already received, not sent twice" : ""}
+            </span>
             {status.statusToken ? (
               <a href={`/o/${status.statusToken}`} className="mt-1 inline-flex min-h-tap items-center font-semibold text-accent underline underline-offset-4">
                 Track my order

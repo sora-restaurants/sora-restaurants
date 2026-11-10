@@ -9,3 +9,6 @@ next-env.d.ts
 .superpowers
 .local-pg
 .local-mail
+.local-pg-e2e
+test-results
+playwright-report

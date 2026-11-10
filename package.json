@@ -20,10 +20,12 @@
     "bench:kitchen": "node --experimental-strip-types scripts/kitchen-index-bench.mjs",
     "demo:isolation": "node scripts/isolation-demo.mjs",
     "demo:pipeline": "node --experimental-strip-types scripts/simulate-order.mjs",
-    "simulate:order": "node --experimental-strip-types scripts/simulate-order.mjs --url http://localhost:3000"
+    "simulate:order": "node --experimental-strip-types scripts/simulate-order.mjs --url http://localhost:3000",
+    "test:e2e": "playwright test"
   },
   "devDependencies": {
     "@electric-sql/pglite": "0.3.11",
+    "@playwright/test": "1.56.1",
     "@types/pg": "8.15.5",
     "embedded-postgres": "17.10.0-beta.17",
     "pg": "8.23.1",
