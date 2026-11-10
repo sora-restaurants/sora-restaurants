@@ -115,7 +115,7 @@
 <main id="top">
   <section class="hero hero--film" data-enter aria-labelledby="hero-h">
     <div class="wrap"><div class="hero-text hero__in">
-      <div class="hero__media hero__fill">
+      <div class="hero__media hero__fill" data-scene="table">
         <!-- CLIENT FILE hero-loop (VIDEO SLOT 1): assets/client/hero-loop.mp4 (1920x1080, H.264, muted, 8 to 12 s loop
              from Higgsfield: a busy restaurant, a phone scanning a table QR) and assets/client/hero-loop.jpg (its poster).
              When the file lands: replace the <img> below with
@@ -204,14 +204,14 @@
   <section class="section ground-inverse" id="demo" aria-labelledby="demo-h">
     <div class="wrap">
       <div class="section-head">
-        <h2 id="demo-h">One order, from phone to pass. <span class="muted">A 30-second film.</span></h2>
+        <h2 id="demo-h">One order, from phone to pass. <span class="muted">Click the scene to replay it.</span></h2>
       </div>
       <!-- CLIENT FILE demo-film (VIDEO SLOT 2): assets/client/demo.mp4 (1920x1080, H.264, the 30 s demo from Higgsfield:
            order on phone, it appears on the kitchen screen, "Ready") and assets/client/demo.jpg (its poster).
            When the file lands: add controls preload="metadata" poster="assets/client/demo.jpg" and
            <source src="assets/client/demo.mp4" type="video/mp4"> inside the <video>. Stand-in poster: photo-f56809472. -->
-      <figure class="frame frame--photo fit-screen">
-        <video class="frame__img" playsinline preload="none" poster="assets/img/photo-f56809472.jpg" aria-label="Cooks plating orders at a busy restaurant pass" data-source="stand-in" data-subject="restaurant kitchen at service"></video>
+      <figure class="frame frame--photo fit-screen" data-scene="flow">
+        <img class="frame__img" src="assets/img/photo-f56809472.jpg" srcset="assets/img/photo-f56809472-500.jpg 500w, assets/img/photo-f56809472-960.jpg 960w, assets/img/photo-f56809472.jpg 1280w" sizes="(max-width: 639px) 250vw, 100vw" width="1280" height="853" alt="Cooks plating orders at a busy restaurant pass" loading="lazy" decoding="async" data-source="stand-in" data-subject="restaurant kitchen at service">
       </figure>
     </div>
   </section>
@@ -472,5 +472,7 @@
 <script type="module" src="assets/system.js"></script>
 <script type="module" src="assets/motion/motion.js"></script>
 <script type="module" src="assets/layout/layout.js"></script>
+<!-- the two 3D scenes (desktop only; phones keep the photographs). A real film dropped into a VIDEO SLOT replaces its scene: remove data-scene from that frame. -->
+<script type="module" src="scene.js"></script>
 </body>
 </html>
