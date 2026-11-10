@@ -3,6 +3,7 @@ import { prodDeps } from "../../../../../server/prod-deps.ts";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
+export const maxDuration = 60;
 
 export async function GET(req: Request, { params }: { params: Promise<{ restaurantId: string }> }) {
   const { restaurantId } = await params;

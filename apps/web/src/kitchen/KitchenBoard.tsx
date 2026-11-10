@@ -44,11 +44,12 @@ type Props = {
 export function KitchenBoard({ restaurant, board, connection, onAdvance }: Props) {
   const now = useNow(30_000);
   const cols = columns(board);
+  const [activeColumn, setActiveColumn] = useState<ColumnId>("new");
 
   return (
-    <div className="grid h-dvh grid-rows-[auto_auto_minmax(0,1fr)] bg-[oklch(13%_0_0)] font-[family-name:var(--font-manrope)] font-extrabold text-white">
-      <header className="flex items-center justify-between gap-4 border-b-4 border-white px-4 py-3">
-        <h1 className="truncate text-3xl uppercase tracking-tight">{restaurant}</h1>
+    <div className="grid h-dvh grid-rows-[auto_auto_auto_minmax(0,1fr)] bg-[oklch(13%_0_0)] font-[family-name:var(--font-manrope)] font-extrabold text-white md:grid-rows-[auto_auto_minmax(0,1fr)]">
+      <header className="flex items-center justify-between gap-3 border-b-4 border-white px-3 py-2 sm:px-4 sm:py-3">
+        <h1 className="truncate text-xl uppercase tracking-tight sm:text-3xl">{restaurant}</h1>
         <ConnectionPill connection={connection} />
       </header>
 
@@ -60,17 +61,31 @@ export function KitchenBoard({ restaurant, board, connection, onAdvance }: Props
         <div />
       )}
 
-      {/* Rigid columns: each scrolls on its own, nothing can push the grid off screen. */}
-      <main className="grid min-h-0 snap-x snap-mandatory auto-cols-[minmax(20rem,1fr)] grid-flow-col gap-3 overflow-x-auto p-3">
+      <nav aria-label="Kitchen stages" className="grid grid-cols-3 border-b-4 border-white md:hidden">
         {cols.map((col) => (
-          <section key={col.id} aria-labelledby={`col-${col.id}`} className="flex min-h-0 min-w-0 snap-start flex-col border-4 border-white">
-            <h2 id={`col-${col.id}`} className="flex items-baseline justify-between bg-white px-4 py-2 text-3xl uppercase text-black">
+          <button
+            key={col.id}
+            type="button"
+            onClick={() => setActiveColumn(col.id)}
+            aria-pressed={activeColumn === col.id}
+            className={`min-h-14 border-r-2 border-white px-2 text-sm uppercase last:border-r-0 ${activeColumn === col.id ? "bg-white text-black" : "bg-black text-white"}`}
+          >
+            {col.title} <span className="tabular-nums">({col.orders.length})</span>
+          </button>
+        ))}
+      </nav>
+
+      {/* Phones show one stage at a time; larger kitchen screens keep three independently scrolling columns. */}
+      <main className="min-h-0 overflow-hidden p-2 sm:p-3 md:grid md:grid-flow-col md:auto-cols-[minmax(20rem,1fr)] md:gap-3 md:overflow-x-auto">
+        {cols.map((col) => (
+          <section key={col.id} aria-labelledby={`col-${col.id}`} className={`${activeColumn === col.id ? "flex" : "hidden"} h-full min-h-0 min-w-0 flex-col border-4 border-white md:flex`}>
+            <h2 id={`col-${col.id}`} className="hidden items-baseline justify-between bg-white px-4 py-2 text-3xl uppercase text-black md:flex">
               <span>{col.title}</span>
               <span className="tabular-nums" aria-label={`${col.orders.length} tickets`}>
                 {col.orders.length}
               </span>
             </h2>
-            <ol className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overscroll-contain p-3">
+            <ol className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto overscroll-contain p-2 sm:gap-3 sm:p-3">
               {col.orders.map((order) => (
                 <Ticket key={order.id} order={order} column={col.id} now={now} onAdvance={onAdvance} />
               ))}
@@ -114,23 +129,23 @@ function Ticket({ order, column, now, onAdvance }: { order: KitchenOrder; column
   }
 
   return (
-    <li className={`flex min-w-0 shrink-0 flex-col gap-3 p-4 ${CARD[column]}`}>
+    <li className={`flex min-w-0 shrink-0 flex-col gap-3 p-3 sm:p-4 ${CARD[column]}`}>
       <div className="flex min-w-0 items-baseline justify-between gap-3">
-        <p className="truncate text-4xl leading-none">{order.table}</p>
-        <p className="shrink-0 text-3xl tabular-nums leading-none" aria-label={`${minutes} minutes ago`}>
+        <p className="truncate text-3xl leading-none sm:text-4xl">{order.table}</p>
+        <p className="shrink-0 text-2xl tabular-nums leading-none sm:text-3xl" aria-label={`${minutes} minutes ago`}>
           {minutes}′
         </p>
       </div>
       <p className="text-xl tabular-nums">#{order.publicRef}</p>
       <ul className="flex min-w-0 flex-col gap-2 border-y-4 border-current py-3">
         {order.items.map((item, i) => (
-          <li key={i} className="min-w-0 text-2xl leading-tight">
+          <li key={i} className="min-w-0 text-xl leading-tight sm:text-2xl">
             {/* Dish names and notes wrap in full, never cut: a hidden "allergy" is worse than a taller card.
                 The column scrolls on its own, so a tall card cannot push the grid. */}
             <span className="block break-words">
               {item.quantity}× {item.name}
             </span>
-            {item.notes ? <span className="mt-1 block break-words text-xl uppercase">» {item.notes}</span> : null}
+            {item.notes ? <span className="mt-1 block break-words text-lg uppercase sm:text-xl">» {item.notes}</span> : null}
           </li>
         ))}
       </ul>
@@ -139,7 +154,7 @@ function Ticket({ order, column, now, onAdvance }: { order: KitchenOrder; column
           type="button"
           onClick={() => send(action.to)}
           disabled={state === "sending" || confirming}
-          className={`min-h-16 min-w-16 w-full text-3xl uppercase transition-transform active:scale-[0.97] disabled:opacity-60 focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-white ${BUTTON[column]}`}
+          className={`min-h-14 min-w-14 w-full text-2xl uppercase transition-transform active:scale-[0.97] disabled:opacity-60 focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-white sm:min-h-16 sm:text-3xl ${BUTTON[column]}`}
         >
           {state === "sending" ? "…" : state === "failed" ? `Retry ${action.label}` : action.label}
         </button>
@@ -148,7 +163,7 @@ function Ticket({ order, column, now, onAdvance }: { order: KitchenOrder; column
           onClick={() => (confirming ? send(stop.to) : setConfirming(true))}
           disabled={state === "sending"}
           aria-label={confirming ? `Tap again to ${stop.label.toLowerCase()} ${order.table}` : `${stop.label} ${order.table}`}
-          className={`min-h-16 min-w-16 w-full border-4 px-3 text-2xl uppercase transition-transform active:scale-[0.97] disabled:opacity-60 focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-white ${
+          className={`min-h-14 min-w-14 w-full border-4 px-3 text-xl uppercase transition-transform active:scale-[0.97] disabled:opacity-60 focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-white sm:min-h-16 sm:text-2xl ${
             confirming ? "border-white bg-[oklch(50%_0.22_28)] text-white" : "border-current bg-transparent"
           }`}
         >
@@ -162,7 +177,7 @@ function Ticket({ order, column, now, onAdvance }: { order: KitchenOrder; column
 function ConnectionPill({ connection }: { connection: Connection }) {
   const live = connection === "live";
   return (
-    <p role="status" className={`shrink-0 px-3 py-1 text-xl uppercase ${live ? "bg-[oklch(80%_0.21_145)] text-black" : "bg-[oklch(55%_0.22_28)] text-white"}`}>
+    <p role="status" className={`shrink-0 px-2 py-1 text-sm uppercase sm:px-3 sm:text-xl ${live ? "bg-[oklch(80%_0.21_145)] text-black" : "bg-[oklch(55%_0.22_28)] text-white"}`}>
       {live ? "● Live" : connection === "connecting" ? "Connecting…" : connection === "denied" ? "No access" : "Offline"}
     </p>
   );

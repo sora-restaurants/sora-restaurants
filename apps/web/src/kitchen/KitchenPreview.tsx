@@ -1,6 +1,6 @@
 "use client";
 
-import { useReducer } from "react";
+import { useEffect, useReducer } from "react";
 import type { KitchenOrder } from "../server/deps.ts";
 import { applyBoardEvent, EMPTY_BOARD } from "./board-state.ts";
 import { KitchenBoard, LEAVES_BOARD, type Target } from "./KitchenBoard.tsx";
@@ -36,9 +36,9 @@ function fridayNight(): KitchenOrder[] {
 }
 
 export function KitchenPreview() {
-  const [board, dispatch] = useReducer(applyBoardEvent, undefined, () =>
-    applyBoardEvent(EMPTY_BOARD, { event: "snapshot", data: { orders: fridayNight() } }),
-  );
+  // Populate after hydration: Date.now() must not produce different server and browser HTML.
+  const [board, dispatch] = useReducer(applyBoardEvent, EMPTY_BOARD);
+  useEffect(() => dispatch({ event: "snapshot", data: { orders: fridayNight() } }), []);
   const advance = async (order: KitchenOrder, to: Target) => {
     await new Promise((r) => setTimeout(r, 250));
     dispatch(LEAVES_BOARD.includes(to) ? { event: "order_removed", data: { id: order.id } } : { event: "order", data: { ...order, status: to } });

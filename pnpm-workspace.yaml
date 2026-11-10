@@ -1,4 +1,7 @@
 packages:
   - apps/*
+
 onlyBuiltDependencies:
+  - '@embedded-postgres/darwin-arm64'
+  - esbuild
   - supabase

@@ -3,6 +3,9 @@ import type { Deps, KitchenOrder } from "./deps.ts";
 const ACTIVE = ["submitted", "accepted", "preparing", "ready"];
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const PING_MS = 15_000;
+// Vercel functions are finite-lived. Closing deliberately makes the client reconnect to a fresh
+// snapshot instead of depending on a never-ending process that the host will eventually terminate.
+const STREAM_WINDOW_MS = 25_000;
 const MEMBER_SQL = "select is_member($1, array['owner','manager','kitchen']) ok";
 // Re-read a short window behind the cursor so a transaction that committed late is not missed;
 // rows already sent with the same updated_at are skipped.
@@ -62,10 +65,12 @@ export async function kitchenStream(req: Request, restaurantId: string, deps: De
   let closed = false;
   let pollTimer: ReturnType<typeof setInterval> | undefined;
   let pingTimer: ReturnType<typeof setInterval> | undefined;
+  let windowTimer: ReturnType<typeof setTimeout> | undefined;
   const stop = () => {
     closed = true;
     clearInterval(pollTimer);
     clearInterval(pingTimer);
+    clearTimeout(windowTimer);
   };
 
   const body = new ReadableStream<Uint8Array>({
@@ -130,6 +135,12 @@ export async function kitchenStream(req: Request, restaurantId: string, deps: De
         }
       }, deps.pollMs);
       pingTimer = setInterval(() => write(": ping\n\n"), PING_MS);
+      windowTimer = setTimeout(() => {
+        if (!closed) {
+          stop();
+          controller.close();
+        }
+      }, STREAM_WINDOW_MS);
     },
     cancel: stop,
   });

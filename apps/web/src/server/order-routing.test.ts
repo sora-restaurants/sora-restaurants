@@ -3,6 +3,7 @@ import type { PGlite } from "@electric-sql/pglite";
 import { freshDb } from "../../../../supabase/tests/db";
 import { BUNNY_CHOW, DEMO, DEMO_USER, OTHER, ROOIBOS } from "../../../../supabase/tests/fixtures";
 import type { Deps } from "./deps";
+import { advanceOrder } from "./advance-order";
 import { kitchenStream } from "./kitchen-stream";
 import { readEvents } from "./sse-test-helpers";
 import { submitOrder } from "./submit-order";
@@ -83,6 +84,37 @@ describe("checkout", () => {
 });
 
 describe("kitchen board", () => {
+  it("runs the real QR token journey: submit, live arrival, cooking, ready, served", async () => {
+    const reading = readEvents(await board(DEMO, "token-A"), 5);
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    const placed = await submitOrder({ ...T4(), idempotencyKey: "journey-regression-0001" }, deps);
+    expect(placed.ok).toBe(true);
+    const { rows } = await db.query<{ id: string }>("select id from orders where public_ref = $1", [placed.ok && placed.publicRef]);
+    const orderId = rows[0].id;
+
+    for (const to of ["preparing", "ready", "served"]) {
+      await new Promise((resolve) => setTimeout(resolve, deps.pollMs * 2));
+      const response = await advanceOrder(
+        new Request(`http://x/api/kitchen/orders/${orderId}/advance`, {
+          method: "POST",
+          headers: { authorization: "Bearer token-A", "content-type": "application/json" },
+          body: JSON.stringify({ to }),
+        }),
+        orderId,
+        deps,
+      );
+      expect(response.status, to).toBe(200);
+    }
+
+    const [snapshot, arrived, cooking, ready, removed] = await reading;
+    expect(snapshot).toEqual({ event: "snapshot", data: { orders: [] } });
+    expect(arrived).toMatchObject({ event: "order", data: { publicRef: placed.ok && placed.publicRef, status: "submitted", table: "Table 4", totalCents: 28500 } });
+    expect(cooking).toMatchObject({ event: "order", data: { id: orderId, status: "preparing" } });
+    expect(ready).toMatchObject({ event: "order", data: { id: orderId, status: "ready" } });
+    expect(removed).toEqual({ event: "order_removed", data: { id: orderId, status: "served" } });
+  });
+
   it("A's board shows Table 4's order", async () => {
     await submitOrder(T4(), deps);
     const [snapshot] = await readEvents(await board(DEMO, "token-A"), 1);
