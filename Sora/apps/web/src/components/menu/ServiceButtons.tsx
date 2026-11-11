@@ -11,7 +11,7 @@ const OPTIONS = [
   { type: "other", label: "Assistance" },
 ] as const;
 
-/** Table service requests. The QR token is the only identity sent. */
+/** Table service requests. Uses the same theme tokens as the menu. */
 export function ServiceButtons({ qrToken }: { qrToken: string }) {
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
@@ -30,8 +30,8 @@ export function ServiceButtons({ qrToken }: { qrToken: string }) {
   }
 
   return (
-    <section className="rounded-theme border border-white/40 bg-white/30 p-4 backdrop-blur-md">
-      <h2 className="text-sm font-semibold">Need help?</h2>
+    <section className="border-theme rounded-theme bg-surface p-pad">
+      <h2 className="display text-xl">Need help?</h2>
       <div className="mt-3 grid grid-cols-2 gap-2">
         {OPTIONS.map((option) => (
           <button
@@ -39,13 +39,13 @@ export function ServiceButtons({ qrToken }: { qrToken: string }) {
             type="button"
             disabled={busy}
             onClick={() => void ask(option.type)}
-            className="min-h-tap rounded-full border border-white/50 bg-white/40 text-sm font-semibold"
+            className="min-h-tap rounded-theme bg-accent px-4 text-sm font-semibold text-on-accent transition-transform active:scale-95 disabled:opacity-60 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ink"
           >
             {option.label}
           </button>
         ))}
       </div>
-      {message && <p className="mt-3 text-sm">{message}</p>}
+      {message && <p className="mt-3 text-sm text-muted">{message}</p>}
     </section>
   );
 }
