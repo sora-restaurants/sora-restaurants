@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { submitOrderAction } from "../../app/actions/submit-order.ts";
 import type { ThemeId } from "../../themes/themes.ts";
+import { SlideToConfirm } from "./SlideToConfirm.tsx";
 import type { MenuItem, TableMenu } from "./types.ts";
 
 const rand = new Intl.NumberFormat("en-ZA", { style: "currency", currency: "ZAR" });
@@ -17,6 +18,7 @@ type Props = {
 };
 
 type Status = { kind: "idle" } | { kind: "sending" } | { kind: "placed"; publicRef: string } | { kind: "error"; message: string };
+type PayMethod = "counter" | "online_demo";
 
 const ERRORS: Record<string, string> = {
   item_unavailable: "Something in your order just sold out. Please check the menu and try again.",
@@ -27,6 +29,7 @@ const ERRORS: Record<string, string> = {
 export function Menu({ menu, theme, qrToken, preview = false }: Props) {
   const [cart, setCart] = useState<Record<string, number>>({});
   const [status, setStatus] = useState<Status>({ kind: "idle" });
+  const [payMethod, setPayMethod] = useState<PayMethod>("counter");
   // One key per order attempt, so a retry after a dropped connection cannot create a second order.
   const idempotencyKey = useRef<string | null>(null);
 
@@ -67,7 +70,7 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
         setStatus({ kind: "error", message: ERRORS[result.error] ?? "We couldn't send your order. Please try again." });
       }
     } catch {
-      setStatus({ kind: "error", message: "No connection. Your order was not sent yet — please try again." });
+      setStatus({ kind: "error", message: "No connection. Your order was not sent yet \u2014 please try again." });
     }
   }
 
@@ -94,7 +97,7 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
         </nav>
       </header>
 
-      <main className="mx-auto max-w-(--t-max) px-pad pb-40">
+      <main className="mx-auto max-w-(--t-max) px-pad pb-56">
         {menu.categories.map((category) => (
           <section key={category.id} id={`c-${category.id}`} aria-labelledby={`h-${category.id}`} className="scroll-mt-4 pt-[calc(var(--t-gap)*1.5)]">
             <h2 id={`h-${category.id}`} className="display mb-[var(--t-gap)] text-2xl">
@@ -109,7 +112,15 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
         ))}
       </main>
 
-      <OrderBar count={count} estimate={estimate} status={status} onPlace={placeOrder} onDismiss={() => setStatus({ kind: "idle" })} />
+      <OrderBar
+        count={count}
+        estimate={estimate}
+        status={status}
+        payMethod={payMethod}
+        onPay={setPayMethod}
+        onPlace={placeOrder}
+        onDismiss={() => setStatus({ kind: "idle" })}
+      />
     </div>
   );
 }
@@ -166,12 +177,16 @@ function OrderBar({
   count,
   estimate,
   status,
+  payMethod,
+  onPay,
   onPlace,
   onDismiss,
 }: {
   count: number;
   estimate: number;
   status: Status;
+  payMethod: PayMethod;
+  onPay: (method: PayMethod) => void;
   onPlace: () => void;
   onDismiss: () => void;
 }) {
@@ -197,22 +212,38 @@ function OrderBar({
   if (count === 0) return null;
 
   return (
-    <div className="border-theme fixed inset-x-0 bottom-0 border-0 border-t bg-surface pb-[env(safe-area-inset-bottom)]">
-      <div className="mx-auto max-w-(--t-max) p-pad">
+    <div className="border-theme fixed inset-x-0 bottom-0 border-0 border-t bg-surface/80 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl">
+      <div className="mx-auto max-w-(--t-max) space-y-3 p-pad">
+        <div className="flex items-center justify-between text-sm font-semibold">
+          <span>{count} {count === 1 ? "item" : "items"}</span>
+          <span className="tabular-nums">{formatCents(estimate)}</span>
+        </div>
+        <fieldset className="grid grid-cols-2 gap-2">
+          <legend className="sr-only">How will you pay?</legend>
+          <label className="flex items-center gap-2 rounded-theme border border-line/40 px-3 py-2 text-sm">
+            <input type="radio" name="pay" checked={payMethod === "counter"} onChange={() => onPay("counter")} />
+            Counter
+          </label>
+          <label className="flex items-center gap-2 rounded-theme border border-line/40 px-3 py-2 text-sm">
+            <input type="radio" name="pay" checked={payMethod === "online_demo"} onChange={() => onPay("online_demo")} />
+            Online demo
+          </label>
+        </fieldset>
+        {payMethod === "online_demo" && (
+          <p className="rounded-theme bg-highlight px-3 py-2 text-xs font-bold text-on-highlight">DEMO PAYMENT \u2014 NO REAL CHARGE</p>
+        )}
         {status.kind === "error" && (
-          <p role="alert" className="mb-2 rounded-theme bg-highlight p-3 text-sm text-on-highlight">
+          <p role="alert" className="rounded-theme bg-highlight p-3 text-sm text-on-highlight">
             {status.message}
           </p>
         )}
-        <button
-          type="button"
-          onClick={onPlace}
-          disabled={status.kind === "sending"}
-          className="flex min-h-14 w-full items-center justify-between gap-4 rounded-theme bg-accent px-5 font-semibold text-on-accent transition-transform active:scale-[0.98] disabled:opacity-70 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ink"
-        >
-          <span>{status.kind === "sending" ? "Sending…" : `Place order · ${count} ${count === 1 ? "item" : "items"}`}</span>
-          <span className="tabular-nums">{formatCents(estimate)}</span>
-        </button>
+        {status.kind === "sending" ? (
+          <button type="button" disabled aria-busy="true" className="flex min-h-14 w-full items-center justify-center rounded-theme bg-accent font-semibold text-on-accent opacity-70">
+            Sending\u2026
+          </button>
+        ) : (
+          <SlideToConfirm label="Slide to confirm" onConfirm={onPlace} />
+        )}
       </div>
     </div>
   );
