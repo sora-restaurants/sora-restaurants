@@ -73,3 +73,28 @@ It does not block other sessions from updating the order row itself. That is int
 - Keyboard alternative remains. Arrow keys move the knob; Enter/Space confirms.
 - `prefers-reduced-motion` disables the fill transition and spinner.
 - Haptic vibration is used only if `navigator.vibrate` exists.
+
+## Task 2 acceptance on PostgreSQL 17.10
+
+`scripts/accept-checkout-pg17.mjs` passed:
+
+- Counter order stays `submitted` and gets `awaiting_collection`.
+- Same key retry creates no second order or payment.
+- Simultaneous submit and payment create leave one of each.
+- `anon` and `authenticated` cannot execute `simulate_payment_success`.
+- A failed payment after a committed order recovers on retry with the same key.
+- The checkout idempotency key is now kept in `sessionStorage` until success, so a refresh retries the same order.
+- Slide success is set only after `onConfirm` returns true.
+
+## Task 3 — service requests
+
+- New migration `20261111000200_service_requests.sql`.
+- `create_service_request` resolves the table from the QR token. Customers cannot supply a restaurant id.
+- An open or acknowledged request of the same type is returned instead of duplicated.
+- `update_service_request` is staff-only, checks `is_member` for owner, manager, or waiter, and writes an event in the same transaction.
+- Cross-restaurant update raises `not_found`.
+- Invalid transitions raise `invalid_transition`.
+- Staff list uses RLS. The board polls every 4 seconds. Kitchen SSE is unchanged.
+- `sora_definer` was granted `SELECT` on `tables` and `restaurants`, with read policies, so it can resolve the QR token. No write grant.
+
+Verified on PostgreSQL 17.10 and in the unit suite.

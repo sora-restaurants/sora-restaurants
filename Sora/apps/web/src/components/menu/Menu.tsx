@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { checkoutAction } from "../../app/actions/checkout.ts";
 import type { ThemeId } from "../../themes/themes.ts";
+import { ServiceButtons } from "./ServiceButtons.tsx";
 import { SlideToConfirm } from "./SlideToConfirm.tsx";
 import type { MenuItem, TableMenu } from "./types.ts";
 
@@ -32,6 +33,7 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
   const [payMethod, setPayMethod] = useState<PayMethod>("counter");
   // One key per order attempt, so a retry after a dropped connection cannot create a second order.
   const idempotencyKey = useRef<string | null>(null);
+  const keyName = `sora-order-key:${qrToken}`;
 
   const items = menu.categories.flatMap((c) => c.items);
   const lines = items.filter((item) => cart[item.id]);
@@ -51,7 +53,10 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
 
   async function placeOrder(): Promise<boolean> {
     if (status.kind === "sending") return false;
-    idempotencyKey.current ??= crypto.randomUUID();
+    if (!idempotencyKey.current) {
+      idempotencyKey.current = sessionStorage.getItem(keyName) ?? crypto.randomUUID();
+      sessionStorage.setItem(keyName, idempotencyKey.current);
+    }
     setStatus({ kind: "sending" });
     if (preview) {
       setStatus({ kind: "placed", publicRef: "PREVIEW", paymentStatus: payMethod === "counter" ? "awaiting_collection" : "succeeded", simulated: payMethod === "online_demo" });
@@ -68,6 +73,7 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
         setStatus({ kind: "placed", publicRef: result.publicRef, paymentStatus: result.paymentStatus, simulated: result.simulated });
         setCart({});
         idempotencyKey.current = null;
+        sessionStorage.removeItem(keyName);
         return true;
       }
       const message = result.error === "payment_incomplete"
@@ -117,6 +123,9 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
             </ul>
           </section>
         ))}
+        <div className="pt-8">
+          <ServiceButtons qrToken={qrToken} />
+        </div>
       </main>
 
       <OrderBar

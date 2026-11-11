@@ -3,6 +3,7 @@
 import { type FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import type { KitchenOrder } from "../server/deps.ts";
 import { KitchenBoard, LEAVES_BOARD, type Target } from "./KitchenBoard.tsx";
+import { ServiceBoard } from "./ServiceBoard.tsx";
 import { type StaffAuth, staffAuth } from "./staff-auth.ts";
 import { useKitchenStream } from "./useKitchenStream.ts";
 
@@ -45,6 +46,8 @@ function KitchenSession({ auth }: { auth: StaffAuth }) {
 function LiveBoard({ restaurant, auth }: { restaurant: Restaurant; auth: StaffAuth }) {
   // Always the current token, so reconnects after a refresh keep working.
   const getToken = useCallback(() => auth.getToken(), [auth]);
+  const [token, setToken] = useState<string | null>(null);
+  useEffect(() => { void getToken().then(setToken); }, [getToken]);
   const { board, connection, dispatch } = useKitchenStream(restaurant.id, getToken);
 
   const advance = useCallback(
@@ -68,7 +71,12 @@ function LiveBoard({ restaurant, auth }: { restaurant: Restaurant; auth: StaffAu
     [dispatch, getToken],
   );
 
-  return <KitchenBoard restaurant={restaurant.name} board={board} connection={connection} onAdvance={advance} />;
+  return (
+    <>
+      <KitchenBoard restaurant={restaurant.name} board={board} connection={connection} onAdvance={advance} />
+      {token && <ServiceBoard token={token} />}
+    </>
+  );
 }
 
 function SignIn({ auth }: { auth: StaffAuth }) {
