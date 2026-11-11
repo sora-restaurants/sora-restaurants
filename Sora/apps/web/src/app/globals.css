@@ -129,30 +129,56 @@
   margin: 8px;
 }
 
-/* Liquid-glass slide-to-confirm. Frosted track + specular knob. */
+/* Premium liquid-glass slide. Frosted track, specular knob, progress fill. */
 .liquid-track {
   background:
-    linear-gradient(180deg, color-mix(in oklch, white 55%, transparent), color-mix(in oklch, white 18%, transparent)),
-    color-mix(in oklch, var(--t-surface) 72%, transparent);
-  border: 1px solid color-mix(in oklch, white 55%, var(--t-line));
+    linear-gradient(180deg, color-mix(in oklch, white 62%, transparent), color-mix(in oklch, white 16%, transparent)),
+    color-mix(in oklch, var(--t-surface) 70%, transparent);
+  border: 1px solid color-mix(in oklch, white 58%, var(--t-line));
   box-shadow:
-    inset 0 1px 0 color-mix(in oklch, white 70%, transparent),
-    inset 0 -8px 16px color-mix(in oklch, var(--t-ink) 6%, transparent),
-    0 10px 30px color-mix(in oklch, var(--t-ink) 10%, transparent);
-  backdrop-filter: blur(18px) saturate(1.4);
-  -webkit-backdrop-filter: blur(18px) saturate(1.4);
+    inset 0 1px 0 color-mix(in oklch, white 78%, transparent),
+    inset 0 -10px 18px color-mix(in oklch, var(--t-ink) 7%, transparent),
+    0 12px 28px color-mix(in oklch, var(--t-ink) 12%, transparent);
+  backdrop-filter: blur(16px) saturate(1.35);
+  -webkit-backdrop-filter: blur(16px) saturate(1.35);
+}
+.liquid-fill {
+  position: absolute;
+  inset: 4px auto 4px 4px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, color-mix(in oklch, var(--t-accent) 28%, transparent), color-mix(in oklch, var(--t-accent) 55%, white));
+  transition: width 180ms ease;
 }
 .liquid-knob {
   background:
-    radial-gradient(120% 120% at 30% 25%, color-mix(in oklch, white 85%, transparent), transparent 55%),
-    linear-gradient(160deg, color-mix(in oklch, white 40%, var(--t-accent)), var(--t-accent));
+    radial-gradient(120% 90% at 28% 22%, color-mix(in oklch, white 90%, transparent), transparent 52%),
+    linear-gradient(165deg, color-mix(in oklch, white 46%, var(--t-accent)), var(--t-accent));
   color: var(--t-on-accent);
-  border: 1px solid color-mix(in oklch, white 60%, transparent);
+  border: 1px solid color-mix(in oklch, white 70%, transparent);
   box-shadow:
-    inset 0 1px 0 color-mix(in oklch, white 80%, transparent),
-    0 8px 18px color-mix(in oklch, var(--t-ink) 18%, transparent);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+    inset 0 1px 0 color-mix(in oklch, white 85%, transparent),
+    0 8px 16px color-mix(in oklch, var(--t-ink) 16%, transparent);
+  z-index: 1;
+}
+.liquid-near {
+  box-shadow:
+    inset 0 1px 0 color-mix(in oklch, white 78%, transparent),
+    0 0 0 4px color-mix(in oklch, var(--t-accent) 28%, transparent),
+    0 12px 28px color-mix(in oklch, var(--t-accent) 18%, transparent);
+}
+.liquid-done .liquid-fill { width: 100% !important; background: color-mix(in oklch, var(--t-accent) 70%, white); }
+.liquid-failed { box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--t-accent) 40%, transparent); }
+.liquid-spin::after {
+  content: "";
+  width: 1.1rem;
+  height: 1.1rem;
+  border: 2px solid color-mix(in oklch, white 35%, transparent);
+  border-top-color: white;
+  border-radius: 999px;
+  animation: spin 0.8s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .liquid-fill, .liquid-knob, .liquid-spin::after { transition: none !important; animation: none !important; }
 }
 
 @media (prefers-reduced-motion: reduce) {

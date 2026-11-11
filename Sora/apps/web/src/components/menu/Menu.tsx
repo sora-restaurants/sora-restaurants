@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { submitOrderAction } from "../../app/actions/submit-order.ts";
+import { checkoutAction } from "../../app/actions/checkout.ts";
 import type { ThemeId } from "../../themes/themes.ts";
 import { SlideToConfirm } from "./SlideToConfirm.tsx";
 import type { MenuItem, TableMenu } from "./types.ts";
@@ -17,7 +17,7 @@ type Props = {
   preview?: boolean;
 };
 
-type Status = { kind: "idle" } | { kind: "sending" } | { kind: "placed"; publicRef: string } | { kind: "error"; message: string };
+type Status = { kind: "idle" } | { kind: "sending" } | { kind: "placed"; publicRef: string; paymentStatus: string; simulated: boolean } | { kind: "error"; message: string };
 type PayMethod = "counter" | "online_demo";
 
 const ERRORS: Record<string, string> = {
@@ -54,22 +54,26 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
     idempotencyKey.current ??= crypto.randomUUID();
     setStatus({ kind: "sending" });
     if (preview) {
-      setStatus({ kind: "placed", publicRef: "PREVIEW" });
+      setStatus({ kind: "placed", publicRef: "PREVIEW", paymentStatus: payMethod === "counter" ? "awaiting_collection" : "succeeded", simulated: payMethod === "online_demo" });
       return true;
     }
     try {
-      const result = await submitOrderAction({
+      const result = await checkoutAction({
         qrToken,
         idempotencyKey: idempotencyKey.current,
+        method: payMethod,
         items: lines.map((item) => ({ menuItemId: item.id, quantity: cart[item.id] })),
       });
       if (result.ok) {
-        setStatus({ kind: "placed", publicRef: result.publicRef });
+        setStatus({ kind: "placed", publicRef: result.publicRef, paymentStatus: result.paymentStatus, simulated: result.simulated });
         setCart({});
         idempotencyKey.current = null;
         return true;
       }
-      setStatus({ kind: "error", message: ERRORS[result.error] ?? "We couldn't send your order. Please try again." });
+      const message = result.error === "payment_incomplete"
+        ? `Order ${result.publicRef ?? ""} was received, but payment was not recorded. Slide again to finish.`
+        : ERRORS[result.error] ?? "We couldn't send your order. Please try again.";
+      setStatus({ kind: "error", message });
       return false;
     } catch {
       setStatus({ kind: "error", message: "No connection. Your order was not sent yet — please try again." });
@@ -200,6 +204,8 @@ function OrderBar({
           <p>
             <span className="display block text-xl">Order sent to the kitchen</span>
             <span className="text-sm text-muted">Reference {status.publicRef}</span>
+            <span className="mt-1 block text-sm">Payment: {status.paymentStatus.replaceAll("_", " ")}</span>
+            {status.simulated && <span className="mt-1 block text-xs font-bold">DEMO PAYMENT — NO REAL CHARGE</span>}
           </p>
           <button
             type="button"

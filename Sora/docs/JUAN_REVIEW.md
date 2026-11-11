@@ -53,3 +53,23 @@ It does not block other sessions from updating the order row itself. That is int
 - Service-request functions are not implemented.
 - Real card processing is not enabled.
 - Online payment before kitchen entry is not implemented. `submit_order` is unchanged.
+
+## Task 2 — checkout connected server-side
+
+- New `checkout` server function calls existing `submit_order`, then creates the payment.
+- `submit_order` itself is unchanged. Kitchen movement and SSE are unchanged.
+- Counter: `create_counter_payment`, status `awaiting_collection`. Not collected automatically.
+- Online demo: `create_demo_payment`, then `simulate_payment_success` only on the server. Response is marked simulated.
+- Client cannot send amount, status, or `is_simulated`. The schema is `.strict()`.
+- Order ownership is checked by joining the returned status token to the QR token's table.
+- Payment idempotency key is derived server-side from the order key and method.
+- If the order is created but payment fails, the action returns `payment_incomplete` with the reference. Retry uses the same key and does not create a second order.
+- Staff collection is a separate authenticated route that calls `mark_counter_collected` as the signed-in user.
+
+## Slide confirmation
+
+- Success state is set only after the server action returns success.
+- Failure resets the knob and shows "Try again".
+- Keyboard alternative remains. Arrow keys move the knob; Enter/Space confirms.
+- `prefers-reduced-motion` disables the fill transition and spinner.
+- Haptic vibration is used only if `navigator.vibrate` exists.
