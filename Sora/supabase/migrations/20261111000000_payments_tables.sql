@@ -142,3 +142,8 @@ create policy definer_lock_orders on public.orders
 -- is_member is SECURITY DEFINER owned by the migration role and already reads
 -- staff_memberships / restaurants as that owner. sora_definer only needs EXECUTE.
 grant execute on function public.is_member(uuid, text[]) to sora_definer;
+
+-- mark_counter_collected records auth.uid(). sora_definer must be able to call it.
+-- This does not grant staff or customers any extra access to auth data.
+grant usage on schema auth to sora_definer;
+grant execute on function auth.uid() to sora_definer;
