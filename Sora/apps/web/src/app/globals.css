@@ -99,7 +99,6 @@
     text-transform: var(--t-display-case);
     letter-spacing: var(--t-display-tracking);
   }
-  /* Mobile-first: one column; the dense braai layout goes two-up once there is room. */
   .menu-grid {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
@@ -116,7 +115,6 @@
   }
 }
 
-/* Kitchen board: new tickets pulse a thick white ring so they are seen across the kitchen. */
 @keyframes kds-pulse {
   0%,
   100% {
@@ -128,7 +126,33 @@
 }
 .kds-new {
   animation: kds-pulse 1.6s ease-in-out infinite;
-  margin: 8px; /* room for the ring inside the scrolling column */
+  margin: 8px;
+}
+
+/* Liquid-glass slide-to-confirm. Frosted track + specular knob. */
+.liquid-track {
+  background:
+    linear-gradient(180deg, color-mix(in oklch, white 55%, transparent), color-mix(in oklch, white 18%, transparent)),
+    color-mix(in oklch, var(--t-surface) 72%, transparent);
+  border: 1px solid color-mix(in oklch, white 55%, var(--t-line));
+  box-shadow:
+    inset 0 1px 0 color-mix(in oklch, white 70%, transparent),
+    inset 0 -8px 16px color-mix(in oklch, var(--t-ink) 6%, transparent),
+    0 10px 30px color-mix(in oklch, var(--t-ink) 10%, transparent);
+  backdrop-filter: blur(18px) saturate(1.4);
+  -webkit-backdrop-filter: blur(18px) saturate(1.4);
+}
+.liquid-knob {
+  background:
+    radial-gradient(120% 120% at 30% 25%, color-mix(in oklch, white 85%, transparent), transparent 55%),
+    linear-gradient(160deg, color-mix(in oklch, white 40%, var(--t-accent)), var(--t-accent));
+  color: var(--t-on-accent);
+  border: 1px solid color-mix(in oklch, white 60%, transparent);
+  box-shadow:
+    inset 0 1px 0 color-mix(in oklch, white 80%, transparent),
+    0 8px 18px color-mix(in oklch, var(--t-ink) 18%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 @media (prefers-reduced-motion: reduce) {
