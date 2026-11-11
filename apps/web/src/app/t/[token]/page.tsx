@@ -13,5 +13,5 @@ export default async function TableMenuPage({ params }: { params: Promise<{ toke
   if (token.length > 100) notFound();
   const [row] = await prodDeps().db.asService<{ m: TableMenu | null }>("select get_table_menu($1) m", [token]);
   if (!row?.m) notFound();
-  return <Menu menu={row.m} theme={resolveTheme(row.m.theme)} qrToken={token} payNowAvailable={payNowAvailable()} />;
+  return <Menu menu={row.m} theme={resolveTheme(row.m.theme)} qrToken={token} payNowAvailable={payNowAvailable(token)} />;
 }

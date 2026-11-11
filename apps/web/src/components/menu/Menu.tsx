@@ -285,7 +285,7 @@ function OrderBar({
                 className={`border-theme flex min-h-tap cursor-pointer items-center justify-center rounded-theme px-3 text-center font-semibold ${paymentChoice === c ? "bg-ink text-bg" : "bg-surface"}`}
               >
                 <input type="radio" name="payment" value={c} checked={paymentChoice === c} onChange={() => onPaymentChoice(c)} className="sr-only" />
-                {c === "pay_now" ? "Pay now" : "Pay after my meal"}
+                {c === "pay_now" ? "Pay now (demo)" : "Pay after my meal"}
               </label>
             ))}
           </fieldset>

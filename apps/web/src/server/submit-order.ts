@@ -59,7 +59,7 @@ export async function submitOrder(input: unknown, deps: Deps, env: Record<string
     const [row] = await deps.db.asService<{ r: { statusToken: string; publicRef: string; replayed: boolean; payNow: boolean } }>(
       // ::text first: postgres.js would JSON-encode a string bound straight to jsonb a second time.
       "select submit_order($1, $2, $3::text::jsonb, $4, $5, $6) r",
-      [qrToken, idempotencyKey, JSON.stringify(items), paymentChoice, email ?? null, payNowAvailable(env)],
+      [qrToken, idempotencyKey, JSON.stringify(items), paymentChoice, email ?? null, payNowAvailable(qrToken, env)],
     );
     return { ok: true, ...row.r };
   } catch (error) {

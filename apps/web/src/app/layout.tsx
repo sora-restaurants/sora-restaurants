@@ -1,5 +1,6 @@
 import { Barlow, Barlow_Condensed, Cormorant_Garamond, Manrope, Source_Serif_4 } from "next/font/google";
 import type { ReactNode } from "react";
+import { ButtonHaptics } from "../components/ButtonHaptics";
 import "./globals.css";
 
 // Every theme's faces are exposed as CSS variables; the active theme picks its pair (globals.css).
@@ -25,7 +26,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     // suppressHydrationWarning applies to these two tags only: phone translators, dark modes and extensions
     // add attributes here before React loads. Mismatches anywhere inside the page are still reported.
     <html lang="en-ZA" className={fontVariables} suppressHydrationWarning>
-      <body suppressHydrationWarning>{children}</body>
+      <body suppressHydrationWarning><ButtonHaptics />{children}</body>
     </html>
   );
 }

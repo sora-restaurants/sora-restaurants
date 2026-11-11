@@ -65,6 +65,31 @@ describe("pay now", () => {
     expect((await simulatePayment("deadbeefdeadbeef", deps, DEV)).status).toBe(404);
   });
 
+  it("allows hosted simulation only in a preview and for the configured demo table", async () => {
+    const preview = {
+      NODE_ENV: "production",
+      VERCEL: "1",
+      VERCEL_ENV: "preview",
+      DEMO_PAYMENT_TABLE_TOKEN: "demo-table-4-token",
+    };
+    const payload = {
+      qrToken: "demo-table-4-token",
+      idempotencyKey: "key-preview",
+      paymentChoice: "pay_now",
+      items: [{ menuItemId: BUNNY_CHOW, quantity: 1 }],
+    };
+    const production = { ...preview, VERCEL_ENV: "production" };
+    const wrongTable = { ...preview, DEMO_PAYMENT_TABLE_TOKEN: "another-demo-table" };
+    expect(await submitOrder(payload, deps, production)).toMatchObject({ ok: false, error: "pay_now_unavailable" });
+    expect(await submitOrder(payload, deps, wrongTable)).toMatchObject({ ok: false, error: "pay_now_unavailable" });
+    const placed = await submitOrder(payload, deps, preview);
+    if (!placed.ok) throw new Error(placed.error);
+    expect((await simulatePayment(placed.statusToken, deps, production)).status).toBe(404);
+    expect((await simulatePayment(placed.statusToken, deps, wrongTable)).status).toBe(404);
+    expect((await simulatePayment(placed.statusToken, deps, preview)).status).toBe(200);
+    expect(await row()).toMatchObject({ status: "submitted", payment_status: "paid" });
+  });
+
   it("the test payment page does not exist in production, and pay-now is refused without a payment provider", async () => {
     const placed = await order({ paymentChoice: "pay_now" });
     if (!placed.ok) throw new Error();
