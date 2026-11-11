@@ -49,12 +49,13 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
     });
   };
 
-  async function placeOrder() {
+  async function placeOrder(): Promise<boolean> {
+    if (status.kind === "sending") return false;
     idempotencyKey.current ??= crypto.randomUUID();
     setStatus({ kind: "sending" });
     if (preview) {
       setStatus({ kind: "placed", publicRef: "PREVIEW" });
-      return;
+      return true;
     }
     try {
       const result = await submitOrderAction({
@@ -66,11 +67,13 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
         setStatus({ kind: "placed", publicRef: result.publicRef });
         setCart({});
         idempotencyKey.current = null;
-      } else {
-        setStatus({ kind: "error", message: ERRORS[result.error] ?? "We couldn't send your order. Please try again." });
+        return true;
       }
+      setStatus({ kind: "error", message: ERRORS[result.error] ?? "We couldn't send your order. Please try again." });
+      return false;
     } catch {
-      setStatus({ kind: "error", message: "No connection. Your order was not sent yet \u2014 please try again." });
+      setStatus({ kind: "error", message: "No connection. Your order was not sent yet — please try again." });
+      return false;
     }
   }
 
@@ -187,7 +190,7 @@ function OrderBar({
   status: Status;
   payMethod: PayMethod;
   onPay: (method: PayMethod) => void;
-  onPlace: () => void;
+  onPlace: () => Promise<boolean>;
   onDismiss: () => void;
 }) {
   if (status.kind === "placed") {

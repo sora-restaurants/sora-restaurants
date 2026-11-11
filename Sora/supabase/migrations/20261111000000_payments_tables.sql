@@ -131,3 +131,14 @@ alter table public.payments owner to sora_definer;
 alter table public.payment_audit owner to sora_definer;
 alter table public.service_requests owner to sora_definer;
 alter table public.service_request_events owner to sora_definer;
+
+-- Minimum rights for sora_definer to read the parent order.
+-- Order serialization uses pg_advisory_xact_lock, so UPDATE on orders is not granted.
+-- No write access to orders. No access for anon. Authenticated keeps the existing staff_read policy only.
+grant select on public.orders to sora_definer;
+create policy definer_lock_orders on public.orders
+  for select to sora_definer using (true);
+
+-- is_member is SECURITY DEFINER owned by the migration role and already reads
+-- staff_memberships / restaurants as that owner. sora_definer only needs EXECUTE.
+grant execute on function public.is_member(uuid, text[]) to sora_definer;
