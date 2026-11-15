@@ -51,10 +51,8 @@ export function canChooseDoneness(name: string): boolean {
 }
 
 export function isDrink(name: string, categoryName?: string): boolean {
-  // Only actual drink categories
-  if (categoryName && /hot drinks|cold drinks|drinks|beverages/i.test(categoryName)) return true;
-  // Or a clearly named drink
-  return /coke|cola|sprite|pepsi|lemonade|smoothie|iced tea|sparkling|flat white|latte|cappuccino|espresso|hot chocolate|juice|water|tea|coffee/i.test(name);
+  // Only items in drink categories get drink options
+  return !!(categoryName && /hot drinks|cold drinks/i.test(categoryName));
 }
 
 export function isCoffee(name: string, categoryName?: string): boolean {
@@ -73,3 +71,8 @@ export function addOnCost(notes: string[]): number {
     return sum + (found?.cents ?? 0);
   }, 0);
 }
+
+
+export const CHEESECAKE_SLICE = ["1 slice", "2 slices", "Whole cake"];
+export const SMOOTHIE_FLAVOUR = ["Berry", "Mango", "Banana", "Mixed fruit", "Green"];
+export const WATER_TYPE = ["Tap water (free)", "Bottled water (+R15)", "Sparkling water (+R30)"];
