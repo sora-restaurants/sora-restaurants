@@ -128,9 +128,6 @@ export function Menu({ menu: liveMenu, theme, qrToken, preview = false }: Props)
           <div className="mb-8 flex items-center justify-between gap-3">
             <span className="restaurant-mark" aria-hidden="true">S</span>
             <div className="flex items-center gap-2">
-              <button type="button" onClick={() => setAssistanceOpen(true)} disabled={assistance !== "idle"} className="min-h-tap rounded-full border border-white/35 bg-white/10 px-4 text-sm font-bold text-white backdrop-blur active:scale-[0.98] disabled:opacity-70 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-white">
-                {assistance === "sending" ? "Calling…" : assistance === "sent" ? "Staff notified" : "Need something?"}
-              </button>
               <ColorModeToggle mode={mode} onToggle={toggle} className="border-white/35 text-white" />
               <span className="table-pill">{menu.table}</span>
             </div>
@@ -216,6 +213,11 @@ export function Menu({ menu: liveMenu, theme, qrToken, preview = false }: Props)
         </div>
       )}
       <OrderDock triggerRef={basketTrigger} count={count} estimate={estimate} status={status} onOpen={() => setBasketOpen(true)} onDismiss={() => setStatus({ kind: "idle" })} onPaid={() => setStatus((s) => s.kind === "placed" ? { ...s, paid: true } : s)} />
+      {status.kind !== "placed" && (
+        <button type="button" onClick={() => setAssistanceOpen(true)} disabled={assistance !== "idle"} className="fixed bottom-20 right-4 z-30 min-h-12 rounded-full border border-line bg-surface px-4 text-sm font-bold text-ink shadow-lg active:scale-[0.98] disabled:opacity-70">
+          {assistance === "sending" ? "Calling…" : assistance === "sent" ? "Staff notified" : "Need something?"}
+        </button>
+      )}
       {basketOpen && <BasketSheet returnFocusRef={basketTrigger} lines={lines} cart={cart} notes={notes} estimate={estimate} status={status} paymentChoice={paymentChoice} splitWays={splitWays} emailReceipt={emailReceipt} weeklySpecials={weeklySpecials} tipPercent={tipPercent} onPaymentChoice={setPaymentChoice} onSplit={setSplitWays} onEmail={setEmailReceipt} onWeekly={setWeeklySpecials} onTip={setTipPercent} onChange={setQuantity} onClose={closeBasket} onPlace={placeOrder} />}
     </div>
   );
