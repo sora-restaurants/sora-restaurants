@@ -9,6 +9,7 @@ import { SlideToPay } from "../order/SlideToPay.tsx";
 import { demoReviewsFor, type DemoReview } from "./demo-reviews.ts";
 import { demoPairings, demoWaitMinutes } from "./demo-extras.ts";
 import { DIETARY, NO_WANT, SPICE, COOKING, ADD_ONS, DRINK_SIZE, DRINK_ICE, DRINK_EXTRAS, canChooseDoneness, isDrink, isCoffee, addOnCost } from "./customise-options.ts";
+import { DEMO_MENU } from "./demo-menu.ts";
 
 const money = new Intl.NumberFormat("en-ZA", { style: "currency", currency: "ZAR" });
 const formatCents = (cents: number) => money.format(cents / 100);
@@ -27,7 +28,8 @@ const ERRORS: Record<string, string> = {
   TABLE_SESSION_NOT_ACTIVE: "Ordering has closed for this table. Please ask a member of staff for help.",
 };
 
-export function Menu({ menu, theme, qrToken, preview = false }: Props) {
+export function Menu({ menu: liveMenu, theme, qrToken, preview = false }: Props) {
+  const menu = DEMO_MENU;
   const { mode, toggle } = useColorMode("sora-customer-color-mode");
   const [cart, setCart] = useState<Record<string, number>>({});
   const [status, setStatus] = useState<Status>({ kind: "idle" });
@@ -145,15 +147,6 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
         </ul>
       </nav>
 
-      <div className="sticky top-[52px] z-10 border-b border-line/40 bg-bg/95 backdrop-blur">
-        <div className="mx-auto flex max-w-(--t-max) gap-2 overflow-x-auto px-pad py-2">
-          <button type="button" onClick={() => setFilter(null)} className={`shrink-0 rounded-full px-3 py-1 text-xs font-bold ${filter === null ? "bg-accent text-on-accent" : "border border-line"}`}>All</button>
-          {["Vegetarian", "Vegan", "Gluten-free", "Dairy-free", "Nut-free", "Halal", "Kosher", "Low-carb"].map((tag) => (
-            <button key={tag} type="button" onClick={() => setFilter(filter === tag ? null : tag)} className={`shrink-0 rounded-full px-3 py-1 text-xs font-bold ${filter === tag ? "bg-accent text-on-accent" : "border border-line"}`}>{tag}</button>
-          ))}
-        </div>
-      </div>
-
       <main id="menu-content" className="mx-auto max-w-(--t-max) px-pad pb-40">
         {(() => {
           const top = menu.categories.flatMap((c) => c.items)
@@ -189,7 +182,7 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
           </section>
         )}
         {menu.categories.length === 0 ? <EmptyMenu /> : menu.categories.map((category, categoryIndex) => {
-          const visible = filter ? category.items.filter((it) => it.dietaryTags?.some((t) => t.toLowerCase().includes(filter.toLowerCase()))) : category.items;
+          const visible = category.items;
           if (visible.length === 0) return null;
           return (
           <section key={category.id} id={`c-${category.id}`} aria-labelledby={`h-${category.id}`} className="scroll-mt-20 pt-9">
