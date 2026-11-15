@@ -25,13 +25,12 @@ export function Nav() {
       <div className="wrap nav__bar">
         <Link className="brand" href="/" onClick={close}>SORA</Link>
         <nav className="nav__links" aria-label="Main">{LINKS.map(([label, href]) => <Link key={label} href={href}>{label}</Link>)}</nav>
-        <Link className="btn btn--sm nav__cta" href="/waitlist">Join Waitlist</Link>
+        <Link className="btn btn--sm nav__cta" href="/waitlist" onClick={close}>Join Waitlist</Link>
         <button className="nav__toggle" type="button" aria-label="Menu" aria-expanded={open} aria-controls="nav-sheet" onClick={() => setOpen(!open)}><i /><i /></button>
       </div>
       <div className="nav__sheet" id="nav-sheet" inert={!open}>
         <div><div className="wrap">
           {LINKS.map(([label, href]) => <Link key={label} href={href} onClick={close}>{label}</Link>)}
-          <Link className="btn" href="/waitlist" onClick={close}>Join Waitlist</Link>
         </div></div>
       </div>
     </header>
