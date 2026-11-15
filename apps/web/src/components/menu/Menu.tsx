@@ -35,7 +35,7 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
   const [assistance, setAssistance] = useState<"idle" | "sending" | "sent">("idle");
   const [assistanceOpen, setAssistanceOpen] = useState(false);
   const [assistanceKind, setAssistanceKind] = useState<"water" | "cutlery" | "bill" | "help" | null>(null);
-  const [notes, setNotes] = useState<Record<string, string>>({});
+  const [notes, setNotes] = useState<Record<string, string[]>>({});
   const [filter, setFilter] = useState<string | null>(null);
   const [tableOrders, setTableOrders] = useState<{ ref: string; total: number; count: number }[]>([]);
   const idempotencyKey = useRef<string | null>(null);
@@ -179,7 +179,7 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
               <div><p className="mb-1 text-xs font-bold uppercase tracking-[0.18em] text-accent">Menu · {String(categoryIndex + 1).padStart(2, "0")}</p><h2 id={`h-${category.id}`} className="display text-3xl leading-none">{category.name}</h2></div>
               <span className="text-sm text-muted">{category.items.length} {category.items.length === 1 ? "dish" : "dishes"}</span>
             </div>
-            <ul className="menu-grid">{category.items.map((item, index) => <MenuCard key={item.id} item={item} quantity={cart[item.id] ?? 0} note={notes[item.id] ?? ""} index={index} onChange={setQuantity} onNote={(id, n) => setNotes((c) => ({ ...c, [id]: n }))} />)}</ul>
+            <ul className="menu-grid">{category.items.map((item, index) => <MenuCard key={item.id} item={item} quantity={cart[item.id] ?? 0} note={notes[item.id] ?? []} index={index} onChange={setQuantity} onNote={(id, opts) => setNotes((c) => ({ ...c, [id]: opts }))} />)}</ul>
           </section>
         );
         })}
@@ -205,7 +205,7 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
         </div>
       )}
       <OrderDock triggerRef={basketTrigger} count={count} estimate={estimate} status={status} onOpen={() => setBasketOpen(true)} onDismiss={() => setStatus({ kind: "idle" })} onPaid={() => setStatus((s) => s.kind === "placed" ? { ...s, paid: true } : s)} />
-      {basketOpen && <BasketSheet returnFocusRef={basketTrigger} lines={lines} cart={cart} estimate={estimate} status={status} paymentChoice={paymentChoice} onPaymentChoice={setPaymentChoice} onChange={setQuantity} onClose={closeBasket} onPlace={placeOrder} />}
+      {basketOpen && <BasketSheet returnFocusRef={basketTrigger} lines={lines} cart={cart} notes={notes} estimate={estimate} status={status} paymentChoice={paymentChoice} onPaymentChoice={setPaymentChoice} onChange={setQuantity} onClose={closeBasket} onPlace={placeOrder} />}
     </div>
   );
 }
@@ -214,7 +214,7 @@ function EmptyMenu() {
   return <section className="py-16 text-center" aria-labelledby="empty-menu-title"><p className="text-xs font-bold uppercase tracking-[0.18em] text-accent">Please check back soon</p><h2 id="empty-menu-title" className="display mt-2 text-3xl">The menu is being updated</h2><p className="mx-auto mt-3 max-w-sm text-sm leading-relaxed text-muted">There are no dishes available to order right now. A member of staff will be happy to help.</p></section>;
 }
 
-function MenuCard({ item, quantity, note, index, onChange, onNote }: { item: MenuItem; quantity: number; note: string; index: number; onChange: (id: string, q: number) => void; onNote: (id: string, n: string) => void }) {
+function MenuCard({ item, quantity, note, index, onChange, onNote }: { item: MenuItem; quantity: number; note: string[]; index: number; onChange: (id: string, q: number) => void; onNote: (id: string, opts: string[]) => void }) {
   const [showReviews, setShowReviews] = useState(false);
   const reviews = demoReviewsFor(item.name);
   return (
@@ -243,13 +243,24 @@ function MenuCard({ item, quantity, note, index, onChange, onNote }: { item: Men
         </button>
         <p className="mt-2 text-xs text-muted">Goes well with: {demoPairings(item.name).join(", ")}</p>
         {quantity > 0 && (
-          <input
-            type="text"
-            value={note}
-            onChange={(e) => onNote(item.id, e.target.value.slice(0, 120))}
-            placeholder="Add a note (e.g. no onions)"
-            className="mt-3 w-full rounded-theme border border-line bg-bg px-3 py-2 text-sm focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-accent"
-          />
+          <div className="mt-3">
+            <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">Customise (pick any)</p>
+            <div className="flex flex-wrap gap-2">
+              {["No onions", "Extra spicy", "Mild", "Sauce on the side", "No sauce", "Extra portion", "Gluten-free prep", "Well done", "Medium", "Rare"].map((opt) => {
+                const selected = note.includes(opt);
+                return (
+                  <button
+                    key={opt}
+                    type="button"
+                    onClick={() => onNote(item.id, selected ? note.filter((x) => x !== opt) : [...note, opt])}
+                    className={`rounded-full border px-3 py-1 text-xs font-bold ${selected ? "border-accent bg-accent text-on-accent" : "border-line"}`}
+                  >
+                    {opt}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         )}
         {showReviews && (
           <ul className="mt-3 space-y-3 border-t border-line/40 pt-3">
@@ -314,7 +325,7 @@ function OrderDock({ triggerRef, count, estimate, status, onOpen, onDismiss, onP
   return <div className="fixed inset-x-0 bottom-0 z-30 bg-linear-to-t from-bg via-bg to-transparent px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-8"><button ref={triggerRef} type="button" onClick={onOpen} aria-haspopup="dialog" className="mx-auto flex min-h-16 w-full max-w-(--t-max) items-center justify-between gap-4 rounded-theme bg-accent px-5 font-bold text-on-accent shadow-2xl active:scale-[0.99] focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ink"><span className="flex items-center gap-3"><span className="grid size-8 place-items-center rounded-full bg-on-accent text-sm text-accent">{count}</span>View your order</span><span className="tabular-nums">{formatCents(estimate)} <span aria-hidden="true">→</span></span></button></div>;
 }
 
-function BasketSheet({ returnFocusRef, lines, cart, estimate, status, paymentChoice, onPaymentChoice, onChange, onClose, onPlace }: { returnFocusRef: React.RefObject<HTMLButtonElement | null>; lines: MenuItem[]; cart: Record<string, number>; estimate: number; status: Status; paymentChoice: "pay_later" | "pay_now"; onPaymentChoice: (c: "pay_later" | "pay_now") => void; onChange: (id: string, q: number) => void; onClose: () => void; onPlace: () => void }) {
+function BasketSheet({ returnFocusRef, lines, cart, notes, estimate, status, paymentChoice, onPaymentChoice, onChange, onClose, onPlace }: { returnFocusRef: React.RefObject<HTMLButtonElement | null>; lines: MenuItem[]; cart: Record<string, number>; notes: Record<string, string[]>; estimate: number; status: Status; paymentChoice: "pay_later" | "pay_now"; onPaymentChoice: (c: "pay_later" | "pay_now") => void; onChange: (id: string, q: number) => void; onClose: () => void; onPlace: () => void }) {
   const dialogRef = useRef<HTMLElement | null>(null);
   const closeRef = useRef<HTMLButtonElement | null>(null);
   const descriptionId = useId();
@@ -344,7 +355,7 @@ function BasketSheet({ returnFocusRef, lines, cart, estimate, status, paymentCho
     <div className="fixed inset-0 z-40 flex items-end bg-ink/55 backdrop-blur-sm sm:items-center sm:justify-center sm:p-6" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
       <section ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="basket-title" aria-describedby={descriptionId} className="max-h-[92dvh] w-full max-w-lg overflow-y-auto rounded-t-[1.75rem] bg-bg p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] shadow-2xl sm:rounded-theme sm:p-7">
         <div className="mb-6 flex items-start justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-[0.18em] text-accent">Almost there</p><h2 id="basket-title" className="display mt-1 text-3xl">Your order</h2></div><button ref={closeRef} type="button" onClick={onClose} aria-label="Close basket" className="grid size-12 place-items-center rounded-full border border-line text-2xl focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-accent">×</button></div>
-        <ul className="divide-y divide-line/40 border-y border-line/40">{lines.map((item) => <li key={item.id} className="flex items-center justify-between gap-4 py-4"><div className="min-w-0"><h3 className="font-bold">{item.name}</h3><p className="mt-1 text-sm tabular-nums text-muted">{formatCents(item.priceCents * cart[item.id])}</p></div><QuantityControl item={item} quantity={cart[item.id]} onChange={onChange} /></li>)}</ul>
+        <ul className="divide-y divide-line/40 border-y border-line/40">{lines.map((item) => <li key={item.id} className="flex items-center justify-between gap-4 py-4"><div className="min-w-0"><h3 className="font-bold">{item.name}</h3>{notes[item.id]?.length ? <p className="mt-1 text-xs text-muted">{notes[item.id].join(", ")}</p> : null}<p className="mt-1 text-sm tabular-nums text-muted">{formatCents(item.priceCents * cart[item.id])}</p></div><QuantityControl item={item} quantity={cart[item.id]} onChange={onChange} /></li>)}</ul>
         <div className="flex items-center justify-between py-5 text-lg font-bold"><span>Estimated total</span><span className="tabular-nums">{formatCents(estimate)}</span></div>
         <p id={descriptionId} className="mb-4 text-xs leading-relaxed text-muted">The kitchen confirms final availability. Prices are securely checked when you place the order.</p>
         {status.kind === "error" && <p role="alert" className="mb-3 rounded-theme bg-highlight p-3 text-sm text-on-highlight">{status.message}</p>}
