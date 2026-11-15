@@ -30,6 +30,7 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
   const [status, setStatus] = useState<Status>({ kind: "idle" });
   const [basketOpen, setBasketOpen] = useState(false);
   const [paymentChoice, setPaymentChoice] = useState<"pay_later" | "pay_now">("pay_later");
+  const [assistance, setAssistance] = useState<"idle" | "sending" | "sent">("idle");
   const idempotencyKey = useRef<string | null>(null);
   const basketTrigger = useRef<HTMLButtonElement | null>(null);
   const closeBasket = useCallback(() => setBasketOpen(false), []);
@@ -75,11 +76,30 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
     }
   }
 
+
+  async function callAssistance() {
+    if (assistance !== "idle") return;
+    setAssistance("sending");
+    // Demo: show confirmation. Real version posts to kitchen alert endpoint.
+    await new Promise((r) => setTimeout(r, 600));
+    setAssistance("sent");
+    setTimeout(() => setAssistance("idle"), 8000);
+  }
+
   return (
     <div data-theme={theme} data-mode={mode} className="menu-shell min-h-dvh bg-bg font-body text-ink antialiased">
       <header className="menu-hero text-on-accent">
         <div className="mx-auto max-w-(--t-max) px-pad pb-7 pt-[calc(var(--t-pad)*2.25)]">
-          <div className="mb-8 flex items-center justify-between gap-3"><span className="restaurant-mark" aria-hidden="true">S</span><div className="flex items-center gap-2"><ColorModeToggle mode={mode} onToggle={toggle} className="border-white/35 text-white" /><span className="table-pill">{menu.table}</span></div></div>
+          <div className="mb-8 flex items-center justify-between gap-3">
+            <span className="restaurant-mark" aria-hidden="true">S</span>
+            <div className="flex items-center gap-2">
+              <button type="button" onClick={callAssistance} disabled={assistance !== "idle"} className="min-h-tap rounded-full border border-white/35 bg-white/10 px-4 text-sm font-bold text-white backdrop-blur active:scale-[0.98] disabled:opacity-70 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-white">
+                {assistance === "sending" ? "Calling…" : assistance === "sent" ? "Staff notified" : "Call for assistance"}
+              </button>
+              <ColorModeToggle mode={mode} onToggle={toggle} className="border-white/35 text-white" />
+              <span className="table-pill">{menu.table}</span>
+            </div>
+          </div>
           <p className="mb-2 text-xs font-bold uppercase tracking-[0.2em] opacity-80">Welcome to</p>
           <h1 className="display max-w-lg text-4xl leading-[0.95] sm:text-5xl">{menu.restaurant}</h1>
           <p className="mt-4 max-w-sm text-sm leading-relaxed opacity-80">Order at your own pace. Your selections go straight to the kitchen.</p>
@@ -104,6 +124,12 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
         ))}
       </main>
 
+      {assistance === "sent" && (
+        <div role="status" aria-live="polite" className="fixed inset-x-3 bottom-24 z-20 mx-auto max-w-(--t-max) rounded-theme bg-ink p-4 text-bg shadow-xl sm:bottom-28">
+          <p className="font-bold">Staff have been notified</p>
+          <p className="mt-1 text-sm opacity-80">Someone will be with you shortly.</p>
+        </div>
+      )}
       <OrderDock triggerRef={basketTrigger} count={count} estimate={estimate} status={status} onOpen={() => setBasketOpen(true)} onDismiss={() => setStatus({ kind: "idle" })} onPaid={() => setStatus((s) => s.kind === "placed" ? { ...s, paid: true } : s)} />
       {basketOpen && <BasketSheet returnFocusRef={basketTrigger} lines={lines} cart={cart} estimate={estimate} status={status} paymentChoice={paymentChoice} onPaymentChoice={setPaymentChoice} onChange={setQuantity} onClose={closeBasket} onPlace={placeOrder} />}
     </div>
