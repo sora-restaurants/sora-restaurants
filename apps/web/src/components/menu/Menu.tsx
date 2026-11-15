@@ -7,13 +7,14 @@ import type { MenuItem, TableMenu } from "./types.ts";
 import { ColorModeToggle, useColorMode } from "../ColorModeToggle.tsx";
 import { SlideToPay } from "../order/SlideToPay.tsx";
 import { demoReviewsFor, type DemoReview } from "./demo-reviews.ts";
+import { demoPairings, demoWaitMinutes } from "./demo-extras.ts";
 
 const money = new Intl.NumberFormat("en-ZA", { style: "currency", currency: "ZAR" });
 const formatCents = (cents: number) => money.format(cents / 100);
 type Status =
   | { kind: "idle" }
   | { kind: "sending" }
-  | { kind: "placed"; publicRef: string; itemCount: number; totalCents: number; payNow: boolean; paid: boolean }
+  | { kind: "placed"; publicRef: string; itemCount: number; totalCents: number; payNow: boolean; paid: boolean; stage: "received" | "preparing" | "ready"; wait: string }
   | { kind: "error"; message: string };
 type Props = { menu: TableMenu; theme: ThemeId; qrToken: string; preview?: boolean };
 
@@ -32,6 +33,11 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
   const [basketOpen, setBasketOpen] = useState(false);
   const [paymentChoice, setPaymentChoice] = useState<"pay_later" | "pay_now">("pay_later");
   const [assistance, setAssistance] = useState<"idle" | "sending" | "sent">("idle");
+  const [assistanceOpen, setAssistanceOpen] = useState(false);
+  const [assistanceKind, setAssistanceKind] = useState<"water" | "cutlery" | "bill" | "help" | null>(null);
+  const [notes, setNotes] = useState<Record<string, string>>({});
+  const [filter, setFilter] = useState<string | null>(null);
+  const [tableOrders, setTableOrders] = useState<{ ref: string; total: number; count: number }[]>([]);
   const idempotencyKey = useRef<string | null>(null);
   const basketTrigger = useRef<HTMLButtonElement | null>(null);
   const closeBasket = useCallback(() => setBasketOpen(false), []);
@@ -56,7 +62,9 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
     idempotencyKey.current ??= crypto.randomUUID();
     setStatus({ kind: "sending" });
     if (preview) {
-      setStatus({ kind: "placed", publicRef: "PREVIEW", itemCount: count, totalCents: estimate, payNow: paymentChoice === "pay_now", paid: false });
+      const wait = demoWaitMinutes(count);
+      setStatus({ kind: "placed", publicRef: "PREVIEW", itemCount: count, totalCents: estimate, payNow: paymentChoice === "pay_now", paid: false, stage: "received", wait });
+      setTableOrders((prev) => [{ ref: "PREVIEW", total: estimate, count }, ...prev].slice(0, 5));
       setBasketOpen(false);
       return;
     }
@@ -67,7 +75,12 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
         items: lines.map((item) => ({ menuItemId: item.id, quantity: cart[item.id] })),
       });
       if (result.ok) {
-        setStatus({ kind: "placed", publicRef: result.publicRef, itemCount: count, totalCents: estimate, payNow: paymentChoice === "pay_now", paid: false });
+        const wait = demoWaitMinutes(count);
+        setStatus({ kind: "placed", publicRef: result.publicRef, itemCount: count, totalCents: estimate, payNow: paymentChoice === "pay_now", paid: false, stage: "received", wait });
+        setTableOrders((prev) => [{ ref: result.publicRef, total: estimate, count }, ...prev].slice(0, 5));
+        // Demo progression
+        setTimeout(() => setStatus((s) => s.kind === "placed" ? { ...s, stage: "preparing" } : s), 4000);
+        setTimeout(() => setStatus((s) => s.kind === "placed" ? { ...s, stage: "ready" } : s), 12000);
         setCart({});
         setBasketOpen(false);
         idempotencyKey.current = null;
@@ -78,13 +91,14 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
   }
 
 
-  async function callAssistance() {
+  async function callAssistance(kind: "water" | "cutlery" | "bill" | "help") {
     if (assistance !== "idle") return;
+    setAssistanceKind(kind);
     setAssistance("sending");
-    // Demo: show confirmation. Real version posts to kitchen alert endpoint.
+    setAssistanceOpen(false);
     await new Promise((r) => setTimeout(r, 600));
     setAssistance("sent");
-    setTimeout(() => setAssistance("idle"), 8000);
+    setTimeout(() => { setAssistance("idle"); setAssistanceKind(null); }, 8000);
   }
 
   return (
@@ -94,8 +108,8 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
           <div className="mb-8 flex items-center justify-between gap-3">
             <span className="restaurant-mark" aria-hidden="true">S</span>
             <div className="flex items-center gap-2">
-              <button type="button" onClick={callAssistance} disabled={assistance !== "idle"} className="min-h-tap rounded-full border border-white/35 bg-white/10 px-4 text-sm font-bold text-white backdrop-blur active:scale-[0.98] disabled:opacity-70 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-white">
-                {assistance === "sending" ? "Calling…" : assistance === "sent" ? "Staff notified" : "Call for assistance"}
+              <button type="button" onClick={() => setAssistanceOpen(true)} disabled={assistance !== "idle"} className="min-h-tap rounded-full border border-white/35 bg-white/10 px-4 text-sm font-bold text-white backdrop-blur active:scale-[0.98] disabled:opacity-70 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-white">
+                {assistance === "sending" ? "Calling…" : assistance === "sent" ? "Staff notified" : "Need something?"}
               </button>
               <ColorModeToggle mode={mode} onToggle={toggle} className="border-white/35 text-white" />
               <span className="table-pill">{menu.table}</span>
@@ -112,6 +126,15 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
           {menu.categories.map((category, index) => <li key={category.id}><a href={`#c-${category.id}`} className="category-chip focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-accent"><span aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>{category.name}</a></li>)}
         </ul>
       </nav>
+
+      <div className="sticky top-[52px] z-10 border-b border-line/40 bg-bg/95 backdrop-blur">
+        <div className="mx-auto flex max-w-(--t-max) gap-2 overflow-x-auto px-pad py-2">
+          <button type="button" onClick={() => setFilter(null)} className={`shrink-0 rounded-full px-3 py-1 text-xs font-bold ${filter === null ? "bg-accent text-on-accent" : "border border-line"}`}>All</button>
+          {["Vegetarian", "Vegan", "Gluten-free", "Halal"].map((tag) => (
+            <button key={tag} type="button" onClick={() => setFilter(filter === tag ? null : tag)} className={`shrink-0 rounded-full px-3 py-1 text-xs font-bold ${filter === tag ? "bg-accent text-on-accent" : "border border-line"}`}>{tag}</button>
+          ))}
+        </div>
+      </div>
 
       <main id="menu-content" className="mx-auto max-w-(--t-max) px-pad pb-40">
         {(() => {
@@ -137,21 +160,48 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
           );
         })()}
 
-        {menu.categories.length === 0 ? <EmptyMenu /> : menu.categories.map((category, categoryIndex) => (
+        {tableOrders.length > 0 && (
+          <section className="mt-6 rounded-theme border border-line/40 bg-surface p-4" aria-label="Your table so far">
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent">Your table so far</p>
+            <ul className="mt-2 space-y-1 text-sm">
+              {tableOrders.map((o) => (
+                <li key={o.ref} className="flex justify-between"><span>Order {o.ref} · {o.count} items</span><span className="font-bold">{formatCents(o.total)}</span></li>
+              ))}
+            </ul>
+          </section>
+        )}
+        {menu.categories.length === 0 ? <EmptyMenu /> : menu.categories.map((category, categoryIndex) => {
+          const visible = filter ? category.items.filter((it) => it.dietaryTags?.some((t) => t.toLowerCase().includes(filter.toLowerCase()))) : category.items;
+          if (visible.length === 0) return null;
+          return (
           <section key={category.id} id={`c-${category.id}`} aria-labelledby={`h-${category.id}`} className="scroll-mt-20 pt-9">
             <div className="mb-5 flex items-end justify-between gap-4 border-b border-line/40 pb-3">
               <div><p className="mb-1 text-xs font-bold uppercase tracking-[0.18em] text-accent">Menu · {String(categoryIndex + 1).padStart(2, "0")}</p><h2 id={`h-${category.id}`} className="display text-3xl leading-none">{category.name}</h2></div>
               <span className="text-sm text-muted">{category.items.length} {category.items.length === 1 ? "dish" : "dishes"}</span>
             </div>
-            <ul className="menu-grid">{category.items.map((item, index) => <MenuCard key={item.id} item={item} quantity={cart[item.id] ?? 0} index={index} onChange={setQuantity} />)}</ul>
+            <ul className="menu-grid">{category.items.map((item, index) => <MenuCard key={item.id} item={item} quantity={cart[item.id] ?? 0} note={notes[item.id] ?? ""} index={index} onChange={setQuantity} onNote={(id, n) => setNotes((c) => ({ ...c, [id]: n }))} />)}</ul>
           </section>
-        ))}
+        );
+        })}
       </main>
 
       {assistance === "sent" && (
         <div role="status" aria-live="polite" className="fixed inset-x-3 bottom-24 z-20 mx-auto max-w-(--t-max) rounded-theme bg-ink p-4 text-bg shadow-xl sm:bottom-28">
-          <p className="font-bold">Staff have been notified</p>
+          <p className="font-bold">Staff notified{assistanceKind ? ` · ${assistanceKind}` : ""}</p>
           <p className="mt-1 text-sm opacity-80">Someone will be with you shortly.</p>
+        </div>
+      )}
+      {assistanceOpen && (
+        <div className="fixed inset-0 z-40 flex items-end bg-ink/50 backdrop-blur-sm" onMouseDown={(e) => e.target === e.currentTarget && setAssistanceOpen(false)}>
+          <div className="w-full rounded-t-3xl bg-bg p-5 pb-8">
+            <p className="mb-4 text-lg font-bold">What do you need?</p>
+            <div className="grid grid-cols-2 gap-3">
+              {(["water", "cutlery", "bill", "help"] as const).map((k) => (
+                <button key={k} type="button" onClick={() => callAssistance(k)} className="min-h-14 rounded-theme border-2 border-line font-bold capitalize">{k === "help" ? "General help" : k}</button>
+              ))}
+            </div>
+            <button type="button" onClick={() => setAssistanceOpen(false)} className="mt-4 w-full text-sm text-muted">Cancel</button>
+          </div>
         </div>
       )}
       <OrderDock triggerRef={basketTrigger} count={count} estimate={estimate} status={status} onOpen={() => setBasketOpen(true)} onDismiss={() => setStatus({ kind: "idle" })} onPaid={() => setStatus((s) => s.kind === "placed" ? { ...s, paid: true } : s)} />
@@ -164,7 +214,7 @@ function EmptyMenu() {
   return <section className="py-16 text-center" aria-labelledby="empty-menu-title"><p className="text-xs font-bold uppercase tracking-[0.18em] text-accent">Please check back soon</p><h2 id="empty-menu-title" className="display mt-2 text-3xl">The menu is being updated</h2><p className="mx-auto mt-3 max-w-sm text-sm leading-relaxed text-muted">There are no dishes available to order right now. A member of staff will be happy to help.</p></section>;
 }
 
-function MenuCard({ item, quantity, index, onChange }: { item: MenuItem; quantity: number; index: number; onChange: (id: string, q: number) => void }) {
+function MenuCard({ item, quantity, note, index, onChange, onNote }: { item: MenuItem; quantity: number; note: string; index: number; onChange: (id: string, q: number) => void; onNote: (id: string, n: string) => void }) {
   const [showReviews, setShowReviews] = useState(false);
   const reviews = demoReviewsFor(item.name);
   return (
@@ -191,6 +241,16 @@ function MenuCard({ item, quantity, index, onChange }: { item: MenuItem; quantit
         <button type="button" onClick={() => setShowReviews((v) => !v)} className="mt-3 self-start text-sm font-semibold text-accent underline-offset-2 hover:underline focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-accent">
           {showReviews ? "Hide reviews" : `See ${reviews.reviews.length} reviews`}
         </button>
+        <p className="mt-2 text-xs text-muted">Goes well with: {demoPairings(item.name).join(", ")}</p>
+        {quantity > 0 && (
+          <input
+            type="text"
+            value={note}
+            onChange={(e) => onNote(item.id, e.target.value.slice(0, 120))}
+            placeholder="Add a note (e.g. no onions)"
+            className="mt-3 w-full rounded-theme border border-line bg-bg px-3 py-2 text-sm focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-accent"
+          />
+        )}
         {showReviews && (
           <ul className="mt-3 space-y-3 border-t border-line/40 pt-3">
             {reviews.reviews.map((r, i) => (
@@ -231,7 +291,25 @@ function OrderDock({ triggerRef, count, estimate, status, onOpen, onDismiss, onP
       </div>
     );
   }
-  if (status.kind === "placed") return <div role="status" aria-live="polite" className="fixed inset-x-3 bottom-3 z-30 mx-auto max-w-(--t-max) rounded-theme bg-ink p-5 text-bg shadow-2xl"><div className="flex items-center justify-between gap-4"><p><span className="display block text-xl text-on-accent">{status.payNow && status.paid ? "Payment confirmed (demo)" : "Order sent to the kitchen"}</span><span className="mt-1 block text-sm opacity-75">Reference <strong className="tracking-wide text-bg">{status.publicRef}</strong> · {status.itemCount} {status.itemCount === 1 ? "item" : "items"} · {formatCents(status.totalCents)}</span></p><button type="button" onClick={onDismiss} className="min-h-tap shrink-0 rounded-full border border-bg/30 px-4 font-semibold focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-bg">Order more</button></div></div>;
+  if (status.kind === "placed") {
+    const stageLabel = status.stage === "ready" ? "Ready" : status.stage === "preparing" ? "Preparing" : "Received";
+    return (
+      <div role="status" aria-live="polite" className="fixed inset-x-3 bottom-3 z-30 mx-auto max-w-(--t-max) rounded-theme bg-ink p-5 text-bg shadow-2xl">
+        <div className="mb-3 flex items-center justify-between gap-4">
+          <p>
+            <span className="display block text-xl text-on-accent">{status.payNow && status.paid ? "Payment confirmed (demo)" : stageLabel}</span>
+            <span className="mt-1 block text-sm opacity-75">Ref <strong className="tracking-wide text-bg">{status.publicRef}</strong> · usually ready in {status.wait} min</span>
+          </p>
+          <button type="button" onClick={onDismiss} className="min-h-tap shrink-0 rounded-full border border-bg/30 px-4 font-semibold">Order more</button>
+        </div>
+        <div className="flex gap-1">
+          {["received", "preparing", "ready"].map((s) => (
+            <div key={s} className={`h-1 flex-1 rounded-full ${status.stage === s || (s === "received" && status.stage !== "received") || (s === "preparing" && status.stage === "ready") ? "bg-accent" : "bg-bg/30"}`} />
+          ))}
+        </div>
+      </div>
+    );
+  }
   if (count === 0) return null;
   return <div className="fixed inset-x-0 bottom-0 z-30 bg-linear-to-t from-bg via-bg to-transparent px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-8"><button ref={triggerRef} type="button" onClick={onOpen} aria-haspopup="dialog" className="mx-auto flex min-h-16 w-full max-w-(--t-max) items-center justify-between gap-4 rounded-theme bg-accent px-5 font-bold text-on-accent shadow-2xl active:scale-[0.99] focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ink"><span className="flex items-center gap-3"><span className="grid size-8 place-items-center rounded-full bg-on-accent text-sm text-accent">{count}</span>View your order</span><span className="tabular-nums">{formatCents(estimate)} <span aria-hidden="true">→</span></span></button></div>;
 }
