@@ -380,6 +380,7 @@ function MenuCard({ item, categoryName, quantity, note, index, onChange, onNote 
                     </div>
                   </div>
                 ) : (
+                <>
                 <div>
                   <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">Dietary</p>
                   <div className="flex flex-wrap gap-2">
@@ -417,6 +418,7 @@ function MenuCard({ item, categoryName, quantity, note, index, onChange, onNote 
                     })}
                   </div>
                 </div>
+                </>
                 )}
                 {canChooseDoneness(item.name) && (
                   <div>
