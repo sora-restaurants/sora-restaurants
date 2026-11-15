@@ -5,13 +5,14 @@ import { submitOrderAction } from "../../app/actions/submit-order.ts";
 import type { ThemeId } from "../../themes/themes.ts";
 import type { MenuItem, TableMenu } from "./types.ts";
 import { ColorModeToggle, useColorMode } from "../ColorModeToggle.tsx";
+import { SlideToPay } from "../order/SlideToPay.tsx";
 
 const money = new Intl.NumberFormat("en-ZA", { style: "currency", currency: "ZAR" });
 const formatCents = (cents: number) => money.format(cents / 100);
 type Status =
   | { kind: "idle" }
   | { kind: "sending" }
-  | { kind: "placed"; publicRef: string; itemCount: number; totalCents: number }
+  | { kind: "placed"; publicRef: string; itemCount: number; totalCents: number; payNow: boolean; paid: boolean }
   | { kind: "error"; message: string };
 type Props = { menu: TableMenu; theme: ThemeId; qrToken: string; preview?: boolean };
 
@@ -28,6 +29,7 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
   const [cart, setCart] = useState<Record<string, number>>({});
   const [status, setStatus] = useState<Status>({ kind: "idle" });
   const [basketOpen, setBasketOpen] = useState(false);
+  const [paymentChoice, setPaymentChoice] = useState<"pay_later" | "pay_now">("pay_later");
   const idempotencyKey = useRef<string | null>(null);
   const basketTrigger = useRef<HTMLButtonElement | null>(null);
   const closeBasket = useCallback(() => setBasketOpen(false), []);
@@ -52,7 +54,7 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
     idempotencyKey.current ??= crypto.randomUUID();
     setStatus({ kind: "sending" });
     if (preview) {
-      setStatus({ kind: "placed", publicRef: "PREVIEW", itemCount: count, totalCents: estimate });
+      setStatus({ kind: "placed", publicRef: "PREVIEW", itemCount: count, totalCents: estimate, payNow: paymentChoice === "pay_now", paid: false });
       setBasketOpen(false);
       return;
     }
@@ -63,7 +65,7 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
         items: lines.map((item) => ({ menuItemId: item.id, quantity: cart[item.id] })),
       });
       if (result.ok) {
-        setStatus({ kind: "placed", publicRef: result.publicRef, itemCount: count, totalCents: estimate });
+        setStatus({ kind: "placed", publicRef: result.publicRef, itemCount: count, totalCents: estimate, payNow: paymentChoice === "pay_now", paid: false });
         setCart({});
         setBasketOpen(false);
         idempotencyKey.current = null;
@@ -102,8 +104,8 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
         ))}
       </main>
 
-      <OrderDock triggerRef={basketTrigger} count={count} estimate={estimate} status={status} onOpen={() => setBasketOpen(true)} onDismiss={() => setStatus({ kind: "idle" })} />
-      {basketOpen && <BasketSheet returnFocusRef={basketTrigger} lines={lines} cart={cart} estimate={estimate} status={status} onChange={setQuantity} onClose={closeBasket} onPlace={placeOrder} />}
+      <OrderDock triggerRef={basketTrigger} count={count} estimate={estimate} status={status} onOpen={() => setBasketOpen(true)} onDismiss={() => setStatus({ kind: "idle" })} onPaid={() => setStatus((s) => s.kind === "placed" ? { ...s, paid: true } : s)} />
+      {basketOpen && <BasketSheet returnFocusRef={basketTrigger} lines={lines} cart={cart} estimate={estimate} status={status} paymentChoice={paymentChoice} onPaymentChoice={setPaymentChoice} onChange={setQuantity} onClose={closeBasket} onPlace={placeOrder} />}
     </div>
   );
 }
@@ -136,13 +138,22 @@ function StepButton({ label, onClick, disabled, children }: { label: string; onC
   return <button type="button" onClick={onClick} disabled={disabled} aria-label={label} className="grid size-11 place-items-center rounded-full bg-ink text-xl font-bold text-bg active:scale-95 disabled:opacity-40 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-accent"><span aria-hidden="true">{children}</span></button>;
 }
 
-function OrderDock({ triggerRef, count, estimate, status, onOpen, onDismiss }: { triggerRef: React.RefObject<HTMLButtonElement | null>; count: number; estimate: number; status: Status; onOpen: () => void; onDismiss: () => void }) {
-  if (status.kind === "placed") return <div role="status" aria-live="polite" className="fixed inset-x-3 bottom-3 z-30 mx-auto max-w-(--t-max) rounded-theme bg-ink p-5 text-bg shadow-2xl"><div className="flex items-center justify-between gap-4"><p><span className="display block text-xl text-on-accent">Order sent to the kitchen</span><span className="mt-1 block text-sm opacity-75">Reference <strong className="tracking-wide text-bg">{status.publicRef}</strong> · {status.itemCount} {status.itemCount === 1 ? "item" : "items"} · {formatCents(status.totalCents)}</span></p><button type="button" onClick={onDismiss} className="min-h-tap shrink-0 rounded-full border border-bg/30 px-4 font-semibold focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-bg">Order more</button></div></div>;
+function OrderDock({ triggerRef, count, estimate, status, onOpen, onDismiss, onPaid }: { triggerRef: React.RefObject<HTMLButtonElement | null>; count: number; estimate: number; status: Status; onOpen: () => void; onDismiss: () => void; onPaid: () => void }) {
+  if (status.kind === "placed" && status.payNow && !status.paid) {
+    return (
+      <div className="fixed inset-x-3 bottom-3 z-30 mx-auto max-w-(--t-max) rounded-theme bg-ink p-5 text-bg shadow-2xl">
+        <p className="mb-3 text-sm font-bold text-on-accent">Demo payment · no real charge</p>
+        <p className="mb-4 text-lg font-bold">Pay for order {status.publicRef}</p>
+        <SlideToPay amount={formatCents(status.totalCents)} pending={false} onConfirm={onPaid} />
+      </div>
+    );
+  }
+  if (status.kind === "placed") return <div role="status" aria-live="polite" className="fixed inset-x-3 bottom-3 z-30 mx-auto max-w-(--t-max) rounded-theme bg-ink p-5 text-bg shadow-2xl"><div className="flex items-center justify-between gap-4"><p><span className="display block text-xl text-on-accent">{status.payNow && status.paid ? "Payment confirmed (demo)" : "Order sent to the kitchen"}</span><span className="mt-1 block text-sm opacity-75">Reference <strong className="tracking-wide text-bg">{status.publicRef}</strong> · {status.itemCount} {status.itemCount === 1 ? "item" : "items"} · {formatCents(status.totalCents)}</span></p><button type="button" onClick={onDismiss} className="min-h-tap shrink-0 rounded-full border border-bg/30 px-4 font-semibold focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-bg">Order more</button></div></div>;
   if (count === 0) return null;
   return <div className="fixed inset-x-0 bottom-0 z-30 bg-linear-to-t from-bg via-bg to-transparent px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-8"><button ref={triggerRef} type="button" onClick={onOpen} aria-haspopup="dialog" className="mx-auto flex min-h-16 w-full max-w-(--t-max) items-center justify-between gap-4 rounded-theme bg-accent px-5 font-bold text-on-accent shadow-2xl active:scale-[0.99] focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ink"><span className="flex items-center gap-3"><span className="grid size-8 place-items-center rounded-full bg-on-accent text-sm text-accent">{count}</span>View your order</span><span className="tabular-nums">{formatCents(estimate)} <span aria-hidden="true">→</span></span></button></div>;
 }
 
-function BasketSheet({ returnFocusRef, lines, cart, estimate, status, onChange, onClose, onPlace }: { returnFocusRef: React.RefObject<HTMLButtonElement | null>; lines: MenuItem[]; cart: Record<string, number>; estimate: number; status: Status; onChange: (id: string, q: number) => void; onClose: () => void; onPlace: () => void }) {
+function BasketSheet({ returnFocusRef, lines, cart, estimate, status, paymentChoice, onPaymentChoice, onChange, onClose, onPlace }: { returnFocusRef: React.RefObject<HTMLButtonElement | null>; lines: MenuItem[]; cart: Record<string, number>; estimate: number; status: Status; paymentChoice: "pay_later" | "pay_now"; onPaymentChoice: (c: "pay_later" | "pay_now") => void; onChange: (id: string, q: number) => void; onClose: () => void; onPlace: () => void }) {
   const dialogRef = useRef<HTMLElement | null>(null);
   const closeRef = useRef<HTMLButtonElement | null>(null);
   const descriptionId = useId();
@@ -176,6 +187,10 @@ function BasketSheet({ returnFocusRef, lines, cart, estimate, status, onChange, 
         <div className="flex items-center justify-between py-5 text-lg font-bold"><span>Estimated total</span><span className="tabular-nums">{formatCents(estimate)}</span></div>
         <p id={descriptionId} className="mb-4 text-xs leading-relaxed text-muted">The kitchen confirms final availability. Prices are securely checked when you place the order.</p>
         {status.kind === "error" && <p role="alert" className="mb-3 rounded-theme bg-highlight p-3 text-sm text-on-highlight">{status.message}</p>}
+        <div className="mb-4 grid grid-cols-2 gap-2">
+          <button type="button" onClick={() => onPaymentChoice("pay_later")} className={`min-h-12 rounded-theme border-2 px-3 text-sm font-bold ${paymentChoice === "pay_later" ? "border-accent bg-accent text-on-accent" : "border-line"}`}>Pay after my meal</button>
+          <button type="button" onClick={() => onPaymentChoice("pay_now")} className={`min-h-12 rounded-theme border-2 px-3 text-sm font-bold ${paymentChoice === "pay_now" ? "border-accent bg-accent text-on-accent" : "border-line"}`}>Pay now (demo)</button>
+        </div>
         <button type="button" onClick={onPlace} disabled={status.kind === "sending" || lines.length === 0} aria-busy={status.kind === "sending"} className="flex min-h-16 w-full items-center justify-center gap-3 rounded-theme bg-accent px-5 text-lg font-bold text-on-accent active:scale-[0.99] disabled:opacity-65">{status.kind === "sending" ? <><span className="spinner" aria-hidden="true" />Sending to kitchen…</> : "Place order"}</button>
       </section>
     </div>
