@@ -11,7 +11,9 @@ const digest = (s: string) => createHash("sha256").update(s).digest();
 const sign = (payload: string, secret: string) => createHmac("sha256", secret).update(payload).digest("hex");
 
 export function adminConfigured(env: NodeJS.ProcessEnv = process.env): boolean {
-  return (env.ADMIN_PASSWORD?.length ?? 0) >= 12 && (env.ADMIN_SESSION_SECRET?.length ?? 0) >= 32;
+  const localDemoPassword = env.NODE_ENV === "development" && !env.VERCEL && env.ADMIN_PASSWORD === "Sora";
+  return (localDemoPassword || (env.ADMIN_PASSWORD?.length ?? 0) >= 12) &&
+    (env.ADMIN_SESSION_SECRET?.length ?? 0) >= 32;
 }
 
 export function passwordMatches(given: string, env: NodeJS.ProcessEnv = process.env): boolean {
