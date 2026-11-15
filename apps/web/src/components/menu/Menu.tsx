@@ -6,6 +6,7 @@ import type { ThemeId } from "../../themes/themes.ts";
 import type { MenuItem, TableMenu } from "./types.ts";
 import { ColorModeToggle, useColorMode } from "../ColorModeToggle.tsx";
 import { SlideToPay } from "../order/SlideToPay.tsx";
+import { demoReviewsFor, type DemoReview } from "./demo-reviews.ts";
 
 const money = new Intl.NumberFormat("en-ZA", { style: "currency", currency: "ZAR" });
 const formatCents = (cents: number) => money.format(cents / 100);
@@ -113,6 +114,29 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
       </nav>
 
       <main id="menu-content" className="mx-auto max-w-(--t-max) px-pad pb-40">
+        {(() => {
+          const top = menu.categories.flatMap((c) => c.items)
+            .map((item) => ({ item, ...demoReviewsFor(item.name) }))
+            .filter((x) => x.badge)
+            .sort((a, b) => b.rating - a.rating)
+            .slice(0, 3);
+          if (top.length === 0) return null;
+          return (
+            <section className="pt-6" aria-label="Guest favourites">
+              <p className="mb-3 text-xs font-bold uppercase tracking-[0.18em] text-accent">Guest favourites</p>
+              <ul className="flex gap-3 overflow-x-auto pb-2">
+                {top.map(({ item, rating, badge }) => (
+                  <li key={item.id} className="min-w-48 shrink-0 rounded-theme border border-line/40 bg-surface p-3">
+                    <p className="text-xs font-bold uppercase tracking-wide text-accent">{badge}</p>
+                    <p className="mt-1 font-bold leading-tight">{item.name}</p>
+                    <p className="mt-1 text-sm text-muted">★ {rating}</p>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          );
+        })()}
+
         {menu.categories.length === 0 ? <EmptyMenu /> : menu.categories.map((category, categoryIndex) => (
           <section key={category.id} id={`c-${category.id}`} aria-labelledby={`h-${category.id}`} className="scroll-mt-20 pt-9">
             <div className="mb-5 flex items-end justify-between gap-4 border-b border-line/40 pb-3">
@@ -141,13 +165,46 @@ function EmptyMenu() {
 }
 
 function MenuCard({ item, quantity, index, onChange }: { item: MenuItem; quantity: number; index: number; onChange: (id: string, q: number) => void }) {
+  const [showReviews, setShowReviews] = useState(false);
+  const reviews = demoReviewsFor(item.name);
   return (
     <li className="menu-card overflow-hidden rounded-theme border border-line/40 bg-surface shadow-[0_12px_40px_color-mix(in_oklch,var(--t-ink)_7%,transparent)]">
       {item.imageUrl ? <div className="relative h-52 overflow-hidden"><img src={item.imageUrl} alt="" className="size-full object-cover" /><div className="absolute inset-x-0 bottom-0 h-20 bg-linear-to-t from-black/45 to-transparent" /></div> : <div className={`dish-art dish-art-${index % 3}`} aria-hidden="true"><span>{item.name.slice(0, 1)}</span></div>}
       <div className="flex min-h-40 flex-col p-5">
-        <div className="flex items-start justify-between gap-3"><h3 className="display text-2xl leading-none">{item.name}</h3><p className="shrink-0 font-bold tabular-nums text-accent">{formatCents(item.priceCents)}</p></div>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h3 className="display text-2xl leading-none">{item.name}</h3>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-1 text-sm font-bold text-accent" aria-label={`${reviews.rating} out of 5 stars`}>
+                {"★".repeat(Math.round(reviews.rating))}{"☆".repeat(5 - Math.round(reviews.rating))}
+                <span className="ml-1 tabular-nums">{reviews.rating}</span>
+              </span>
+              <span className="text-xs text-muted">({reviews.count})</span>
+              {reviews.badge && <span className="rounded-full bg-accent/15 px-2 py-0.5 text-[0.65rem] font-bold uppercase tracking-wide text-accent">{reviews.badge}</span>}
+            </div>
+          </div>
+          <p className="shrink-0 font-bold tabular-nums text-accent">{formatCents(item.priceCents)}</p>
+        </div>
         {item.description ? <p className="mt-3 text-sm leading-relaxed text-muted">{item.description}</p> : <p className="mt-3 text-sm italic text-muted">Made fresh to order</p>}
         {item.dietaryTags?.length ? <ul aria-label="Dietary information" className="mt-3 flex flex-wrap gap-2">{item.dietaryTags.map((tag) => <li key={tag} className="rounded-full border border-line/40 px-2 py-1 text-[0.7rem] font-bold uppercase tracking-wide text-muted">{tag}</li>)}</ul> : null}
+
+        <button type="button" onClick={() => setShowReviews((v) => !v)} className="mt-3 self-start text-sm font-semibold text-accent underline-offset-2 hover:underline focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-accent">
+          {showReviews ? "Hide reviews" : `See ${reviews.reviews.length} reviews`}
+        </button>
+        {showReviews && (
+          <ul className="mt-3 space-y-3 border-t border-line/40 pt-3">
+            {reviews.reviews.map((r, i) => (
+              <li key={i} className="text-sm">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-bold">{r.author}</span>
+                  <span className="text-xs text-muted">{r.date} · {"★".repeat(r.rating)}</span>
+                </div>
+                <p className="mt-1 text-muted">{r.text}</p>
+              </li>
+            ))}
+          </ul>
+        )}
+
         <div className="mt-auto flex justify-end pt-5">
           {item.soldOut ? <span className="inline-flex min-h-12 items-center rounded-full bg-highlight px-4 text-sm font-bold text-on-highlight">Sold out</span> : quantity === 0 ? <button type="button" onClick={() => onChange(item.id, 1)} aria-label={`Add ${item.name}`} className="add-button focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ink"><span aria-hidden="true">＋</span> Add to order</button> : <QuantityControl item={item} quantity={quantity} onChange={onChange} />}
         </div>
