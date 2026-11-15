@@ -14,9 +14,9 @@ export const DEMO_MENU: TableMenu = {
       name: "Starters",
       items: [
         { id: "d-bruschetta", name: "Tomato Bruschetta", description: "Toasted sourdough, ripe tomatoes, basil, olive oil.", priceCents: 8500, imageUrl: img("photo-1506280754576-f6fa8a873550"), dietaryTags: ["Vegetarian", "Vegan"], prepTime: "8 min" },
-        { id: "d-calamari", name: "Crispy Calamari", description: "Lightly battered squid with lemon aioli.", priceCents: 12000, imageUrl: img("photo-1599487488170-d11ec9c172f0"), dietaryTags: [], allergens: ["Shellfish", "Gluten"], prepTime: "12 min" },
-        { id: "d-spring-rolls", name: "Vegetable Spring Rolls", description: "Crisp rolls with sweet chilli dip.", priceCents: 9000, imageUrl: img("photo-1626700051175-6818013e1d4f"), dietaryTags: ["Vegetarian", "Vegan"], prepTime: "10 min" },
-        { id: "d-chicken-wings", name: "Peri-Peri Wings", description: "Six wings with extra hot peri-peri sauce.", priceCents: 11000, imageUrl: img("photo-1608039829572-78524f79c4c7"), dietaryTags: ["Gluten-free"], prepTime: "15 min" },
+        { id: "d-calamari", name: "Crispy Calamari", description: "Lightly battered squid with lemon aioli.", priceCents: 12000, imageUrl: img("photo-1508737027454-e6454ef45afd"), dietaryTags: [], allergens: ["Shellfish", "Gluten"], prepTime: "12 min" },
+        { id: "d-spring-rolls", name: "Vegetable Spring Rolls", description: "Crisp rolls with sweet chilli dip.", priceCents: 9000, imageUrl: img("photo-1559847844-5315695dadae"), dietaryTags: ["Vegetarian", "Vegan"], prepTime: "10 min" },
+        { id: "d-chicken-wings", name: "Peri-Peri Wings", description: "Six wings with extra hot peri-peri sauce.", priceCents: 11000, imageUrl: img("photo-1527477396000-e27163b481c2"), dietaryTags: ["Gluten-free"], prepTime: "15 min" },
       ],
     },
     {
@@ -27,7 +27,7 @@ export const DEMO_MENU: TableMenu = {
         { id: "d-burger", name: "Sora Smash Burger", description: "Double beef patty, cheese, pickles, special sauce.", priceCents: 16500, imageUrl: img("photo-1568901346375-23c9450c58cd"), dietaryTags: [], allergens: ["Gluten", "Dairy"], prepTime: "16 min" },
         { id: "d-grilled-chicken", name: "Grilled Chicken Breast", description: "Herb-marinated chicken, seasonal vegetables.", priceCents: 17500, imageUrl: img("photo-1532550907401-a500c9a57435"), dietaryTags: ["Gluten-free", "Dairy-free"], prepTime: "18 min" },
         { id: "d-salmon", name: "Pan-Seared Salmon", description: "Atlantic salmon, lemon butter, greens.", priceCents: 24500, imageUrl: img("photo-1467003909585-2f8a72700288"), dietaryTags: ["Gluten-free"], special: "Today's special", allergens: ["Fish"], prepTime: "20 min" },
-        { id: "d-pasta", name: "Tomato Basil Pasta", description: "Fresh pasta in a slow-cooked tomato sauce.", priceCents: 14500, imageUrl: img("photo-1621996346565-e3dbc646d9a9"), dietaryTags: ["Vegetarian"], allergens: ["Gluten"], prepTime: "14 min" },
+        { id: "d-pasta", name: "Tomato Basil Pasta", description: "Fresh pasta in a slow-cooked tomato sauce.", priceCents: 14500, imageUrl: img("photo-1563379926898-05f4575a45d8"), dietaryTags: ["Vegetarian"], allergens: ["Gluten"], prepTime: "14 min" },
         { id: "d-veggie-bowl", name: "Garden Veggie Bowl", description: "Quinoa, roasted vegetables, tahini dressing.", priceCents: 13500, imageUrl: img("photo-1512621776951-a57141f2eefd"), dietaryTags: ["Vegetarian", "Vegan", "Gluten-free"], prepTime: "12 min" },
       ],
     },
@@ -45,7 +45,7 @@ export const DEMO_MENU: TableMenu = {
       name: "Desserts",
       items: [
         { id: "d-brownie", name: "Chocolate Brownie", description: "Warm brownie with vanilla ice cream.", priceCents: 8500, imageUrl: img("photo-1606313564200-e75d5e30476c"), dietaryTags: ["Vegetarian"], allergens: ["Gluten", "Dairy", "Nuts"], prepTime: "5 min" },
-        { id: "d-cheesecake", name: "New York Cheesecake", description: "Classic baked cheesecake, berry coulis.", priceCents: 9500, imageUrl: img("photo-1533134486753-c833f0ed4866"), dietaryTags: ["Vegetarian"], allergens: ["Gluten", "Dairy"], prepTime: "5 min" },
+        { id: "d-cheesecake", name: "New York Cheesecake", description: "Classic baked cheesecake, berry coulis.", priceCents: 9500, imageUrl: img("photo-1578985545062-69928b1d9587"), dietaryTags: ["Vegetarian"], allergens: ["Gluten", "Dairy"], prepTime: "5 min" },
       ],
     },
     {
@@ -63,7 +63,7 @@ export const DEMO_MENU: TableMenu = {
       id: "cold-drinks",
       name: "Cold Drinks",
       items: [
-        { id: "d-coke", name: "Coca-Cola", description: "Ice-cold classic.", priceCents: 3500, imageUrl: img("photo-1629203851122-3726ecdf080e"), dietaryTags: ["Vegan"], prepTime: "2 min" },
+        { id: "d-cool-drink", name: "Cool Drink", description: "Choose your brand and can or bottle.", priceCents: 3500, imageUrl: img("photo-1629203851122-3726ecdf080e"), dietaryTags: ["Vegan"], prepTime: "2 min" },
         { id: "d-lemonade", name: "Fresh Lemonade", description: "House-made with mint.", priceCents: 4000, imageUrl: img("photo-1621263764928-df1444c5e859"), dietaryTags: ["Vegetarian", "Vegan"], prepTime: "3 min" },
         { id: "d-smoothie", name: "Berry Smoothie", description: "Mixed berries, banana, almond milk.", priceCents: 5500, imageUrl: img("photo-1505252585461-04db1eb84625"), dietaryTags: ["Vegetarian", "Vegan", "Dairy-free"], allergens: ["Nuts"], prepTime: "4 min" },
         { id: "d-iced-tea", name: "Iced Tea", description: "Chilled black tea with lemon.", priceCents: 3800, imageUrl: img("photo-1556679343-c7306c1976bc"), dietaryTags: ["Vegan"], prepTime: "2 min" },

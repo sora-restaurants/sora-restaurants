@@ -34,6 +34,9 @@ export const DRINK_EXTRAS = ["No sugar", "Extra sugar", "Lemon", "No lemon", "Sp
 /** Milk options for hot coffee drinks. */
 export const COFFEE_MILK = ["Full cream", "Skim", "Oat milk", "Almond milk", "Soy milk", "No milk"];
 
+export const COOL_DRINK_BRAND = ["Coca-Cola", "Pepsi", "Sprite", "Fanta"];
+export const COOL_DRINK_TYPE = ["Can", "Bottle"];
+
 const COOKABLE = /steak|burger|beef|lamb|wagyu|fillet|sirloin|ribeye|rump|mince|patty/i;
 const NO_COOK = /chicken|fish|prawn|shrimp|salmon|tuna|tofu|veg|salad|soup|pasta|pizza|dessert|cake/i;
 
@@ -48,8 +51,10 @@ export function canChooseDoneness(name: string): boolean {
 }
 
 export function isDrink(name: string, categoryName?: string): boolean {
-  if (categoryName && DRINK_CATEGORY.test(categoryName)) return true;
-  return DRINK.test(name);
+  // Only actual drink categories
+  if (categoryName && /hot drinks|cold drinks|drinks|beverages/i.test(categoryName)) return true;
+  // Or a clearly named drink
+  return /coke|cola|sprite|pepsi|lemonade|smoothie|iced tea|sparkling|flat white|latte|cappuccino|espresso|hot chocolate|juice|water|tea|coffee/i.test(name);
 }
 
 export function isCoffee(name: string, categoryName?: string): boolean {
@@ -58,8 +63,8 @@ export function isCoffee(name: string, categoryName?: string): boolean {
 }
 
 export function isHotDrink(name: string, categoryName?: string): boolean {
-  if (categoryName && /hot/i.test(categoryName)) return true;
-  return HOT_DRINK.test(name);
+  if (categoryName && /hot drinks/i.test(categoryName)) return true;
+  return /flat white|latte|cappuccino|espresso|hot chocolate|americano|mocha|chai/i.test(name);
 }
 
 export function addOnCost(notes: string[]): number {

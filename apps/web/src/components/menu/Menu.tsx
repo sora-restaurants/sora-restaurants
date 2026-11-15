@@ -8,7 +8,7 @@ import { ColorModeToggle, useColorMode } from "../ColorModeToggle.tsx";
 import { SlideToPay } from "../order/SlideToPay.tsx";
 import { demoReviewsFor, type DemoReview } from "./demo-reviews.ts";
 import { demoPairings, demoWaitMinutes } from "./demo-extras.ts";
-import { DIETARY, NO_WANT, SPICE, COOKING, ADD_ONS, DRINK_SIZE, DRINK_ICE, DRINK_EXTRAS, COFFEE_MILK, canChooseDoneness, isDrink, isCoffee, isHotDrink, addOnCost } from "./customise-options.ts";
+import { DIETARY, NO_WANT, SPICE, COOKING, ADD_ONS, DRINK_SIZE, DRINK_ICE, DRINK_EXTRAS, COFFEE_MILK, COOL_DRINK_BRAND, COOL_DRINK_TYPE, canChooseDoneness, isDrink, isCoffee, isHotDrink, addOnCost } from "./customise-options.ts";
 import { DEMO_MENU } from "./demo-menu.ts";
 
 const money = new Intl.NumberFormat("en-ZA", { style: "currency", currency: "ZAR" });
@@ -260,6 +260,29 @@ function MenuCard({ item, categoryName, quantity, note, index, onChange, onNote 
           <div className="mt-3 space-y-3">
             {isDrink(item.name, categoryName) ? (
               <>
+                {/cool drink/i.test(item.name) ? (
+                  <>
+                    <div>
+                      <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">Brand</p>
+                      <div className="flex flex-wrap gap-2">
+                        {COOL_DRINK_BRAND.map((opt) => {
+                          const selected = note.includes(opt);
+                          return <button key={opt} type="button" onClick={() => onNote(item.id, selected ? note.filter((x) => x !== opt) : [...note, opt])} className={`rounded-full border px-3 py-1 text-xs font-bold ${selected ? "border-accent bg-accent text-on-accent" : "border-line"}`}>{opt}</button>;
+                        })}
+                      </div>
+                    </div>
+                    <div>
+                      <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">Type</p>
+                      <div className="flex flex-wrap gap-2">
+                        {COOL_DRINK_TYPE.map((opt) => {
+                          const selected = note.includes(opt);
+                          return <button key={opt} type="button" onClick={() => onNote(item.id, selected ? note.filter((x) => x !== opt) : [...note, opt])} className={`rounded-full border px-3 py-1 text-xs font-bold ${selected ? "border-accent bg-accent text-on-accent" : "border-line"}`}>{opt}</button>;
+                        })}
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                <>
                 <div>
                   <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">Size</p>
                   <div className="flex flex-wrap gap-2">
@@ -300,6 +323,8 @@ function MenuCard({ item, categoryName, quantity, note, index, onChange, onNote 
                       </div>
                     </div>
                   </>
+                )}
+                </>
                 )}
               </>
             ) : (
