@@ -1,4 +1,4 @@
-/** Full demo menu with pictures, tags, specials, allergens and prep times. */
+/** Full demo menu with matching pictures, specials, allergens and prep times. */
 
 import type { TableMenu } from "./types.ts";
 
@@ -13,7 +13,7 @@ export const DEMO_MENU: TableMenu = {
       id: "starters",
       name: "Starters",
       items: [
-        { id: "d-bruschetta", name: "Tomato Bruschetta", description: "Toasted sourdough, ripe tomatoes, basil, olive oil.", priceCents: 8500, imageUrl: img("photo-1572695157366-5e585ab2b69f"), dietaryTags: ["Vegetarian", "Vegan"], prepTime: "8 min" },
+        { id: "d-bruschetta", name: "Tomato Bruschetta", description: "Toasted sourdough, ripe tomatoes, basil, olive oil.", priceCents: 8500, imageUrl: img("photo-1506280754576-f6fa8a873550"), dietaryTags: ["Vegetarian", "Vegan"], prepTime: "8 min" },
         { id: "d-calamari", name: "Crispy Calamari", description: "Lightly battered squid with lemon aioli.", priceCents: 12000, imageUrl: img("photo-1599487488170-d11ec9c172f0"), dietaryTags: [], allergens: ["Shellfish", "Gluten"], prepTime: "12 min" },
         { id: "d-spring-rolls", name: "Vegetable Spring Rolls", description: "Crisp rolls with sweet chilli dip.", priceCents: 9000, imageUrl: img("photo-1626700051175-6818013e1d4f"), dietaryTags: ["Vegetarian", "Vegan"], prepTime: "10 min" },
         { id: "d-chicken-wings", name: "Peri-Peri Wings", description: "Six wings with extra hot peri-peri sauce.", priceCents: 11000, imageUrl: img("photo-1608039829572-78524f79c4c7"), dietaryTags: ["Gluten-free"], prepTime: "15 min" },
@@ -49,13 +49,25 @@ export const DEMO_MENU: TableMenu = {
       ],
     },
     {
-      id: "drinks",
-      name: "Drinks",
+      id: "hot-drinks",
+      name: "Hot Drinks",
+      items: [
+        { id: "d-flat-white", name: "Flat White", description: "Double espresso with steamed milk.", priceCents: 4200, imageUrl: img("photo-1572442388796-11668a67e53d"), dietaryTags: ["Vegetarian"], allergens: ["Dairy"], prepTime: "4 min" },
+        { id: "d-latte", name: "Cafe Latte", description: "Espresso with a silky milk foam.", priceCents: 4500, imageUrl: img("photo-1461023058943-07fcbe16d735"), dietaryTags: ["Vegetarian"], allergens: ["Dairy"], prepTime: "4 min" },
+        { id: "d-cappuccino", name: "Cappuccino", description: "Equal parts espresso, steamed milk and foam.", priceCents: 4500, imageUrl: img("photo-1534778101976-62847782c213"), dietaryTags: ["Vegetarian"], allergens: ["Dairy"], prepTime: "4 min" },
+        { id: "d-espresso", name: "Espresso", description: "A short, strong shot.", priceCents: 2800, imageUrl: img("photo-1510591509098-f4fdc6d0ff04"), dietaryTags: ["Vegan"], prepTime: "2 min" },
+        { id: "d-hot-chocolate", name: "Hot Chocolate", description: "Rich cocoa with steamed milk.", priceCents: 4800, imageUrl: img("photo-1542990253-0d0f5be5f0ed"), dietaryTags: ["Vegetarian"], allergens: ["Dairy"], prepTime: "5 min" },
+      ],
+    },
+    {
+      id: "cold-drinks",
+      name: "Cold Drinks",
       items: [
         { id: "d-coke", name: "Coca-Cola", description: "Ice-cold classic.", priceCents: 3500, imageUrl: img("photo-1629203851122-3726ecdf080e"), dietaryTags: ["Vegan"], prepTime: "2 min" },
         { id: "d-lemonade", name: "Fresh Lemonade", description: "House-made with mint.", priceCents: 4000, imageUrl: img("photo-1621263764928-df1444c5e859"), dietaryTags: ["Vegetarian", "Vegan"], prepTime: "3 min" },
-        { id: "d-latte", name: "Flat White", description: "Double espresso with steamed milk.", priceCents: 4200, imageUrl: img("photo-1572442388796-11668a67e53d"), dietaryTags: ["Vegetarian"], allergens: ["Dairy"], prepTime: "4 min" },
         { id: "d-smoothie", name: "Berry Smoothie", description: "Mixed berries, banana, almond milk.", priceCents: 5500, imageUrl: img("photo-1505252585461-04db1eb84625"), dietaryTags: ["Vegetarian", "Vegan", "Dairy-free"], allergens: ["Nuts"], prepTime: "4 min" },
+        { id: "d-iced-tea", name: "Iced Tea", description: "Chilled black tea with lemon.", priceCents: 3800, imageUrl: img("photo-1556679343-c7306c1976bc"), dietaryTags: ["Vegan"], prepTime: "2 min" },
+        { id: "d-sparkling", name: "Sparkling Water", description: "Chilled with a slice of lime.", priceCents: 3000, imageUrl: img("photo-1548839140-29a749e1cf4d"), dietaryTags: ["Vegan"], prepTime: "1 min" },
       ],
     },
   ],

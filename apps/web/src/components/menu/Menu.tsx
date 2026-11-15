@@ -8,7 +8,7 @@ import { ColorModeToggle, useColorMode } from "../ColorModeToggle.tsx";
 import { SlideToPay } from "../order/SlideToPay.tsx";
 import { demoReviewsFor, type DemoReview } from "./demo-reviews.ts";
 import { demoPairings, demoWaitMinutes } from "./demo-extras.ts";
-import { DIETARY, NO_WANT, SPICE, COOKING, ADD_ONS, DRINK_SIZE, DRINK_ICE, DRINK_EXTRAS, canChooseDoneness, isDrink, isCoffee, addOnCost } from "./customise-options.ts";
+import { DIETARY, NO_WANT, SPICE, COOKING, ADD_ONS, DRINK_SIZE, DRINK_ICE, DRINK_EXTRAS, COFFEE_MILK, canChooseDoneness, isDrink, isCoffee, isHotDrink, addOnCost } from "./customise-options.ts";
 import { DEMO_MENU } from "./demo-menu.ts";
 
 const money = new Intl.NumberFormat("en-ZA", { style: "currency", currency: "ZAR" });
@@ -230,7 +230,7 @@ function MenuCard({ item, categoryName, quantity, note, index, onChange, onNote 
   const reviews = demoReviewsFor(item.name);
   return (
     <li className="menu-card overflow-hidden rounded-theme border border-line/40 bg-surface shadow-[0_12px_40px_color-mix(in_oklch,var(--t-ink)_7%,transparent)]">
-      {item.imageUrl ? <div className="relative h-52 overflow-hidden"><img src={item.imageUrl} alt="" className="size-full object-cover" /><div className="absolute inset-x-0 bottom-0 h-20 bg-linear-to-t from-black/45 to-transparent" /></div> : <div className={`dish-art dish-art-${index % 3}`} aria-hidden="true"><span>{item.name.slice(0, 1)}</span></div>}
+      {item.imageUrl ? <div className="relative h-52 overflow-hidden"><img src={item.imageUrl} alt={item.name} className="size-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; (e.target as HTMLImageElement).parentElement?.classList.add("dish-art", `dish-art-${index % 3}`); }} /><div className="absolute inset-x-0 bottom-0 h-20 bg-linear-to-t from-black/45 to-transparent" /></div> : <div className={`dish-art dish-art-${index % 3}`} aria-hidden="true"><span>{item.name.slice(0, 1)}</span></div>}
       <div className="flex min-h-40 flex-col p-5">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
@@ -269,7 +269,17 @@ function MenuCard({ item, categoryName, quantity, note, index, onChange, onNote 
                     })}
                   </div>
                 </div>
-                {!isCoffee(item.name) && (
+                {isCoffee(item.name, categoryName) || isHotDrink(item.name, categoryName) ? (
+                  <div>
+                    <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">Milk</p>
+                    <div className="flex flex-wrap gap-2">
+                      {COFFEE_MILK.map((opt) => {
+                        const selected = note.includes(opt);
+                        return <button key={opt} type="button" onClick={() => onNote(item.id, selected ? note.filter((x) => x !== opt) : [...note, opt])} className={`rounded-full border px-3 py-1 text-xs font-bold ${selected ? "border-accent bg-accent text-on-accent" : "border-line"}`}>{opt}</button>;
+                      })}
+                    </div>
+                  </div>
+                ) : (
                   <>
                     <div>
                       <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">Ice</p>
