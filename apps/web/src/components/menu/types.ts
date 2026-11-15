@@ -14,5 +14,8 @@ export type MenuItem = {
   priceCents: number;
   imageUrl?: string | null;
   dietaryTags?: string[];
+  special?: string;
+  allergens?: string[];
+  prepTime?: string;
   soldOut?: boolean;
 };

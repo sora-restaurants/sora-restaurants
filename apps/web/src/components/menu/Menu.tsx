@@ -235,6 +235,7 @@ function MenuCard({ item, categoryName, quantity, note, index, onChange, onNote 
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <h3 className="display text-2xl leading-none">{item.name}</h3>
+            {(item as MenuItem & { special?: string }).special && <span className="ml-2 rounded-full bg-accent px-2 py-0.5 text-[0.65rem] font-bold uppercase text-on-accent">{(item as MenuItem & { special?: string }).special}</span>}
             <div className="mt-2 flex flex-wrap items-center gap-2">
               <span className="inline-flex items-center gap-1 text-sm font-bold text-accent" aria-label={`${reviews.rating} out of 5 stars`}>
                 {"★".repeat(Math.round(reviews.rating))}{"☆".repeat(5 - Math.round(reviews.rating))}
@@ -248,6 +249,8 @@ function MenuCard({ item, categoryName, quantity, note, index, onChange, onNote 
         </div>
         {item.description ? <p className="mt-3 text-sm leading-relaxed text-muted">{item.description}</p> : <p className="mt-3 text-sm italic text-muted">Made fresh to order</p>}
         {item.dietaryTags?.length ? <ul aria-label="Dietary information" className="mt-3 flex flex-wrap gap-2">{item.dietaryTags.map((tag) => <li key={tag} className="rounded-full border border-line/40 px-2 py-1 text-[0.7rem] font-bold uppercase tracking-wide text-muted">{tag}</li>)}</ul> : null}
+        {(item as MenuItem & { prepTime?: string }).prepTime && <p className="mt-2 text-xs text-muted">Ready in {(item as MenuItem & { prepTime?: string }).prepTime}</p>}
+        {(item as MenuItem & { allergens?: string[] }).allergens?.length ? <p className="mt-1 text-xs text-muted">Contains: {(item as MenuItem & { allergens?: string[] }).allergens!.join(", ")}</p> : null}
 
         <button type="button" onClick={() => setShowReviews((v) => !v)} className="mt-3 self-start text-sm font-semibold text-accent underline-offset-2 hover:underline focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-accent">
           {showReviews ? "Hide reviews" : `See ${reviews.reviews.length} reviews`}
