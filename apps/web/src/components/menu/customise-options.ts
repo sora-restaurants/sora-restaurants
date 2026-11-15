@@ -2,12 +2,29 @@
 
 export const DIETARY = [
   "Vegetarian", "Vegan", "Gluten-free", "Dairy-free", "Nut-free", "Shellfish-free",
-  "Halal", "Kosher", "Low-carb", "Keto", "No onion", "No garlic", "Sauce on the side",
+  "Halal", "Kosher", "Low-carb", "Keto",
+];
+
+export const NO_WANT = [
+  "No onion", "No garlic", "No tomato", "No pickles", "No lettuce", "No cheese",
+  "No mayo", "No sauce", "Sauce on the side", "No mushrooms", "No peppers", "No chilli",
 ];
 
 export const SPICE = ["Mild", "Medium spice", "Hot", "Extra spicy"];
 
 export const COOKING = ["Rare", "Medium-rare", "Medium", "Medium-well", "Well done"];
+
+/** Add-ons with an extra cost (cents). */
+export const ADD_ONS: { label: string; cents: number }[] = [
+  { label: "Extra hot sauce", cents: 1200 },
+  { label: "Grilled onions", cents: 1500 },
+  { label: "Jalapeño sauce", cents: 1200 },
+  { label: "White cheese sauce", cents: 1800 },
+  { label: "Extra cheese", cents: 1500 },
+  { label: "Bacon", cents: 2000 },
+  { label: "Avocado", cents: 1800 },
+  { label: "Extra portion", cents: 2500 },
+];
 
 export const DRINK_SIZE = ["Small", "Medium", "Large"];
 
@@ -18,18 +35,27 @@ export const DRINK_EXTRAS = ["No sugar", "Extra sugar", "Lemon", "No lemon", "Sp
 const COOKABLE = /steak|burger|beef|lamb|wagyu|fillet|sirloin|ribeye|rump|mince|patty/i;
 const NO_COOK = /chicken|fish|prawn|shrimp|salmon|tuna|tofu|veg|salad|soup|pasta|pizza|dessert|cake/i;
 
-const DRINK = /drink|juice|soda|cola|coke|sprite|water|tea|coffee|latte|espresso|cappuccino|beer|wine|cocktail|smoothie|shake|lemonade|iced/i;
-const COFFEE = /coffee|latte|espresso|cappuccino|americano|mocha|flat white|macchiato/i;
+const DRINK = /drink|juice|soda|cola|coke|sprite|fanta|water|tea|coffee|latte|espresso|cappuccino|americano|mocha|beer|wine|cocktail|smoothie|shake|lemonade|iced|cooler|frappe|mocktail|gin|whisky|vodka|rum|cider|soft|beverage|bar|ale|lager|sparkling|still/i;
+const COFFEE = /coffee|latte|espresso|cappuccino|americano|mocha|flat white|macchiato|frappe/i;
+const DRINK_CATEGORY = /drink|beverage|bar|wine|beer|cocktail|soft|juice|coffee|tea/i;
 
 export function canChooseDoneness(name: string): boolean {
   if (NO_COOK.test(name)) return false;
   return COOKABLE.test(name);
 }
 
-export function isDrink(name: string): boolean {
+export function isDrink(name: string, categoryName?: string): boolean {
+  if (categoryName && DRINK_CATEGORY.test(categoryName)) return true;
   return DRINK.test(name);
 }
 
 export function isCoffee(name: string): boolean {
   return COFFEE.test(name);
+}
+
+export function addOnCost(notes: string[]): number {
+  return notes.reduce((sum, n) => {
+    const found = ADD_ONS.find((a) => n.startsWith(a.label));
+    return sum + (found?.cents ?? 0);
+  }, 0);
 }

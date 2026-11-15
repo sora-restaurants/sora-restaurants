@@ -8,7 +8,7 @@ import { ColorModeToggle, useColorMode } from "../ColorModeToggle.tsx";
 import { SlideToPay } from "../order/SlideToPay.tsx";
 import { demoReviewsFor, type DemoReview } from "./demo-reviews.ts";
 import { demoPairings, demoWaitMinutes } from "./demo-extras.ts";
-import { DIETARY, SPICE, COOKING, DRINK_SIZE, DRINK_ICE, DRINK_EXTRAS, canChooseDoneness, isDrink, isCoffee } from "./customise-options.ts";
+import { DIETARY, NO_WANT, SPICE, COOKING, ADD_ONS, DRINK_SIZE, DRINK_ICE, DRINK_EXTRAS, canChooseDoneness, isDrink, isCoffee, addOnCost } from "./customise-options.ts";
 
 const money = new Intl.NumberFormat("en-ZA", { style: "currency", currency: "ZAR" });
 const formatCents = (cents: number) => money.format(cents / 100);
@@ -50,7 +50,11 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
   const lines = items.filter((item) => cart[item.id]);
   const count = lines.reduce((sum, item) => sum + cart[item.id], 0);
   // Display only. The database resolves every trusted price from the menu item id.
-  const estimate = lines.reduce((sum, item) => sum + item.priceCents * cart[item.id], 0);
+  const estimate = lines.reduce((sum, item) => {
+    const base = item.priceCents * cart[item.id];
+    const extras = (notes[item.id] ?? []).reduce((s, set) => s + addOnCost(set), 0);
+    return sum + base + extras;
+  }, 0);
 
   const setQuantity = (id: string, quantity: number) => {
     idempotencyKey.current = null;
@@ -193,7 +197,7 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
               <div><p className="mb-1 text-xs font-bold uppercase tracking-[0.18em] text-accent">Menu · {String(categoryIndex + 1).padStart(2, "0")}</p><h2 id={`h-${category.id}`} className="display text-3xl leading-none">{category.name}</h2></div>
               <span className="text-sm text-muted">{category.items.length} {category.items.length === 1 ? "dish" : "dishes"}</span>
             </div>
-            <ul className="menu-grid">{category.items.map((item, index) => <MenuCard key={item.id} item={item} quantity={cart[item.id] ?? 0} note={(notes[item.id] ?? [[]])[Math.max(0, (notes[item.id]?.length ?? 1) - 1)] ?? []} index={index} onChange={setQuantity} onNote={(id, opts) => setNotes((c) => { const sets = c[id] ? [...c[id]] : [[]]; sets[sets.length - 1] = opts; return { ...c, [id]: sets }; })} />)}</ul>
+            <ul className="menu-grid">{category.items.map((item, index) => <MenuCard key={item.id} item={item} categoryName={category.name} quantity={cart[item.id] ?? 0} note={(notes[item.id] ?? [[]])[Math.max(0, (notes[item.id]?.length ?? 1) - 1)] ?? []} index={index} onChange={setQuantity} onNote={(id, opts) => setNotes((c) => { const sets = c[id] ? [...c[id]] : [[]]; sets[sets.length - 1] = opts; return { ...c, [id]: sets }; })} />)}</ul>
           </section>
         );
         })}
@@ -228,7 +232,7 @@ function EmptyMenu() {
   return <section className="py-16 text-center" aria-labelledby="empty-menu-title"><p className="text-xs font-bold uppercase tracking-[0.18em] text-accent">Please check back soon</p><h2 id="empty-menu-title" className="display mt-2 text-3xl">The menu is being updated</h2><p className="mx-auto mt-3 max-w-sm text-sm leading-relaxed text-muted">There are no dishes available to order right now. A member of staff will be happy to help.</p></section>;
 }
 
-function MenuCard({ item, quantity, note, index, onChange, onNote }: { item: MenuItem; quantity: number; note: string[]; index: number; onChange: (id: string, q: number) => void; onNote: (id: string, opts: string[]) => void }) {
+function MenuCard({ item, categoryName, quantity, note, index, onChange, onNote }: { item: MenuItem; categoryName: string; quantity: number; note: string[]; index: number; onChange: (id: string, q: number) => void; onNote: (id: string, opts: string[]) => void }) {
   const [showReviews, setShowReviews] = useState(false);
   const reviews = demoReviewsFor(item.name);
   return (
@@ -258,7 +262,7 @@ function MenuCard({ item, quantity, note, index, onChange, onNote }: { item: Men
         <p className="mt-2 text-xs text-muted">Goes well with: {demoPairings(item.name).join(", ")}</p>
         {quantity > 0 && (
           <div className="mt-3 space-y-3">
-            {isDrink(item.name) ? (
+            {isDrink(item.name, categoryName) ? (
               <>
                 <div>
                   <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">Size</p>
@@ -309,6 +313,25 @@ function MenuCard({ item, quantity, note, index, onChange, onNote }: { item: Men
                     {SPICE.map((opt) => {
                       const selected = note.includes(opt);
                       return <button key={opt} type="button" onClick={() => onNote(item.id, selected ? note.filter((x) => x !== opt) : [...note, opt])} className={`rounded-full border px-3 py-1 text-xs font-bold ${selected ? "border-accent bg-accent text-on-accent" : "border-line"}`}>{opt}</button>;
+                    })}
+                  </div>
+                </div>
+                <div>
+                  <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">Leave off</p>
+                  <div className="flex flex-wrap gap-2">
+                    {NO_WANT.map((opt) => {
+                      const selected = note.includes(opt);
+                      return <button key={opt} type="button" onClick={() => onNote(item.id, selected ? note.filter((x) => x !== opt) : [...note, opt])} className={`rounded-full border px-3 py-1 text-xs font-bold ${selected ? "border-accent bg-accent text-on-accent" : "border-line"}`}>{opt}</button>;
+                    })}
+                  </div>
+                </div>
+                <div>
+                  <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">Add-ons</p>
+                  <div className="flex flex-wrap gap-2">
+                    {ADD_ONS.map((a) => {
+                      const label = `${a.label} (+${formatCents(a.cents)})`;
+                      const selected = note.includes(label);
+                      return <button key={a.label} type="button" onClick={() => onNote(item.id, selected ? note.filter((x) => x !== label) : [...note, label])} className={`rounded-full border px-3 py-1 text-xs font-bold ${selected ? "border-accent bg-accent text-on-accent" : "border-line"}`}>{label}</button>;
                     })}
                   </div>
                 </div>
