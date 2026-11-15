@@ -66,13 +66,38 @@ export function isHotDrink(name: string, categoryName?: string): boolean {
 }
 
 export function addOnCost(notes: string[]): number {
+  const priced = [...ADD_ONS, ...CHEESECAKE_SLICE, ...WATER_TYPE, ...STEAK_SIZE, ...WINGS_SIZE, ...FRIES_ADDONS];
   return notes.reduce((sum, n) => {
-    const found = ADD_ONS.find((a) => n.startsWith(a.label));
+    const found = priced.find((a) => n.startsWith(a.label));
     return sum + (found?.cents ?? 0);
   }, 0);
 }
 
 
-export const CHEESECAKE_SLICE = ["1 slice", "2 slices", "Whole cake"];
+export const CHEESECAKE_SLICE = [
+  { label: "1 slice", cents: 0 },
+  { label: "2 slices", cents: 8000 },
+  { label: "Whole cake", cents: 28000 },
+];
 export const SMOOTHIE_FLAVOUR = ["Berry", "Mango", "Banana", "Mixed fruit", "Green"];
-export const WATER_TYPE = ["Tap water (free)", "Bottled water (+R15)", "Sparkling water (+R30)"];
+export const WATER_TYPE = [
+  { label: "Tap water", cents: 0 },
+  { label: "Bottled water", cents: 1500 },
+  { label: "Sparkling water", cents: 3000 },
+];
+export const STEAK_SIZE = [
+  { label: "250g", cents: 0 },
+  { label: "300g", cents: 4000 },
+  { label: "400g", cents: 9000 },
+];
+export const WINGS_SIZE = [
+  { label: "6 wings", cents: 0 },
+  { label: "8 wings", cents: 1000 },
+  { label: "12 wings", cents: 3000 },
+];
+export const FRIES_SIZE = ["Small", "Medium", "Large"];
+export const FRIES_ADDONS = [
+  { label: "Cheese sauce", cents: 1500 },
+  { label: "Bacon", cents: 2000 },
+  { label: "Extra cheese", cents: 1000 },
+];
