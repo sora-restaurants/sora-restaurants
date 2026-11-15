@@ -5,6 +5,7 @@ import type { TableMenu } from "./types.ts";
 const img = (id: string) => `https://images.unsplash.com/${id}?auto=format&fit=crop&w=800&q=70`;
 
 export const DEMO_MENU: TableMenu = {
+  theme: "sora",
   restaurant: "Sora",
   table: "Table 1",
   categories: [
