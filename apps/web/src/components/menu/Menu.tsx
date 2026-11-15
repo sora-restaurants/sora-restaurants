@@ -40,7 +40,7 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
   const [assistance, setAssistance] = useState<"idle" | "sending" | "sent">("idle");
   const [assistanceOpen, setAssistanceOpen] = useState(false);
   const [assistanceKind, setAssistanceKind] = useState<"water" | "cutlery" | "bill" | "help" | null>(null);
-  const [notes, setNotes] = useState<Record<string, string[]>>({});
+  const [notes, setNotes] = useState<Record<string, string[][]>>({});
   const [filter, setFilter] = useState<string | null>(null);
   const [tableOrders, setTableOrders] = useState<{ ref: string; total: number; count: number }[]>([]);
   const idempotencyKey = useRef<string | null>(null);
@@ -59,6 +59,15 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
       const next = { ...current };
       if (quantity > 0) next[id] = Math.min(quantity, 50);
       else delete next[id];
+      return next;
+    });
+    setNotes((current) => {
+      const next = { ...current };
+      if (quantity <= 0) { delete next[id]; return next; }
+      const sets = next[id] ? [...next[id]] : [];
+      while (sets.length < quantity) sets.push([]);
+      while (sets.length > quantity) sets.pop();
+      next[id] = sets;
       return next;
     });
   };
@@ -184,7 +193,7 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
               <div><p className="mb-1 text-xs font-bold uppercase tracking-[0.18em] text-accent">Menu · {String(categoryIndex + 1).padStart(2, "0")}</p><h2 id={`h-${category.id}`} className="display text-3xl leading-none">{category.name}</h2></div>
               <span className="text-sm text-muted">{category.items.length} {category.items.length === 1 ? "dish" : "dishes"}</span>
             </div>
-            <ul className="menu-grid">{category.items.map((item, index) => <MenuCard key={item.id} item={item} quantity={cart[item.id] ?? 0} note={notes[item.id] ?? []} index={index} onChange={setQuantity} onNote={(id, opts) => setNotes((c) => ({ ...c, [id]: opts }))} />)}</ul>
+            <ul className="menu-grid">{category.items.map((item, index) => <MenuCard key={item.id} item={item} quantity={cart[item.id] ?? 0} note={(notes[item.id] ?? [[]])[Math.max(0, (notes[item.id]?.length ?? 1) - 1)] ?? []} index={index} onChange={setQuantity} onNote={(id, opts) => setNotes((c) => { const sets = c[id] ? [...c[id]] : [[]]; sets[sets.length - 1] = opts; return { ...c, [id]: sets }; })} />)}</ul>
           </section>
         );
         })}
@@ -380,7 +389,7 @@ function OrderDock({ triggerRef, count, estimate, status, onOpen, onDismiss, onP
   return <div className="fixed inset-x-0 bottom-0 z-30 bg-linear-to-t from-bg via-bg to-transparent px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-8"><button ref={triggerRef} type="button" onClick={onOpen} aria-haspopup="dialog" className="mx-auto flex min-h-16 w-full max-w-(--t-max) items-center justify-between gap-4 rounded-theme bg-accent px-5 font-bold text-on-accent shadow-2xl active:scale-[0.99] focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ink"><span className="flex items-center gap-3"><span className="grid size-8 place-items-center rounded-full bg-on-accent text-sm text-accent">{count}</span>View your order</span><span className="tabular-nums">{formatCents(estimate)} <span aria-hidden="true">→</span></span></button></div>;
 }
 
-function BasketSheet({ returnFocusRef, lines, cart, notes, estimate, status, paymentChoice, splitWays, emailReceipt, weeklySpecials, tipPercent, onPaymentChoice, onSplit, onEmail, onWeekly, onTip, onChange, onClose, onPlace }: { returnFocusRef: React.RefObject<HTMLButtonElement | null>; lines: MenuItem[]; cart: Record<string, number>; notes: Record<string, string[]>; estimate: number; status: Status; paymentChoice: "pay_later" | "pay_now"; splitWays: 1|2|3|4; emailReceipt: string; weeklySpecials: boolean; tipPercent: 0|10|15|20; onPaymentChoice: (c: "pay_later" | "pay_now") => void; onSplit: (n: 1|2|3|4) => void; onEmail: (v: string) => void; onWeekly: (v: boolean) => void; onTip: (p: 0|10|15|20) => void; onChange: (id: string, q: number) => void; onClose: () => void; onPlace: () => void }) {
+function BasketSheet({ returnFocusRef, lines, cart, notes, estimate, status, paymentChoice, splitWays, emailReceipt, weeklySpecials, tipPercent, onPaymentChoice, onSplit, onEmail, onWeekly, onTip, onChange, onClose, onPlace }: { returnFocusRef: React.RefObject<HTMLButtonElement | null>; lines: MenuItem[]; cart: Record<string, number>; notes: Record<string, string[][]>; estimate: number; status: Status; paymentChoice: "pay_later" | "pay_now"; splitWays: 1|2|3|4; emailReceipt: string; weeklySpecials: boolean; tipPercent: 0|10|15|20; onPaymentChoice: (c: "pay_later" | "pay_now") => void; onSplit: (n: 1|2|3|4) => void; onEmail: (v: string) => void; onWeekly: (v: boolean) => void; onTip: (p: 0|10|15|20) => void; onChange: (id: string, q: number) => void; onClose: () => void; onPlace: () => void }) {
   const dialogRef = useRef<HTMLElement | null>(null);
   const closeRef = useRef<HTMLButtonElement | null>(null);
   const descriptionId = useId();
@@ -410,7 +419,7 @@ function BasketSheet({ returnFocusRef, lines, cart, notes, estimate, status, pay
     <div className="fixed inset-0 z-40 flex items-end bg-ink/55 backdrop-blur-sm sm:items-center sm:justify-center sm:p-6" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
       <section ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="basket-title" aria-describedby={descriptionId} className="max-h-[92dvh] w-full max-w-lg overflow-y-auto rounded-t-[1.75rem] bg-bg p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] shadow-2xl sm:rounded-theme sm:p-7">
         <div className="mb-6 flex items-start justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-[0.18em] text-accent">Almost there</p><h2 id="basket-title" className="display mt-1 text-3xl">Your order</h2></div><button ref={closeRef} type="button" onClick={onClose} aria-label="Close basket" className="grid size-12 place-items-center rounded-full border border-line text-2xl focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-accent">×</button></div>
-        <ul className="divide-y divide-line/40 border-y border-line/40">{lines.map((item) => <li key={item.id} className="flex items-center justify-between gap-4 py-4"><div className="min-w-0"><h3 className="font-bold">{item.name}</h3>{notes[item.id]?.length ? <p className="mt-1 text-xs text-muted">{notes[item.id].join(", ")}</p> : null}<p className="mt-1 text-sm tabular-nums text-muted">{formatCents(item.priceCents * cart[item.id])}</p></div><QuantityControl item={item} quantity={cart[item.id]} onChange={onChange} /></li>)}</ul>
+        <ul className="divide-y divide-line/40 border-y border-line/40">{lines.map((item) => <li key={item.id} className="flex items-center justify-between gap-4 py-4"><div className="min-w-0"><h3 className="font-bold">{item.name}</h3>{(notes[item.id] ?? []).map((set, i) => set.length ? <p key={i} className="mt-1 text-xs text-muted">#{i + 1}: {set.join(", ")}</p> : null)}<p className="mt-1 text-sm tabular-nums text-muted">{formatCents(item.priceCents * cart[item.id])}</p></div><QuantityControl item={item} quantity={cart[item.id]} onChange={onChange} /></li>)}</ul>
         <div className="flex items-center justify-between py-5 text-lg font-bold"><span>Estimated total</span><span className="tabular-nums">{formatCents(estimate)}</span></div>
         <p id={descriptionId} className="mb-4 text-xs leading-relaxed text-muted">The kitchen confirms final availability. Prices are securely checked when you place the order.</p>
         {status.kind === "error" && <p role="alert" className="mb-3 rounded-theme bg-highlight p-3 text-sm text-on-highlight">{status.message}</p>}
