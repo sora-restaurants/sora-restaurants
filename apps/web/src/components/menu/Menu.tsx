@@ -416,6 +416,7 @@ function BasketSheet({ returnFocusRef, lines, cart, notes, estimate, status, pay
   const dialogRef = useRef<HTMLElement | null>(null);
   const closeRef = useRef<HTMLButtonElement | null>(null);
   const descriptionId = useId();
+  const [step, setStep] = useState<1 | 2 | 3>(1);
 
   useEffect(() => {
     closeRef.current?.focus();
@@ -442,41 +443,59 @@ function BasketSheet({ returnFocusRef, lines, cart, notes, estimate, status, pay
     <div className="fixed inset-0 z-40 flex items-end bg-ink/55 backdrop-blur-sm sm:items-center sm:justify-center sm:p-6" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
       <section ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="basket-title" aria-describedby={descriptionId} className="max-h-[92dvh] w-full max-w-lg overflow-y-auto rounded-t-[1.75rem] bg-bg p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] shadow-2xl sm:rounded-theme sm:p-7">
         <div className="mb-6 flex items-start justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-[0.18em] text-accent">Almost there</p><h2 id="basket-title" className="display mt-1 text-3xl">Your order</h2></div><button ref={closeRef} type="button" onClick={onClose} aria-label="Close basket" className="grid size-12 place-items-center rounded-full border border-line text-2xl focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-accent">×</button></div>
-        <ul className="divide-y divide-line/40 border-y border-line/40">{lines.map((item) => <li key={item.id} className="flex items-center justify-between gap-4 py-4"><div className="min-w-0"><h3 className="font-bold">{item.name}</h3>{(notes[item.id] ?? []).map((set, i) => set.length ? <p key={i} className="mt-1 text-xs text-muted">#{i + 1}: {set.join(", ")}</p> : null)}<p className="mt-1 text-sm tabular-nums text-muted">{formatCents(item.priceCents * cart[item.id])}</p></div><QuantityControl item={item} quantity={cart[item.id]} onChange={onChange} /></li>)}</ul>
-        <div className="flex items-center justify-between py-5 text-lg font-bold"><span>Estimated total</span><span className="tabular-nums">{formatCents(estimate)}</span></div>
-        <p id={descriptionId} className="mb-4 text-xs leading-relaxed text-muted">The kitchen confirms final availability. Prices are securely checked when you place the order.</p>
-        {status.kind === "error" && <p role="alert" className="mb-3 rounded-theme bg-highlight p-3 text-sm text-on-highlight">{status.message}</p>}
-        <div className="mb-4 grid grid-cols-2 gap-2">
-          <button type="button" onClick={() => onPaymentChoice("pay_later")} className={`min-h-12 rounded-theme border-2 px-3 text-sm font-bold ${paymentChoice === "pay_later" ? "border-accent bg-accent text-on-accent" : "border-line"}`}>Pay after my meal</button>
-          <button type="button" onClick={() => onPaymentChoice("pay_now")} className={`min-h-12 rounded-theme border-2 px-3 text-sm font-bold ${paymentChoice === "pay_now" ? "border-accent bg-accent text-on-accent" : "border-line"}`}>Pay now (demo)</button>
-        </div>
-        <div className="mb-4">
-          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">Add a tip</p>
-          <div className="flex gap-2">
-            {([0, 10, 15, 20] as const).map((p) => (
-              <button key={p} type="button" onClick={() => onTip(p)} className={`min-h-10 flex-1 rounded-theme border-2 text-sm font-bold ${tipPercent === p ? "border-accent bg-accent text-on-accent" : "border-line"}`}>{p === 0 ? "None" : `${p}%`}</button>
-            ))}
+        {step === 1 && (
+        <>
+          <ul className="divide-y divide-line/40 border-y border-line/40">{lines.map((item) => <li key={item.id} className="flex items-center justify-between gap-4 py-4"><div className="min-w-0"><h3 className="font-bold">{item.name}</h3>{(notes[item.id] ?? []).map((set, i) => set.length ? <p key={i} className="mt-1 text-xs text-muted">#{i + 1}: {set.join(", ")}</p> : null)}<p className="mt-1 text-sm tabular-nums text-muted">{formatCents(item.priceCents * cart[item.id])}</p></div><QuantityControl item={item} quantity={cart[item.id]} onChange={onChange} /></li>)}</ul>
+          <div className="flex items-center justify-between py-5 text-lg font-bold"><span>Estimated total</span><span className="tabular-nums">{formatCents(estimate)}</span></div>
+          <button type="button" onClick={() => setStep(2)} disabled={lines.length === 0} className="flex min-h-16 w-full items-center justify-center rounded-theme bg-accent px-5 text-lg font-bold text-on-accent">Continue to payment</button>
+        </>
+      )}
+      {step === 2 && (
+        <>
+          <div className="mb-4 grid grid-cols-2 gap-2">
+            <button type="button" onClick={() => onPaymentChoice("pay_later")} className={`min-h-12 rounded-theme border-2 px-3 text-sm font-bold ${paymentChoice === "pay_later" ? "border-accent bg-accent text-on-accent" : "border-line"}`}>Pay after my meal</button>
+            <button type="button" onClick={() => onPaymentChoice("pay_now")} className={`min-h-12 rounded-theme border-2 px-3 text-sm font-bold ${paymentChoice === "pay_now" ? "border-accent bg-accent text-on-accent" : "border-line"}`}>Pay now (demo)</button>
           </div>
-          {tipPercent > 0 && <p className="mt-2 text-sm text-muted">Tip {formatCents(Math.round(estimate * tipPercent / 100))} · total {formatCents(estimate + Math.round(estimate * tipPercent / 100))}</p>}
-        </div>
-        <div className="mb-4">
-          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">Split the bill</p>
-          <div className="flex gap-2">
-            {([1, 2, 3, 4] as const).map((n) => (
-              <button key={n} type="button" onClick={() => onSplit(n)} className={`min-h-10 flex-1 rounded-theme border-2 text-sm font-bold ${splitWays === n ? "border-accent bg-accent text-on-accent" : "border-line"}`}>{n === 1 ? "No split" : `${n} ways`}</button>
-            ))}
+          <div className="mb-4">
+            <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">Add a tip</p>
+            <div className="flex gap-2">
+              {([0, 10, 15, 20] as const).map((p) => (
+                <button key={p} type="button" onClick={() => onTip(p)} className={`min-h-10 flex-1 rounded-theme border-2 text-sm font-bold ${tipPercent === p ? "border-accent bg-accent text-on-accent" : "border-line"}`}>{p === 0 ? "None" : `${p}%`}</button>
+              ))}
+            </div>
+            {tipPercent > 0 && <p className="mt-2 text-sm text-muted">Tip {formatCents(Math.round(estimate * tipPercent / 100))} · total {formatCents(estimate + Math.round(estimate * tipPercent / 100))}</p>}
           </div>
-          {splitWays > 1 && <p className="mt-2 text-sm text-muted">About {formatCents(Math.round(estimate / splitWays))} each</p>}
-        </div>
-        <div className="mb-4">
-          <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-muted">Email receipt (optional)</label>
-          <input type="email" value={emailReceipt} onChange={(e) => onEmail(e.target.value)} placeholder="you@email.com" className="w-full rounded-theme border border-line bg-bg px-3 py-2 text-sm" />
-        </div>
-        <label className="mb-4 flex items-center gap-2 text-sm">
-          <input type="checkbox" checked={weeklySpecials} onChange={(e) => onWeekly(e.target.checked)} className="size-4 accent-accent" />
-          Email me the weekly specials
-        </label>
-        <button type="button" onClick={onPlace} disabled={status.kind === "sending" || lines.length === 0} aria-busy={status.kind === "sending"} className="flex min-h-16 w-full items-center justify-center gap-3 rounded-theme bg-accent px-5 text-lg font-bold text-on-accent active:scale-[0.99] disabled:opacity-65">{status.kind === "sending" ? <><span className="spinner" aria-hidden="true" />Sending to kitchen…</> : "Place order"}</button>
+          <div className="mb-4">
+            <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">Split the bill</p>
+            <div className="flex gap-2">
+              {([1, 2, 3, 4] as const).map((n) => (
+                <button key={n} type="button" onClick={() => onSplit(n)} className={`min-h-10 flex-1 rounded-theme border-2 text-sm font-bold ${splitWays === n ? "border-accent bg-accent text-on-accent" : "border-line"}`}>{n === 1 ? "No split" : `${n} ways`}</button>
+              ))}
+            </div>
+            {splitWays > 1 && <p className="mt-2 text-sm text-muted">About {formatCents(Math.round(estimate / splitWays))} each</p>}
+          </div>
+          <div className="flex gap-2">
+            <button type="button" onClick={() => setStep(1)} className="min-h-14 flex-1 rounded-theme border-2 border-line text-sm font-bold">Back</button>
+            <button type="button" onClick={() => setStep(3)} className="min-h-14 flex-[2] rounded-theme bg-accent text-lg font-bold text-on-accent">Continue</button>
+          </div>
+        </>
+      )}
+      {step === 3 && (
+        <>
+          <div className="mb-4">
+            <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-muted">Email receipt (optional)</label>
+            <input type="email" value={emailReceipt} onChange={(e) => onEmail(e.target.value)} placeholder="you@email.com" className="w-full rounded-theme border border-line bg-bg px-3 py-2 text-sm" />
+          </div>
+          <label className="mb-4 flex items-center gap-2 text-sm">
+            <input type="checkbox" checked={weeklySpecials} onChange={(e) => onWeekly(e.target.checked)} className="size-4 accent-accent" />
+            Email me the weekly specials
+          </label>
+          <div className="flex gap-2">
+            <button type="button" onClick={() => setStep(2)} className="min-h-14 flex-1 rounded-theme border-2 border-line text-sm font-bold">Back</button>
+            <button type="button" onClick={onPlace} disabled={status.kind === "sending"} className="flex min-h-14 flex-[2] items-center justify-center gap-3 rounded-theme bg-accent text-lg font-bold text-on-accent disabled:opacity-65">{status.kind === "sending" ? <><span className="spinner" aria-hidden="true" />Sending…</> : "Place order"}</button>
+          </div>
+        </>
+      )}
       </section>
     </div>
   );
