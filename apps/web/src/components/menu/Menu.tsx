@@ -8,6 +8,7 @@ import { ColorModeToggle, useColorMode } from "../ColorModeToggle.tsx";
 import { SlideToPay } from "../order/SlideToPay.tsx";
 import { demoReviewsFor, type DemoReview } from "./demo-reviews.ts";
 import { demoPairings, demoWaitMinutes } from "./demo-extras.ts";
+import { DIETARY, SPICE, COOKING, canChooseDoneness } from "./customise-options.ts";
 
 const money = new Intl.NumberFormat("en-ZA", { style: "currency", currency: "ZAR" });
 const formatCents = (cents: number) => money.format(cents / 100);
@@ -32,6 +33,10 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
   const [status, setStatus] = useState<Status>({ kind: "idle" });
   const [basketOpen, setBasketOpen] = useState(false);
   const [paymentChoice, setPaymentChoice] = useState<"pay_later" | "pay_now">("pay_later");
+  const [splitWays, setSplitWays] = useState<1 | 2 | 3 | 4>(1);
+  const [emailReceipt, setEmailReceipt] = useState("");
+  const [weeklySpecials, setWeeklySpecials] = useState(false);
+  const [tipPercent, setTipPercent] = useState<0 | 10 | 15 | 20>(0);
   const [assistance, setAssistance] = useState<"idle" | "sending" | "sent">("idle");
   const [assistanceOpen, setAssistanceOpen] = useState(false);
   const [assistanceKind, setAssistanceKind] = useState<"water" | "cutlery" | "bill" | "help" | null>(null);
@@ -130,7 +135,7 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
       <div className="sticky top-[52px] z-10 border-b border-line/40 bg-bg/95 backdrop-blur">
         <div className="mx-auto flex max-w-(--t-max) gap-2 overflow-x-auto px-pad py-2">
           <button type="button" onClick={() => setFilter(null)} className={`shrink-0 rounded-full px-3 py-1 text-xs font-bold ${filter === null ? "bg-accent text-on-accent" : "border border-line"}`}>All</button>
-          {["Vegetarian", "Vegan", "Gluten-free", "Halal"].map((tag) => (
+          {["Vegetarian", "Vegan", "Gluten-free", "Dairy-free", "Nut-free", "Halal", "Kosher", "Low-carb"].map((tag) => (
             <button key={tag} type="button" onClick={() => setFilter(filter === tag ? null : tag)} className={`shrink-0 rounded-full px-3 py-1 text-xs font-bold ${filter === tag ? "bg-accent text-on-accent" : "border border-line"}`}>{tag}</button>
           ))}
         </div>
@@ -205,7 +210,7 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
         </div>
       )}
       <OrderDock triggerRef={basketTrigger} count={count} estimate={estimate} status={status} onOpen={() => setBasketOpen(true)} onDismiss={() => setStatus({ kind: "idle" })} onPaid={() => setStatus((s) => s.kind === "placed" ? { ...s, paid: true } : s)} />
-      {basketOpen && <BasketSheet returnFocusRef={basketTrigger} lines={lines} cart={cart} notes={notes} estimate={estimate} status={status} paymentChoice={paymentChoice} onPaymentChoice={setPaymentChoice} onChange={setQuantity} onClose={closeBasket} onPlace={placeOrder} />}
+      {basketOpen && <BasketSheet returnFocusRef={basketTrigger} lines={lines} cart={cart} notes={notes} estimate={estimate} status={status} paymentChoice={paymentChoice} splitWays={splitWays} emailReceipt={emailReceipt} weeklySpecials={weeklySpecials} tipPercent={tipPercent} onPaymentChoice={setPaymentChoice} onSplit={setSplitWays} onEmail={setEmailReceipt} onWeekly={setWeeklySpecials} onTip={setTipPercent} onChange={setQuantity} onClose={closeBasket} onPlace={placeOrder} />}
     </div>
   );
 }
@@ -243,23 +248,36 @@ function MenuCard({ item, quantity, note, index, onChange, onNote }: { item: Men
         </button>
         <p className="mt-2 text-xs text-muted">Goes well with: {demoPairings(item.name).join(", ")}</p>
         {quantity > 0 && (
-          <div className="mt-3">
-            <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">Customise (pick any)</p>
-            <div className="flex flex-wrap gap-2">
-              {["No onions", "Extra spicy", "Mild", "Sauce on the side", "No sauce", "Extra portion", "Gluten-free prep", "Well done", "Medium", "Rare"].map((opt) => {
-                const selected = note.includes(opt);
-                return (
-                  <button
-                    key={opt}
-                    type="button"
-                    onClick={() => onNote(item.id, selected ? note.filter((x) => x !== opt) : [...note, opt])}
-                    className={`rounded-full border px-3 py-1 text-xs font-bold ${selected ? "border-accent bg-accent text-on-accent" : "border-line"}`}
-                  >
-                    {opt}
-                  </button>
-                );
-              })}
+          <div className="mt-3 space-y-3">
+            <div>
+              <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">Dietary</p>
+              <div className="flex flex-wrap gap-2">
+                {DIETARY.map((opt) => {
+                  const selected = note.includes(opt);
+                  return <button key={opt} type="button" onClick={() => onNote(item.id, selected ? note.filter((x) => x !== opt) : [...note, opt])} className={`rounded-full border px-3 py-1 text-xs font-bold ${selected ? "border-accent bg-accent text-on-accent" : "border-line"}`}>{opt}</button>;
+                })}
+              </div>
             </div>
+            <div>
+              <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">Spice</p>
+              <div className="flex flex-wrap gap-2">
+                {SPICE.map((opt) => {
+                  const selected = note.includes(opt);
+                  return <button key={opt} type="button" onClick={() => onNote(item.id, selected ? note.filter((x) => x !== opt) : [...note, opt])} className={`rounded-full border px-3 py-1 text-xs font-bold ${selected ? "border-accent bg-accent text-on-accent" : "border-line"}`}>{opt}</button>;
+                })}
+              </div>
+            </div>
+            {canChooseDoneness(item.name) && (
+              <div>
+                <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">How cooked</p>
+                <div className="flex flex-wrap gap-2">
+                  {COOKING.map((opt) => {
+                    const selected = note.includes(opt);
+                    return <button key={opt} type="button" onClick={() => onNote(item.id, selected ? note.filter((x) => x !== opt) : [...note, opt])} className={`rounded-full border px-3 py-1 text-xs font-bold ${selected ? "border-accent bg-accent text-on-accent" : "border-line"}`}>{opt}</button>;
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         )}
         {showReviews && (
@@ -313,11 +331,10 @@ function OrderDock({ triggerRef, count, estimate, status, onOpen, onDismiss, onP
           </p>
           <button type="button" onClick={onDismiss} className="min-h-tap shrink-0 rounded-full border border-bg/30 px-4 font-semibold">Order more</button>
         </div>
-        <div className="flex gap-1">
-          {["received", "preparing", "ready"].map((s) => (
-            <div key={s} className={`h-1 flex-1 rounded-full ${status.stage === s || (s === "received" && status.stage !== "received") || (s === "preparing" && status.stage === "ready") ? "bg-accent" : "bg-bg/30"}`} />
-          ))}
+        <div className="relative mt-2 h-2 overflow-hidden rounded-full bg-bg/30">
+          <div className="absolute inset-y-0 left-0 w-1/2 animate-[charge_1.2s_ease-in-out_infinite] rounded-full bg-accent" style={{ animation: "charge 1.2s ease-in-out infinite" }} />
         </div>
+        <style>{`@keyframes charge { 0% { transform: translateX(-100%); } 100% { transform: translateX(300%); } }`}</style>
       </div>
     );
   }
@@ -325,7 +342,7 @@ function OrderDock({ triggerRef, count, estimate, status, onOpen, onDismiss, onP
   return <div className="fixed inset-x-0 bottom-0 z-30 bg-linear-to-t from-bg via-bg to-transparent px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-8"><button ref={triggerRef} type="button" onClick={onOpen} aria-haspopup="dialog" className="mx-auto flex min-h-16 w-full max-w-(--t-max) items-center justify-between gap-4 rounded-theme bg-accent px-5 font-bold text-on-accent shadow-2xl active:scale-[0.99] focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ink"><span className="flex items-center gap-3"><span className="grid size-8 place-items-center rounded-full bg-on-accent text-sm text-accent">{count}</span>View your order</span><span className="tabular-nums">{formatCents(estimate)} <span aria-hidden="true">→</span></span></button></div>;
 }
 
-function BasketSheet({ returnFocusRef, lines, cart, notes, estimate, status, paymentChoice, onPaymentChoice, onChange, onClose, onPlace }: { returnFocusRef: React.RefObject<HTMLButtonElement | null>; lines: MenuItem[]; cart: Record<string, number>; notes: Record<string, string[]>; estimate: number; status: Status; paymentChoice: "pay_later" | "pay_now"; onPaymentChoice: (c: "pay_later" | "pay_now") => void; onChange: (id: string, q: number) => void; onClose: () => void; onPlace: () => void }) {
+function BasketSheet({ returnFocusRef, lines, cart, notes, estimate, status, paymentChoice, splitWays, emailReceipt, weeklySpecials, tipPercent, onPaymentChoice, onSplit, onEmail, onWeekly, onTip, onChange, onClose, onPlace }: { returnFocusRef: React.RefObject<HTMLButtonElement | null>; lines: MenuItem[]; cart: Record<string, number>; notes: Record<string, string[]>; estimate: number; status: Status; paymentChoice: "pay_later" | "pay_now"; splitWays: 1|2|3|4; emailReceipt: string; weeklySpecials: boolean; tipPercent: 0|10|15|20; onPaymentChoice: (c: "pay_later" | "pay_now") => void; onSplit: (n: 1|2|3|4) => void; onEmail: (v: string) => void; onWeekly: (v: boolean) => void; onTip: (p: 0|10|15|20) => void; onChange: (id: string, q: number) => void; onClose: () => void; onPlace: () => void }) {
   const dialogRef = useRef<HTMLElement | null>(null);
   const closeRef = useRef<HTMLButtonElement | null>(null);
   const descriptionId = useId();
@@ -363,6 +380,32 @@ function BasketSheet({ returnFocusRef, lines, cart, notes, estimate, status, pay
           <button type="button" onClick={() => onPaymentChoice("pay_later")} className={`min-h-12 rounded-theme border-2 px-3 text-sm font-bold ${paymentChoice === "pay_later" ? "border-accent bg-accent text-on-accent" : "border-line"}`}>Pay after my meal</button>
           <button type="button" onClick={() => onPaymentChoice("pay_now")} className={`min-h-12 rounded-theme border-2 px-3 text-sm font-bold ${paymentChoice === "pay_now" ? "border-accent bg-accent text-on-accent" : "border-line"}`}>Pay now (demo)</button>
         </div>
+        <div className="mb-4">
+          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">Add a tip</p>
+          <div className="flex gap-2">
+            {([0, 10, 15, 20] as const).map((p) => (
+              <button key={p} type="button" onClick={() => onTip(p)} className={`min-h-10 flex-1 rounded-theme border-2 text-sm font-bold ${tipPercent === p ? "border-accent bg-accent text-on-accent" : "border-line"}`}>{p === 0 ? "None" : `${p}%`}</button>
+            ))}
+          </div>
+          {tipPercent > 0 && <p className="mt-2 text-sm text-muted">Tip {formatCents(Math.round(estimate * tipPercent / 100))} · total {formatCents(estimate + Math.round(estimate * tipPercent / 100))}</p>}
+        </div>
+        <div className="mb-4">
+          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">Split the bill</p>
+          <div className="flex gap-2">
+            {([1, 2, 3, 4] as const).map((n) => (
+              <button key={n} type="button" onClick={() => onSplit(n)} className={`min-h-10 flex-1 rounded-theme border-2 text-sm font-bold ${splitWays === n ? "border-accent bg-accent text-on-accent" : "border-line"}`}>{n === 1 ? "No split" : `${n} ways`}</button>
+            ))}
+          </div>
+          {splitWays > 1 && <p className="mt-2 text-sm text-muted">About {formatCents(Math.round(estimate / splitWays))} each</p>}
+        </div>
+        <div className="mb-4">
+          <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-muted">Email receipt (optional)</label>
+          <input type="email" value={emailReceipt} onChange={(e) => onEmail(e.target.value)} placeholder="you@email.com" className="w-full rounded-theme border border-line bg-bg px-3 py-2 text-sm" />
+        </div>
+        <label className="mb-4 flex items-center gap-2 text-sm">
+          <input type="checkbox" checked={weeklySpecials} onChange={(e) => onWeekly(e.target.checked)} className="size-4 accent-accent" />
+          Email me the weekly specials
+        </label>
         <button type="button" onClick={onPlace} disabled={status.kind === "sending" || lines.length === 0} aria-busy={status.kind === "sending"} className="flex min-h-16 w-full items-center justify-center gap-3 rounded-theme bg-accent px-5 text-lg font-bold text-on-accent active:scale-[0.99] disabled:opacity-65">{status.kind === "sending" ? <><span className="spinner" aria-hidden="true" />Sending to kitchen…</> : "Place order"}</button>
       </section>
     </div>
