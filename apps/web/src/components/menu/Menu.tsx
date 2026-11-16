@@ -83,6 +83,7 @@ export function Menu({ menu: liveMenu, theme, qrToken, preview = false }: Props)
       const wait = demoWaitMinutes(count);
       setStatus({ kind: "placed", publicRef: "PREVIEW", itemCount: count, totalCents: estimate, payNow: paymentChoice === "pay_now", paid: false, stage: "received", wait });
       setTableOrders((prev) => [{ ref: "PREVIEW", total: estimate, count }, ...prev].slice(0, 5));
+      setCart({});
       setBasketOpen(false);
       return;
     }
@@ -307,7 +308,7 @@ function MenuCard({ item, categoryName, quantity, note, index, onChange, onNote 
                     <div className="flex flex-wrap gap-2">
                       {SMOOTHIE_FLAVOUR.map((opt) => {
                         const selected = note.includes(opt);
-                        return <button key={opt} type="button" onClick={() => onNote(item.id, selected ? note.filter((x) => x !== opt) : [...note, opt])} className={`rounded-full border px-3 py-1 text-xs font-bold ${selected ? "border-accent bg-accent text-on-accent" : "border-line"}`}>{opt}</button>;
+                        return <button key={opt} type="button" onClick={() => onNote(item.id, selected ? note.filter((x) => x !== opt) : [opt, ...note.filter(x => !SMOOTHIE_FLAVOUR.includes(x))])} className={`rounded-full border px-3 py-1 text-xs font-bold ${selected ? "border-accent bg-accent text-on-accent" : "border-line"}`}>{opt}</button>;
                       })}
                     </div>
                   </div>
@@ -318,7 +319,7 @@ function MenuCard({ item, categoryName, quantity, note, index, onChange, onNote 
                       <div className="flex flex-wrap gap-2">
                         {COOL_DRINK_BRAND.map((opt) => {
                           const selected = note.includes(opt);
-                          return <button key={opt} type="button" onClick={() => onNote(item.id, selected ? note.filter((x) => x !== opt) : [...note, opt])} className={`rounded-full border px-3 py-1 text-xs font-bold ${selected ? "border-accent bg-accent text-on-accent" : "border-line"}`}>{opt}</button>;
+                          return <button key={opt} type="button" onClick={() => onNote(item.id, selected ? note.filter((x) => x !== opt) : [opt, ...note.filter(x => !COOL_DRINK_BRAND.includes(x))])} className={`rounded-full border px-3 py-1 text-xs font-bold ${selected ? "border-accent bg-accent text-on-accent" : "border-line"}`}>{opt}</button>;
                         })}
                       </div>
                     </div>
@@ -327,7 +328,7 @@ function MenuCard({ item, categoryName, quantity, note, index, onChange, onNote 
                       <div className="flex flex-wrap gap-2">
                         {COOL_DRINK_TYPE.map((opt) => {
                           const selected = note.includes(opt);
-                          return <button key={opt} type="button" onClick={() => onNote(item.id, selected ? note.filter((x) => x !== opt) : [...note, opt])} className={`rounded-full border px-3 py-1 text-xs font-bold ${selected ? "border-accent bg-accent text-on-accent" : "border-line"}`}>{opt}</button>;
+                          return <button key={opt} type="button" onClick={() => onNote(item.id, selected ? note.filter((x) => x !== opt) : [opt, ...note.filter(x => !COOL_DRINK_TYPE.includes(x))])} className={`rounded-full border px-3 py-1 text-xs font-bold ${selected ? "border-accent bg-accent text-on-accent" : "border-line"}`}>{opt}</button>;
                         })}
                       </div>
                     </div>
@@ -339,7 +340,7 @@ function MenuCard({ item, categoryName, quantity, note, index, onChange, onNote 
                   <div className="flex flex-wrap gap-2">
                     {DRINK_SIZE.map((opt) => {
                       const selected = note.includes(opt);
-                      return <button key={opt} type="button" onClick={() => onNote(item.id, selected ? note.filter((x) => x !== opt) : [...note, opt])} className={`rounded-full border px-3 py-1 text-xs font-bold ${selected ? "border-accent bg-accent text-on-accent" : "border-line"}`}>{opt}</button>;
+                      return <button key={opt} type="button" onClick={() => onNote(item.id, selected ? note.filter((x) => x !== opt) : [opt, ...note.filter(x => !DRINK_SIZE.includes(x))])} className={`rounded-full border px-3 py-1 text-xs font-bold ${selected ? "border-accent bg-accent text-on-accent" : "border-line"}`}>{opt}</button>;
                     })}
                   </div>
                 </div>
@@ -349,7 +350,7 @@ function MenuCard({ item, categoryName, quantity, note, index, onChange, onNote 
                     <div className="flex flex-wrap gap-2">
                       {COFFEE_MILK.map((opt) => {
                         const selected = note.includes(opt);
-                        return <button key={opt} type="button" onClick={() => onNote(item.id, selected ? note.filter((x) => x !== opt) : [...note, opt])} className={`rounded-full border px-3 py-1 text-xs font-bold ${selected ? "border-accent bg-accent text-on-accent" : "border-line"}`}>{opt}</button>;
+                        return <button key={opt} type="button" onClick={() => onNote(item.id, selected ? note.filter((x) => x !== opt) : [opt, ...note.filter(x => !COFFEE_MILK.includes(x))])} className={`rounded-full border px-3 py-1 text-xs font-bold ${selected ? "border-accent bg-accent text-on-accent" : "border-line"}`}>{opt}</button>;
                       })}
                     </div>
                   </div>
@@ -492,7 +493,7 @@ function MenuCard({ item, categoryName, quantity, note, index, onChange, onNote 
                     <div className="flex flex-wrap gap-2">
                       {COOKING.map((opt) => {
                         const selected = note.includes(opt);
-                        return <button key={opt} type="button" onClick={() => onNote(item.id, selected ? note.filter((x) => x !== opt) : [...note, opt])} className={`rounded-full border px-3 py-1 text-xs font-bold ${selected ? "border-accent bg-accent text-on-accent" : "border-line"}`}>{opt}</button>;
+                        return <button key={opt} type="button" onClick={() => onNote(item.id, selected ? note.filter((x) => x !== opt) : [opt, ...note.filter(x => !COOKING.includes(x))])} className={`rounded-full border px-3 py-1 text-xs font-bold ${selected ? "border-accent bg-accent text-on-accent" : "border-line"}`}>{opt}</button>;
                       })}
                     </div>
                   </div>
