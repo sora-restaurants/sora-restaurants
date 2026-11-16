@@ -8,7 +8,6 @@ import { SlideToPay } from "../order/SlideToPay.tsx";
 import { demoReviewsFor, type DemoReview } from "./demo-reviews.ts";
 import { demoWaitMinutes } from "./demo-extras.ts";
 import { NO_WANT, SPICE, COOKING, ADD_ONS, DRINK_SIZE, DRINK_ICE, DRINK_EXTRAS, COFFEE_MILK, COOL_DRINK_BRAND, COOL_DRINK_TYPE, CHEESECAKE_SLICE, SMOOTHIE_FLAVOUR, WATER_TYPE, STEAK_SIZE, WINGS_SIZE, FRIES_SIZE, FRIES_ADDONS, canChooseDoneness, isDrink, isCoffee, isHotDrink, addOnCost } from "./customise-options.ts";
-import { DEMO_MENU } from "./demo-menu.ts";
 
 const money = new Intl.NumberFormat("en-ZA", { style: "currency", currency: "ZAR" });
 const formatCents = (cents: number) => money.format(cents / 100);
@@ -27,8 +26,7 @@ const ERRORS: Record<string, string> = {
   TABLE_SESSION_NOT_ACTIVE: "Ordering has closed for this table. Please ask a member of staff for help.",
 };
 
-export function Menu({ menu: liveMenu, theme, qrToken, preview = false }: Props) {
-  const menu = DEMO_MENU;
+export function Menu({ menu, theme, qrToken, preview = false }: Props) {
   const [cart, setCart] = useState<Record<string, number>>({});
   const [status, setStatus] = useState<Status>({ kind: "idle" });
   const [basketOpen, setBasketOpen] = useState(false);
@@ -125,8 +123,13 @@ export function Menu({ menu: liveMenu, theme, qrToken, preview = false }: Props)
       <header className="menu-hero text-on-accent">
         <div className="mx-auto max-w-(--t-max) px-pad pb-7 pt-[calc(var(--t-pad)*2.25)]">
           <div className="mb-8 flex items-center justify-between gap-3">
-            <span className="restaurant-mark" aria-hidden="true">S</span>
+            <span className="restaurant-mark" aria-hidden="true">{menu.restaurant.slice(0, 1)}</span>
             <div className="flex items-center gap-2">
+              {status.kind !== "placed" && (
+                <button type="button" onClick={() => setAssistanceOpen(true)} disabled={assistance !== "idle"} className="table-pill disabled:opacity-70">
+                  {assistance === "sending" ? "Calling…" : assistance === "sent" ? "Staff notified" : "Need something?"}
+                </button>
+              )}
               <span className="table-pill">{menu.table}</span>
             </div>
           </div>
@@ -143,7 +146,7 @@ export function Menu({ menu: liveMenu, theme, qrToken, preview = false }: Props)
       </nav>
 
       <main id="menu-content" className="mx-auto max-w-(--t-max) px-pad pb-40">
-        {(() => {
+        {preview && (() => {
           const top = menu.categories.flatMap((c) => c.items)
             .map((item) => ({ item, ...demoReviewsFor(item.name) }))
             .filter((x) => x.badge)
@@ -185,7 +188,7 @@ export function Menu({ menu: liveMenu, theme, qrToken, preview = false }: Props)
               <div><p className="mb-1 text-xs font-bold uppercase tracking-[0.18em] text-accent">Menu · {String(categoryIndex + 1).padStart(2, "0")}</p><h2 id={`h-${category.id}`} className="display text-3xl leading-none">{category.name}</h2></div>
               <span className="text-sm text-muted">{category.items.length} {category.items.length === 1 ? "dish" : "dishes"}</span>
             </div>
-            <ul className="menu-grid">{category.items.map((item, index) => <MenuCard key={item.id} item={item} categoryName={category.name} quantity={cart[item.id] ?? 0} note={(notes[item.id] ?? [[]])[Math.max(0, (notes[item.id]?.length ?? 1) - 1)] ?? []} index={index} onChange={setQuantity} onNote={(id, opts) => setNotes((c) => { const sets = c[id] ? [...c[id]] : [[]]; sets[sets.length - 1] = opts; return { ...c, [id]: sets }; })} />)}</ul>
+            <ul className="menu-grid">{category.items.map((item, index) => <MenuCard key={item.id} item={item} showRatings={preview} categoryName={category.name} quantity={cart[item.id] ?? 0} note={(notes[item.id] ?? [[]])[Math.max(0, (notes[item.id]?.length ?? 1) - 1)] ?? []} index={index} onChange={setQuantity} onNote={(id, opts) => setNotes((c) => { const sets = c[id] ? [...c[id]] : [[]]; sets[sets.length - 1] = opts; return { ...c, [id]: sets }; })} />)}</ul>
           </section>
         );
         })}
@@ -211,11 +214,6 @@ export function Menu({ menu: liveMenu, theme, qrToken, preview = false }: Props)
         </div>
       )}
       <OrderDock triggerRef={basketTrigger} count={count} estimate={estimate} status={status} onOpen={() => setBasketOpen(true)} onDismiss={() => setStatus({ kind: "idle" })} onPaid={() => setStatus((s) => s.kind === "placed" ? { ...s, paid: true } : s)} />
-      {status.kind !== "placed" && (
-        <button type="button" onClick={() => setAssistanceOpen(true)} disabled={assistance !== "idle"} className="fixed bottom-24 right-4 z-20 min-h-12 rounded-full border border-line bg-surface px-4 text-sm font-bold text-ink shadow-lg active:scale-[0.98] disabled:opacity-70">
-          {assistance === "sending" ? "Calling…" : assistance === "sent" ? "Staff notified" : "Need something?"}
-        </button>
-      )}
       {basketOpen && <BasketSheet returnFocusRef={basketTrigger} lines={lines} cart={cart} notes={notes} estimate={estimate} status={status} paymentChoice={paymentChoice} splitWays={splitWays} emailReceipt={emailReceipt} weeklySpecials={weeklySpecials} tipPercent={tipPercent} onPaymentChoice={setPaymentChoice} onSplit={setSplitWays} onEmail={setEmailReceipt} onWeekly={setWeeklySpecials} onTip={setTipPercent} onChange={setQuantity} onClose={closeBasket} onPlace={placeOrder} />}
     </div>
   );
@@ -256,7 +254,8 @@ function missingRequired(item: MenuItem, categoryName: string, note: string[]): 
   return missing;
 }
 
-function MenuCard({ item, categoryName, quantity, note, index, onChange, onNote }: { item: MenuItem; categoryName: string; quantity: number; note: string[]; index: number; onChange: (id: string, q: number) => void; onNote: (id: string, opts: string[]) => void }) {
+// Ratings and reviews are sample data, so they only show on the demo table; real restaurants have none yet.
+function MenuCard({ item, showRatings, categoryName, quantity, note, index, onChange, onNote }: { item: MenuItem; showRatings: boolean; categoryName: string; quantity: number; note: string[]; index: number; onChange: (id: string, q: number) => void; onNote: (id: string, opts: string[]) => void }) {
   const [showReviews, setShowReviews] = useState(false);
   const [optsOpen, setOptsOpen] = useState(false);
   const reviews = demoReviewsFor(item.name);
@@ -268,14 +267,14 @@ function MenuCard({ item, categoryName, quantity, note, index, onChange, onNote 
           <div className="min-w-0">
             <h3 className="display text-2xl leading-none">{item.name}</h3>
             {(item as MenuItem & { special?: string }).special && <span className="ml-2 rounded-full bg-accent px-2 py-0.5 text-[0.65rem] font-bold uppercase text-on-accent">{(item as MenuItem & { special?: string }).special}</span>}
-            <div className="mt-2 flex flex-wrap items-center gap-2">
+            {showRatings && <div className="mt-2 flex flex-wrap items-center gap-2">
               <span className="inline-flex items-center gap-1 text-sm font-bold text-accent" aria-label={`${reviews.rating} out of 5 stars`}>
                 {"★".repeat(Math.round(reviews.rating))}{"☆".repeat(5 - Math.round(reviews.rating))}
                 <span className="ml-1 tabular-nums">{reviews.rating}</span>
               </span>
               <span className="text-xs text-muted">({reviews.count})</span>
               {reviews.badge && <span className="rounded-full bg-accent/15 px-2 py-0.5 text-[0.65rem] font-bold uppercase tracking-wide text-accent">{reviews.badge}</span>}
-            </div>
+            </div>}
           </div>
           <p className="shrink-0 font-bold tabular-nums text-accent">{formatCents(item.priceCents)}</p>
         </div>
@@ -284,9 +283,9 @@ function MenuCard({ item, categoryName, quantity, note, index, onChange, onNote 
         {(item as MenuItem & { prepTime?: string }).prepTime && <p className="mt-2 text-xs text-muted">Ready in {(item as MenuItem & { prepTime?: string }).prepTime}</p>}
         {(item as MenuItem & { allergens?: string[] }).allergens?.length ? <p className="mt-1 text-xs text-muted">Contains: {(item as MenuItem & { allergens?: string[] }).allergens!.join(", ")}</p> : null}
 
-        <button type="button" onClick={() => setShowReviews((v) => !v)} className="mt-3 self-start text-sm font-semibold text-accent underline-offset-2 hover:underline focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-accent">
+        {showRatings && <button type="button" onClick={() => setShowReviews((v) => !v)} className="mt-3 self-start text-sm font-semibold text-accent underline-offset-2 hover:underline focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-accent">
           {showReviews ? "Hide reviews" : `See ${reviews.reviews.length} reviews`}
-        </button>
+        </button>}
         {optsOpen && (
           <div className="mt-3 space-y-3">
             {isDrink(item.name, categoryName) ? (
@@ -509,7 +508,7 @@ function MenuCard({ item, categoryName, quantity, note, index, onChange, onNote 
         <div className="mt-auto flex justify-end pt-5">
           {item.soldOut ? <span className="inline-flex min-h-12 items-center rounded-full bg-highlight px-4 text-sm font-bold text-on-highlight">Sold out</span> : (() => {
             const missing = missingRequired(item, categoryName, note);
-            if (quantity === 0) return <button type="button" onClick={() => { if (missing.length > 0) { setOptsOpen(true); return; } onChange(item.id, 1); }} aria-label={`Add ${item.name}`} className="add-button focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ink">{missing.length > 0 ? (optsOpen ? `Choose ${missing[0]}` : <><span aria-hidden="true">＋</span> Add to order</>) : <><span aria-hidden="true">＋</span> Add to order</>}</button>;
+            if (quantity === 0) return <button type="button" onClick={() => { if (missing.length > 0) { setOptsOpen(true); return; } onChange(item.id, 1); setOptsOpen(false); }} aria-label={`Add ${item.name}`} className="add-button focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ink">{missing.length > 0 ? (optsOpen ? `Choose ${missing[0]}` : <><span aria-hidden="true">＋</span> Add to order</>) : <><span aria-hidden="true">＋</span> Add to order</>}</button>;
             return <QuantityControl item={item} quantity={quantity} onChange={onChange} missing={missing} />;
           })()}
         </div>
@@ -563,6 +562,7 @@ function BasketSheet({ returnFocusRef, lines, cart, notes, estimate, status, pay
   const closeRef = useRef<HTMLButtonElement | null>(null);
   const descriptionId = useId();
   const [step, setStep] = useState<1 | 2 | 3>(1);
+  const totalLine = <div className="flex items-center justify-between py-4 text-lg font-bold"><span>Total{tipPercent > 0 ? " with tip" : ""}</span><span className="tabular-nums">{formatCents(estimate + Math.round(estimate * tipPercent / 100))}</span></div>;
 
   useEffect(() => {
     closeRef.current?.focus();
@@ -593,7 +593,7 @@ function BasketSheet({ returnFocusRef, lines, cart, notes, estimate, status, pay
         <>
           <ul className="divide-y divide-line/40 border-y border-line/40">{lines.map((item) => <li key={item.id} className="flex items-center justify-between gap-4 py-4"><div className="min-w-0"><h3 className="font-bold">{item.name}</h3>{(notes[item.id] ?? []).map((set, i) => set.length ? <p key={i} className="mt-1 text-xs text-muted">#{i + 1}: {set.join(", ")}</p> : null)}<p className="mt-1 text-sm tabular-nums text-muted">{formatCents(item.priceCents * cart[item.id])}</p></div><QuantityControl item={item} quantity={cart[item.id]} onChange={onChange} /></li>)}</ul>
           <div className="flex items-center justify-between py-5 text-lg font-bold"><span>Estimated total</span><span className="tabular-nums">{formatCents(estimate)}</span></div>
-          <button type="button" onClick={() => setStep(2)} disabled={lines.length === 0} className="flex min-h-16 w-full items-center justify-center rounded-theme bg-accent px-5 text-lg font-bold text-on-accent">Continue to payment</button>
+          <button type="button" onClick={() => setStep(2)} disabled={lines.length === 0} className="flex min-h-16 w-full items-center justify-center rounded-theme bg-accent px-5 text-lg font-bold text-on-accent">Continue</button>
         </>
       )}
       {step === 2 && (
@@ -620,6 +620,7 @@ function BasketSheet({ returnFocusRef, lines, cart, notes, estimate, status, pay
             </div>
             {splitWays > 1 && <p className="mt-2 text-sm text-muted">About {formatCents(Math.round(estimate / splitWays))} each</p>}
           </div>
+          {totalLine}
           <div className="flex gap-2">
             <button type="button" onClick={() => setStep(1)} className="min-h-14 flex-1 rounded-theme border-2 border-line text-sm font-bold">Back</button>
             <button type="button" onClick={() => setStep(3)} className="min-h-14 flex-[2] rounded-theme bg-accent text-lg font-bold text-on-accent">Continue</button>
@@ -636,6 +637,7 @@ function BasketSheet({ returnFocusRef, lines, cart, notes, estimate, status, pay
             <input type="checkbox" checked={weeklySpecials} onChange={(e) => onWeekly(e.target.checked)} className="size-4 accent-accent" />
             Email me the weekly specials
           </label>
+          {totalLine}
           <div className="flex gap-2">
             <button type="button" onClick={() => setStep(2)} className="min-h-14 flex-1 rounded-theme border-2 border-line text-sm font-bold">Back</button>
             <button type="button" onClick={onPlace} disabled={status.kind === "sending"} className="flex min-h-14 flex-[2] items-center justify-center gap-3 rounded-theme bg-accent text-lg font-bold text-on-accent disabled:opacity-65">{status.kind === "sending" ? <><span className="spinner" aria-hidden="true" />Sending…</> : "Place order"}</button>

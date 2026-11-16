@@ -5,7 +5,7 @@ import type { TableMenu } from "./types.ts";
 const img = (id: string) => `https://images.unsplash.com/${id}?auto=format&fit=crop&w=800&q=70`;
 
 export const DEMO_MENU: TableMenu = {
-  restaurant: "Sora",
+  restaurant: "The Corner Bistro",
   theme: "sora",
   table: "Table 1",
   categories: [
@@ -24,7 +24,7 @@ export const DEMO_MENU: TableMenu = {
       name: "Mains",
       items: [
         { id: "d-ribeye", name: "Ribeye Steak", description: "300g grain-fed ribeye, herb butter, chips.", priceCents: 28500, imageUrl: img("photo-1558030006-450675393462"), dietaryTags: ["Gluten-free"], special: "Chef's special", allergens: ["Dairy"], prepTime: "22 min" },
-        { id: "d-burger", name: "Sora Smash Burger", description: "Double beef patty, cheese, pickles, special sauce.", priceCents: 16500, imageUrl: img("photo-1568901346375-23c9450c58cd"), dietaryTags: [], allergens: ["Gluten", "Dairy"], prepTime: "16 min" },
+        { id: "d-burger", name: "Smash Burger", description: "Double beef patty, cheese, pickles, special sauce.", priceCents: 16500, imageUrl: img("photo-1568901346375-23c9450c58cd"), dietaryTags: [], allergens: ["Gluten", "Dairy"], prepTime: "16 min" },
         { id: "d-grilled-chicken", name: "Grilled Chicken Breast", description: "Herb-marinated chicken, seasonal vegetables.", priceCents: 17500, imageUrl: img("photo-1532550907401-a500c9a57435"), dietaryTags: ["Gluten-free", "Dairy-free"], prepTime: "18 min" },
         { id: "d-salmon", name: "Pan-Seared Salmon", description: "Atlantic salmon, lemon butter, greens.", priceCents: 24500, imageUrl: img("photo-1467003909585-2f8a72700288"), dietaryTags: ["Gluten-free"], special: "Today's special", allergens: ["Fish"], prepTime: "20 min" },
         { id: "d-pasta", name: "Tomato Basil Pasta", description: "Fresh pasta in a slow-cooked tomato sauce.", priceCents: 14500, imageUrl: img("photo-1473093295043-cdd812d0e601"), dietaryTags: ["Vegetarian"], allergens: ["Gluten"], prepTime: "14 min" },
