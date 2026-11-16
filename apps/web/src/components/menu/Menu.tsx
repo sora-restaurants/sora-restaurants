@@ -224,6 +224,37 @@ function EmptyMenu() {
   return <section className="py-16 text-center" aria-labelledby="empty-menu-title"><p className="text-xs font-bold uppercase tracking-[0.18em] text-accent">Please check back soon</p><h2 id="empty-menu-title" className="display mt-2 text-3xl">The menu is being updated</h2><p className="mx-auto mt-3 max-w-sm text-sm leading-relaxed text-muted">There are no dishes available to order right now. A member of staff will be happy to help.</p></section>;
 }
 
+
+function missingRequired(item: MenuItem, categoryName: string, note: string[]): string[] {
+  const missing: string[] = [];
+  const name = item.name;
+  if (/steak|ribeye/i.test(name)) {
+    if (!STEAK_SIZE.some(s => note.includes(s.label))) missing.push("Size");
+    if (!COOKING.some(c => note.includes(c))) missing.push("How cooked");
+  } else if (/wings/i.test(name)) {
+    if (!WINGS_SIZE.some(w => note.includes(w.label))) missing.push("Size");
+  } else if (/fries/i.test(name)) {
+    if (!FRIES_SIZE.some(f => note.includes(f))) missing.push("Size");
+  } else if (/cheesecake/i.test(name)) {
+    if (!CHEESECAKE_SLICE.some(c => note.includes(c.label))) missing.push("Slice");
+  } else if (/water/i.test(name)) {
+    if (!WATER_TYPE.some(w => note.includes(w.label))) missing.push("Type");
+  } else if (/smoothie/i.test(name)) {
+    if (!SMOOTHIE_FLAVOUR.some(s => note.includes(s))) missing.push("Flavour");
+  } else if (/cool drink/i.test(name)) {
+    if (!COOL_DRINK_BRAND.some(b => note.includes(b))) missing.push("Brand");
+    if (!COOL_DRINK_TYPE.some(t => note.includes(t))) missing.push("Type");
+  } else if (isDrink(name, categoryName)) {
+    if (!DRINK_SIZE.some(s => note.includes(s))) missing.push("Size");
+    if (isCoffee(name, categoryName) || isHotDrink(name, categoryName)) {
+      if (!COFFEE_MILK.some(m => note.includes(m))) missing.push("Milk");
+    }
+  } else if (canChooseDoneness(name)) {
+    if (!COOKING.some(c => note.includes(c))) missing.push("How cooked");
+  }
+  return missing;
+}
+
 function MenuCard({ item, categoryName, quantity, note, index, onChange, onNote }: { item: MenuItem; categoryName: string; quantity: number; note: string[]; index: number; onChange: (id: string, q: number) => void; onNote: (id: string, opts: string[]) => void }) {
   const [showReviews, setShowReviews] = useState(false);
   const reviews = demoReviewsFor(item.name);
@@ -261,7 +292,7 @@ function MenuCard({ item, categoryName, quantity, note, index, onChange, onNote 
               <>
                 {/^water$/i.test(item.name) ? (
                   <div>
-                    <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">Type</p>
+                    <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">Type <span className="text-accent">*</span></p>
                     <div className="flex flex-wrap gap-2">
                       {WATER_TYPE.map((opt) => {
                         const selected = note.includes(opt.label);
@@ -271,7 +302,7 @@ function MenuCard({ item, categoryName, quantity, note, index, onChange, onNote 
                   </div>
                 ) : /smoothie/i.test(item.name) ? (
                   <div>
-                    <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">Flavour</p>
+                    <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">Flavour <span className="text-accent">*</span></p>
                     <div className="flex flex-wrap gap-2">
                       {SMOOTHIE_FLAVOUR.map((opt) => {
                         const selected = note.includes(opt);
@@ -282,7 +313,7 @@ function MenuCard({ item, categoryName, quantity, note, index, onChange, onNote 
                 ) : /cool drink/i.test(item.name) ? (
                   <>
                     <div>
-                      <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">Brand</p>
+                      <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">Brand <span className="text-accent">*</span></p>
                       <div className="flex flex-wrap gap-2">
                         {COOL_DRINK_BRAND.map((opt) => {
                           const selected = note.includes(opt);
@@ -291,7 +322,7 @@ function MenuCard({ item, categoryName, quantity, note, index, onChange, onNote 
                       </div>
                     </div>
                     <div>
-                      <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">Type</p>
+                      <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">Type <span className="text-accent">*</span></p>
                       <div className="flex flex-wrap gap-2">
                         {COOL_DRINK_TYPE.map((opt) => {
                           const selected = note.includes(opt);
@@ -303,7 +334,7 @@ function MenuCard({ item, categoryName, quantity, note, index, onChange, onNote 
                 ) : (
                 <>
                 <div>
-                  <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">Size</p>
+                  <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">Size <span className="text-accent">*</span></p>
                   <div className="flex flex-wrap gap-2">
                     {DRINK_SIZE.map((opt) => {
                       const selected = note.includes(opt);
@@ -313,7 +344,7 @@ function MenuCard({ item, categoryName, quantity, note, index, onChange, onNote 
                 </div>
                 {isCoffee(item.name, categoryName) || isHotDrink(item.name, categoryName) ? (
                   <div>
-                    <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">Milk</p>
+                    <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">Milk <span className="text-accent">*</span></p>
                     <div className="flex flex-wrap gap-2">
                       {COFFEE_MILK.map((opt) => {
                         const selected = note.includes(opt);
@@ -350,7 +381,7 @@ function MenuCard({ item, categoryName, quantity, note, index, onChange, onNote 
               <>
                 {/cheesecake/i.test(item.name) ? (
                   <div>
-                    <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">Slice</p>
+                    <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">Slice <span className="text-accent">*</span></p>
                     <div className="flex flex-wrap gap-2">
                       {CHEESECAKE_SLICE.map((opt) => {
                         const selected = note.includes(opt.label);
@@ -360,7 +391,7 @@ function MenuCard({ item, categoryName, quantity, note, index, onChange, onNote 
                   </div>
                 ) : /ribeye|steak/i.test(item.name) ? (
                   <div>
-                    <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">Size</p>
+                    <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">Size <span className="text-accent">*</span></p>
                     <div className="flex flex-wrap gap-2">
                       {STEAK_SIZE.map((opt) => {
                         const selected = note.includes(opt.label);
@@ -371,7 +402,7 @@ function MenuCard({ item, categoryName, quantity, note, index, onChange, onNote 
                 ) : /wings/i.test(item.name) ? (
                   <>
                     <div>
-                      <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">Size</p>
+                      <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">Size <span className="text-accent">*</span></p>
                       <div className="flex flex-wrap gap-2">
                         {WINGS_SIZE.map((opt) => {
                           const selected = note.includes(opt.label);
@@ -392,7 +423,7 @@ function MenuCard({ item, categoryName, quantity, note, index, onChange, onNote 
                 ) : /fries/i.test(item.name) ? (
                   <>
                     <div>
-                      <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">Size</p>
+                      <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">Size <span className="text-accent">*</span></p>
                       <div className="flex flex-wrap gap-2">
                         {FRIES_SIZE.map((opt) => {
                           const selected = note.includes(opt);
@@ -456,7 +487,7 @@ function MenuCard({ item, categoryName, quantity, note, index, onChange, onNote 
                 )}
                 {canChooseDoneness(item.name) && (
                   <div>
-                    <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">How cooked</p>
+                    <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">How cooked <span className="text-accent">*</span></p>
                     <div className="flex flex-wrap gap-2">
                       {COOKING.map((opt) => {
                         const selected = note.includes(opt);
@@ -484,15 +515,19 @@ function MenuCard({ item, categoryName, quantity, note, index, onChange, onNote 
         )}
 
         <div className="mt-auto flex justify-end pt-5">
-          {item.soldOut ? <span className="inline-flex min-h-12 items-center rounded-full bg-highlight px-4 text-sm font-bold text-on-highlight">Sold out</span> : quantity === 0 ? <button type="button" onClick={() => onChange(item.id, 1)} aria-label={`Add ${item.name}`} className="add-button focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ink"><span aria-hidden="true">＋</span> Add to order</button> : <QuantityControl item={item} quantity={quantity} onChange={onChange} />}
+          {item.soldOut ? <span className="inline-flex min-h-12 items-center rounded-full bg-highlight px-4 text-sm font-bold text-on-highlight">Sold out</span> : (() => {
+            const missing = missingRequired(item, categoryName, note);
+            if (quantity === 0) return <button type="button" disabled={missing.length > 0} onClick={() => onChange(item.id, 1)} aria-label={`Add ${item.name}`} className="add-button focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-50">{missing.length > 0 ? `Choose ${missing[0]}` : <><span aria-hidden="true">＋</span> Add to order</>}</button>;
+            return <QuantityControl item={item} quantity={quantity} onChange={onChange} missing={missing} />;
+          })()}
         </div>
       </div>
     </li>
   );
 }
 
-function QuantityControl({ item, quantity, onChange }: { item: MenuItem; quantity: number; onChange: (id: string, q: number) => void }) {
-  return <div className="quantity-control" role="group" aria-label={`${item.name} quantity`}><StepButton label={`Remove one ${item.name}`} onClick={() => onChange(item.id, quantity - 1)}>−</StepButton><output aria-live="polite" className="min-w-10 text-center font-bold tabular-nums">{quantity}</output><StepButton label={`Add one more ${item.name}`} onClick={() => onChange(item.id, quantity + 1)} disabled={quantity >= 50}>+</StepButton></div>;
+function QuantityControl({ item, quantity, onChange, missing = [] }: { item: MenuItem; quantity: number; onChange: (id: string, q: number) => void; missing?: string[] }) {
+  return <div className="quantity-control" role="group" aria-label={`${item.name} quantity`}><StepButton label={`Remove one ${item.name}`} onClick={() => onChange(item.id, quantity - 1)}>−</StepButton><output aria-live="polite" className="min-w-10 text-center font-bold tabular-nums">{quantity}</output><StepButton label={`Add one more ${item.name}`} onClick={() => onChange(item.id, quantity + 1)} disabled={quantity >= 50 || missing.length > 0}>+</StepButton></div>;
 }
 
 function StepButton({ label, onClick, disabled, children }: { label: string; onClick: () => void; disabled?: boolean; children: string }) {
