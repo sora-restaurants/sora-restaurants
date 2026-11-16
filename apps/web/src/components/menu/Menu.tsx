@@ -211,7 +211,7 @@ export function Menu({ menu: liveMenu, theme, qrToken, preview = false }: Props)
       )}
       <OrderDock triggerRef={basketTrigger} count={count} estimate={estimate} status={status} onOpen={() => setBasketOpen(true)} onDismiss={() => setStatus({ kind: "idle" })} onPaid={() => setStatus((s) => s.kind === "placed" ? { ...s, paid: true } : s)} />
       {status.kind !== "placed" && (
-        <button type="button" onClick={() => setAssistanceOpen(true)} disabled={assistance !== "idle"} className="fixed bottom-20 right-4 z-30 min-h-12 rounded-full border border-line bg-surface px-4 text-sm font-bold text-ink shadow-lg active:scale-[0.98] disabled:opacity-70">
+        <button type="button" onClick={() => setAssistanceOpen(true)} disabled={assistance !== "idle"} className="fixed bottom-24 right-4 z-20 min-h-12 rounded-full border border-line bg-surface px-4 text-sm font-bold text-ink shadow-lg active:scale-[0.98] disabled:opacity-70">
           {assistance === "sending" ? "Calling…" : assistance === "sent" ? "Staff notified" : "Need something?"}
         </button>
       )}
