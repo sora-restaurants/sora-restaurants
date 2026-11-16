@@ -1,10 +1,5 @@
 /** Option groups. Food and drinks get different sets. */
 
-export const DIETARY = [
-  "Vegetarian", "Vegan", "Gluten-free", "Dairy-free", "Nut-free", "Shellfish-free",
-  "Halal", "Kosher", "Low-carb", "Keto",
-];
-
 export const NO_WANT = [
   "No onion", "No garlic", "No tomato", "No pickles", "No lettuce", "No cheese",
   "No mayo", "No sauce", "Sauce on the side", "No mushrooms", "No peppers", "No chilli",

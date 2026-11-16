@@ -6,8 +6,8 @@ import type { ThemeId } from "../../themes/themes.ts";
 import type { MenuItem, TableMenu } from "./types.ts";
 import { SlideToPay } from "../order/SlideToPay.tsx";
 import { demoReviewsFor, type DemoReview } from "./demo-reviews.ts";
-import { demoPairings, demoWaitMinutes } from "./demo-extras.ts";
-import { DIETARY, NO_WANT, SPICE, COOKING, ADD_ONS, DRINK_SIZE, DRINK_ICE, DRINK_EXTRAS, COFFEE_MILK, COOL_DRINK_BRAND, COOL_DRINK_TYPE, CHEESECAKE_SLICE, SMOOTHIE_FLAVOUR, WATER_TYPE, STEAK_SIZE, WINGS_SIZE, FRIES_SIZE, FRIES_ADDONS, canChooseDoneness, isDrink, isCoffee, isHotDrink, addOnCost } from "./customise-options.ts";
+import { demoWaitMinutes } from "./demo-extras.ts";
+import { NO_WANT, SPICE, COOKING, ADD_ONS, DRINK_SIZE, DRINK_ICE, DRINK_EXTRAS, COFFEE_MILK, COOL_DRINK_BRAND, COOL_DRINK_TYPE, CHEESECAKE_SLICE, SMOOTHIE_FLAVOUR, WATER_TYPE, STEAK_SIZE, WINGS_SIZE, FRIES_SIZE, FRIES_ADDONS, canChooseDoneness, isDrink, isCoffee, isHotDrink, addOnCost } from "./customise-options.ts";
 import { DEMO_MENU } from "./demo-menu.ts";
 
 const money = new Intl.NumberFormat("en-ZA", { style: "currency", currency: "ZAR" });
@@ -287,7 +287,6 @@ function MenuCard({ item, categoryName, quantity, note, index, onChange, onNote 
         <button type="button" onClick={() => setShowReviews((v) => !v)} className="mt-3 self-start text-sm font-semibold text-accent underline-offset-2 hover:underline focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-accent">
           {showReviews ? "Hide reviews" : `See ${reviews.reviews.length} reviews`}
         </button>
-        <p className="mt-2 text-xs text-muted">Goes well with: {demoPairings(item.name).join(", ")}</p>
         {optsOpen && (
           <div className="mt-3 space-y-3">
             {isDrink(item.name, categoryName) ? (
@@ -448,15 +447,6 @@ function MenuCard({ item, categoryName, quantity, note, index, onChange, onNote 
                   <p className="text-xs text-muted">No customisation needed.</p>
                 ) : (
                 <>
-                <div>
-                  <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">Dietary</p>
-                  <div className="flex flex-wrap gap-2">
-                    {DIETARY.map((opt) => {
-                      const selected = note.includes(opt);
-                      return <button key={opt} type="button" onClick={() => onNote(item.id, selected ? note.filter((x) => x !== opt) : [...note, opt])} className={`rounded-full border px-3 py-1 text-xs font-bold ${selected ? "border-accent bg-accent text-on-accent" : "border-line"}`}>{opt}</button>;
-                    })}
-                  </div>
-                </div>
                 <div>
                   <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">Spice</p>
                   <div className="flex flex-wrap gap-2">
