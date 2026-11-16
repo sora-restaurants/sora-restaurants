@@ -505,7 +505,7 @@ function MenuCard({ item, categoryName, quantity, note, index, onChange, onNote 
             )}
           </div>
         )}
-        )}{showReviews && (
+        {showReviews && (
           <ul className="mt-3 space-y-3 border-t border-line/40 pt-3">
             {reviews.reviews.map((r, i) => (
               <li key={i} className="text-sm">
