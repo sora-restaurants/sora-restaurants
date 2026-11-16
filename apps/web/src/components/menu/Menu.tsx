@@ -257,6 +257,7 @@ function missingRequired(item: MenuItem, categoryName: string, note: string[]): 
 
 function MenuCard({ item, categoryName, quantity, note, index, onChange, onNote }: { item: MenuItem; categoryName: string; quantity: number; note: string[]; index: number; onChange: (id: string, q: number) => void; onNote: (id: string, opts: string[]) => void }) {
   const [showReviews, setShowReviews] = useState(false);
+  const [optsOpen, setOptsOpen] = useState(false);
   const reviews = demoReviewsFor(item.name);
   return (
     <li className="menu-card overflow-hidden rounded-theme border border-line/40 bg-surface shadow-[0_12px_40px_color-mix(in_oklch,var(--t-ink)_7%,transparent)]">
@@ -279,6 +280,10 @@ function MenuCard({ item, categoryName, quantity, note, index, onChange, onNote 
         </div>
         {item.description ? <p className="mt-3 text-sm leading-relaxed text-muted">{item.description}</p> : <p className="mt-3 text-sm italic text-muted">Made fresh to order</p>}
         {item.dietaryTags?.length ? <ul aria-label="Dietary information" className="mt-3 flex flex-wrap gap-2">{item.dietaryTags.map((tag) => <li key={tag} className="rounded-full border border-line/40 px-2 py-1 text-[0.7rem] font-bold uppercase tracking-wide text-muted">{tag}</li>)}</ul> : null}
+        <button type="button" onClick={() => setOptsOpen((v) => !v)} className="mt-3 flex w-full items-center justify-between rounded-theme border border-line px-3 py-2 text-sm font-bold">
+          <span>{optsOpen ? "Hide options" : "Customise"}</span>
+          <span aria-hidden="true">{optsOpen ? "▲" : "▼"}</span>
+        </button>
         {(item as MenuItem & { prepTime?: string }).prepTime && <p className="mt-2 text-xs text-muted">Ready in {(item as MenuItem & { prepTime?: string }).prepTime}</p>}
         {(item as MenuItem & { allergens?: string[] }).allergens?.length ? <p className="mt-1 text-xs text-muted">Contains: {(item as MenuItem & { allergens?: string[] }).allergens!.join(", ")}</p> : null}
 
@@ -286,7 +291,7 @@ function MenuCard({ item, categoryName, quantity, note, index, onChange, onNote 
           {showReviews ? "Hide reviews" : `See ${reviews.reviews.length} reviews`}
         </button>
         <p className="mt-2 text-xs text-muted">Goes well with: {demoPairings(item.name).join(", ")}</p>
-        {quantity > 0 && (
+        {optsOpen && (
           <div className="mt-3 space-y-3">
             {isDrink(item.name, categoryName) ? (
               <>
@@ -500,7 +505,7 @@ function MenuCard({ item, categoryName, quantity, note, index, onChange, onNote 
             )}
           </div>
         )}
-        {showReviews && (
+        )}{showReviews && (
           <ul className="mt-3 space-y-3 border-t border-line/40 pt-3">
             {reviews.reviews.map((r, i) => (
               <li key={i} className="text-sm">
@@ -517,7 +522,7 @@ function MenuCard({ item, categoryName, quantity, note, index, onChange, onNote 
         <div className="mt-auto flex justify-end pt-5">
           {item.soldOut ? <span className="inline-flex min-h-12 items-center rounded-full bg-highlight px-4 text-sm font-bold text-on-highlight">Sold out</span> : (() => {
             const missing = missingRequired(item, categoryName, note);
-            if (quantity === 0) return <button type="button" disabled={missing.length > 0} onClick={() => onChange(item.id, 1)} aria-label={`Add ${item.name}`} className="add-button focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-50">{missing.length > 0 ? `Choose ${missing[0]}` : <><span aria-hidden="true">＋</span> Add to order</>}</button>;
+            if (quantity === 0) return <button type="button" onClick={() => { if (missing.length > 0) { setOptsOpen(true); return; } onChange(item.id, 1); }} aria-label={`Add ${item.name}`} className="add-button focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ink">{missing.length > 0 ? `Choose ${missing[0]}` : <><span aria-hidden="true">＋</span> Add to order</>}</button>;
             return <QuantityControl item={item} quantity={quantity} onChange={onChange} missing={missing} />;
           })()}
         </div>
