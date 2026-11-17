@@ -25,11 +25,19 @@ async function verifyStaffToken(bearer: string): Promise<string | null> {
   return (await supabase.auth.getUser(bearer)).data.user?.id ?? null;
 }
 
+/** DATABASE_URL, or the POSTGRES_URL the Supabase–Vercel integration injects (minus its `supa` param, which Postgres rejects). */
+export function databaseUrl(): string {
+  if (process.env.DATABASE_URL) return process.env.DATABASE_URL;
+  const url = new URL(env("POSTGRES_URL"));
+  url.searchParams.delete("supa");
+  return url.toString();
+}
+
 /** Real dependencies. Same role switching as the PGlite test harness, so RLS behaves identically. */
 export function prodDeps(): Deps {
   assertNoDevLoginInProduction();
   // prepare: false keeps this working behind Supabase's transaction-mode connection pooler.
-  sql ??= postgres(env("DATABASE_URL"), { max: 10, prepare: false });
+  sql ??= postgres(databaseUrl(), { max: 10, prepare: false });
   const db = sql;
 
   return {
