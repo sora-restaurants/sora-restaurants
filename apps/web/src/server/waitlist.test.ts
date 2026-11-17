@@ -71,6 +71,8 @@ describe("waitlist applications", () => {
       expect(await submitApplication(form({ restaurantName: `Place ${i}`, email: `a${i}@x.example` }), db, "9.9.9.9")).toMatchObject({ ok: true });
     }
     expect(await submitApplication(form({ restaurantName: "Place 6", email: "a6@x.example" }), db, "9.9.9.9")).toMatchObject({ ok: false, httpStatus: 429 });
+    const retry = await submitApplication(form({ restaurantName: "Place 0", email: "a0@x.example" }), db, "9.9.9.9");
+    expect(retry).toMatchObject({ ok: true, replayed: true });
     expect(await submitApplication(form({ restaurantName: "Elsewhere", email: "b@x.example" }), db, "8.8.8.8")).toMatchObject({ ok: true });
   });
 
