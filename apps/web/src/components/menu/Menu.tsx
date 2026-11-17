@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { submitOrderAction } from "../../app/actions/submit-order.ts";
+import { sendReceiptAction } from "../../app/actions/send-receipt.ts";
 import type { ThemeId } from "../../themes/themes.ts";
 import type { MenuItem, TableMenu } from "./types.ts";
 import { SlideToPay } from "../order/SlideToPay.tsx";
@@ -79,8 +80,18 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
     setStatus({ kind: "sending" });
     if (preview) {
       const wait = demoWaitMinutes(count);
-      setStatus({ kind: "placed", publicRef: "PREVIEW", itemCount: count, totalCents: estimate, payNow: paymentChoice === "pay_now", paid: false, stage: "received", wait });
-      setTableOrders((prev) => [{ ref: "PREVIEW", total: estimate, count }, ...prev].slice(0, 5));
+      const publicRef = "SORA-" + Math.floor(Math.random() * 9000 + 1000);
+      if (emailReceipt.trim()) {
+        const receiptLines = lines.map((item) => ({
+          name: item.name,
+          quantity: cart[item.id],
+          notes: (notes[item.id] ?? []).flat(),
+          priceCents: item.priceCents * cart[item.id],
+        }));
+        void sendReceiptAction({ to: emailReceipt, publicRef, lines: receiptLines, totalCents: estimate, tipPercent, splitWays, weeklySpecials });
+      }
+      setStatus({ kind: "placed", publicRef, itemCount: count, totalCents: estimate, payNow: paymentChoice === "pay_now", paid: false, stage: "received", wait });
+      setTableOrders((prev) => [{ ref: publicRef, total: estimate, count }, ...prev].slice(0, 5));
       setCart({});
       setBasketOpen(false);
       return;
