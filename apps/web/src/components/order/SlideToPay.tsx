@@ -27,7 +27,7 @@ export function SlideToPay({ amount, pending, onConfirm }: {
         type="button"
         data-custom-haptics
         className="payment-slide-thumb"
-        aria-label={`Confirm demo payment of ${amount}`}
+        aria-label={`Confirm payment of ${amount}`}
         disabled={pending}
         data-dragging={dragging}
         style={{ transform: `translateX(${offset}px)` }}

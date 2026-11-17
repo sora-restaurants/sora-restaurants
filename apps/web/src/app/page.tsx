@@ -7,7 +7,7 @@ export default function Home() {
         <header className="flex items-center justify-between gap-4">
           <div className="grid size-12 place-items-center rounded-full border border-white/40 text-xl font-extrabold">S</div>
           <span className="rounded-full border border-white/30 px-3 py-2 text-xs font-bold uppercase tracking-[0.14em] text-white/80">
-            Staging demo
+            Live
           </span>
         </header>
 
@@ -17,7 +17,7 @@ export default function Home() {
             Order from your table.
           </h1>
           <p className="mt-6 max-w-xl text-lg leading-7 text-white/70 sm:text-xl">
-            Try the customer ordering experience or open the kitchen screen. This environment contains demo data only.
+            Try the customer ordering experience or open the kitchen screen. Order from your table in seconds.
           </p>
 
           <div className="mt-10 grid gap-4 sm:max-w-2xl sm:grid-cols-2">
@@ -25,9 +25,9 @@ export default function Home() {
               href="/t/staging-demo-table-1"
               className="flex min-h-28 flex-col justify-between rounded-2xl bg-[oklch(58%_0.23_260)] p-5 transition-transform active:scale-[0.98] focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-white"
             >
-              <span className="text-xs font-extrabold uppercase tracking-[0.16em] text-white/75">Customer demo</span>
+              <span className="text-xs font-extrabold uppercase tracking-[0.16em] text-white/75">Customer</span>
               <span className="flex items-end justify-between gap-4 text-2xl font-extrabold">
-                Demo Table 1 <span aria-hidden="true">→</span>
+                Table 1 <span aria-hidden="true">→</span>
               </span>
             </Link>
 
@@ -43,7 +43,7 @@ export default function Home() {
           </div>
         </section>
 
-        <footer className="border-t border-white/15 pt-5 text-sm text-white/45">Demo service · No real customer data</footer>
+        <footer className="border-t border-white/15 pt-5 text-sm text-white/45">Sora Restaurants</footer>
       </div>
     </main>
   );
