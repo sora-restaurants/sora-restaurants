@@ -15,7 +15,6 @@ export const DEMO_MENU: TableMenu = {
       items: [
         { id: "d-bruschetta", name: "Tomato Bruschetta", description: "Toasted sourdough, ripe tomatoes, basil, olive oil.", priceCents: 8500, imageUrl: img("photo-1506280754576-f6fa8a873550"), dietaryTags: ["Vegetarian", "Vegan"], prepTime: "8 min" },
         { id: "d-calamari", name: "Crispy Calamari", description: "Lightly battered squid with lemon aioli.", priceCents: 12000, imageUrl: img("photo-1599487488170-d11ec9c172f0"), dietaryTags: [], allergens: ["Shellfish", "Gluten"], prepTime: "12 min" },
-        { id: "d-spring-rolls", name: "Vegetable Spring Rolls", description: "Crisp rolls with sweet chilli dip.", priceCents: 9000, imageUrl: img("photo-1607330289024-1535c6b0e0a5"), dietaryTags: ["Vegetarian", "Vegan"], prepTime: "10 min" },
         { id: "d-chicken-wings", name: "Peri-Peri Wings", description: "Six wings with extra hot peri-peri sauce.", priceCents: 11000, imageUrl: img("photo-1527477396000-e27163b481c2"), dietaryTags: ["Gluten-free"], prepTime: "15 min" },
       ],
     },
