@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 export const EMAIL = "Sora.administration@gmail.com";
-const LINKS: [string, string][] = [["Home", "/"], ["How It Works", "/#how"], ["Features", "/#features"], ["For Restaurants", "/#restaurants"], ["Contact", "/#contact"]];
+const LINKS: [string, string][] = [["Home", "/"], ["What SORA Does", "/#features"], ["How It Works", "/#how"], ["Contact", "/#contact"]];
 
 export const Arrow = () => (
   <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M1 7h11M8 3l4 4-4 4" fill="none" stroke="currentColor" strokeWidth="1.5" /></svg>
