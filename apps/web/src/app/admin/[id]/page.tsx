@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ReviewForm } from "../../../components/site/AdminForms.tsx";
+import { DeleteForm, ReviewForm } from "../../../components/site/AdminForms.tsx";
 import { requireAdmin } from "../../../server/admin-session.ts";
 import { prodDeps } from "../../../server/prod-deps.ts";
 import { getApplication } from "../../../server/waitlist.ts";
@@ -41,7 +41,10 @@ export default async function ApplicationPage({ params }: { params: Promise<{ id
             </section>
           ))}
         </div>
-        <ReviewForm id={a.id} status={a.status} notes={a.admin_notes} />
+        <div style={{ display: "grid", gap: 20, alignContent: "start" }}>
+          <ReviewForm id={a.id} status={a.status} notes={a.admin_notes} />
+          <DeleteForm id={a.id} name={a.restaurant_name} />
+        </div>
       </div>
     </main>
   );

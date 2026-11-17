@@ -98,6 +98,11 @@ export async function updateApplication(db: Db, id: string, status: string, note
   return rows.length === 1;
 }
 
+export async function deleteApplication(db: Db, id: string): Promise<boolean> {
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return false;
+  return (await db.asService<{ id: string }>("delete from restaurant_waitlist_applications where id = $1 returning id", [id])).length === 1;
+}
+
 export type Stats = {
   total: number; fresh: number; contacted: number; approved: number; pilotCandidates: number;
   pos: { label: string; n: number }[]; features: { label: string; n: number }[]; byDay: { day: string; n: number }[];

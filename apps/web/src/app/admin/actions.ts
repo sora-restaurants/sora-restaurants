@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 import { ADMIN_COOKIE, adminConfigured, loginAllowed, newSession, passwordMatches, SESSION_HOURS } from "../../server/admin-auth.ts";
 import { requireAdmin } from "../../server/admin-session.ts";
 import { prodDeps } from "../../server/prod-deps.ts";
-import { updateApplication } from "../../server/waitlist.ts";
+import { deleteApplication, updateApplication } from "../../server/waitlist.ts";
 
 export async function signIn(_: string, form: FormData): Promise<string> {
   if (!adminConfigured()) return "Admin sign-in is not set up on this server. Set ADMIN_PASSWORD and ADMIN_SESSION_SECRET.";
@@ -31,4 +31,11 @@ export async function saveApplication(_: string, form: FormData): Promise<string
   if (!saved) return "Could not save. Reload the page and try again.";
   revalidatePath("/admin");
   return "Saved.";
+}
+
+export async function removeApplication(_: string, form: FormData): Promise<string> {
+  await requireAdmin();
+  if (!(await deleteApplication(prodDeps().db, String(form.get("id"))))) return "Could not delete. Reload the page and try again.";
+  revalidatePath("/admin");
+  redirect("/admin");
 }

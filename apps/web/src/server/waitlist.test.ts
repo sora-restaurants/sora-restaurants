@@ -5,7 +5,7 @@ import { DEMO_USER } from "../../../../supabase/tests/fixtures";
 import type { Db } from "./deps.ts";
 import { adminConfigured, loginAllowed, newSession, passwordMatches, sessionValid } from "./admin-auth.ts";
 import { testDeps } from "./test-deps";
-import { getApplication, listApplications, submitApplication, toCsv, updateApplication, waitlistStats } from "./waitlist.ts";
+import { deleteApplication, getApplication, listApplications, submitApplication, toCsv, updateApplication, waitlistStats } from "./waitlist.ts";
 
 let pg: PGlite;
 let db: Db;
@@ -95,6 +95,12 @@ describe("admin review", () => {
     expect(await updateApplication(db, durban.id, "made-up", "")).toBe(false);
     expect(await getApplication(db, durban.id)).toMatchObject({ status: "contacted", admin_notes: "Called on Monday" });
     expect(await listApplications(db, { status: "contacted" })).toHaveLength(1);
+
+    const extra = await submitApplication(form({ email: "gone@x.example" }), db, "3.3.3.3");
+    const [gone] = await listApplications(db, { q: "gone@x" });
+    expect(extra.ok && await deleteApplication(db, gone.id)).toBe(true);
+    expect(await deleteApplication(db, gone.id)).toBe(false);
+    expect(await deleteApplication(db, "not-a-uuid")).toBe(false);
 
     const s = await waitlistStats(db);
     expect(s).toMatchObject({ total: 2, fresh: 1, contacted: 1, approved: 0, pilotCandidates: 1, cities: ["Durban", "Stellenbosch"] });
