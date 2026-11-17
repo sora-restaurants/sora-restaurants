@@ -38,7 +38,7 @@ export async function sendReceiptAction(input: {
         <div style="display:flex;justify-content:space-between;margin-top:8px;font-weight:700;font-size:18px"><span>Total</span><span>R ${(grand / 100).toFixed(2)}</span></div>
         ${input.splitWays > 1 ? `<p style="margin:8px 0 0;color:#666;font-size:13px">Split ${input.splitWays} ways · about R ${(each / 100).toFixed(2)} each</p>` : ""}
       </div>
-      <p style="margin:24px 0 0;color:#666;font-size:13px">Thank you for ordering at Sora. This is a demo receipt.</p>
+      <p style="margin:24px 0 0;color:#666;font-size:13px">Thank you for ordering at Sora.</p>
       ${input.weeklySpecials ? `<p style="margin:8px 0 0;color:#666;font-size:13px">You’ll also get our weekly specials.</p>` : ""}
     </div>`;
 

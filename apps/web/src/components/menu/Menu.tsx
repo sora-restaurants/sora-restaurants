@@ -540,7 +540,7 @@ function OrderDock({ triggerRef, count, estimate, status, onOpen, onDismiss, onP
   if (status.kind === "placed" && status.payNow && !status.paid) {
     return (
       <div className="fixed inset-x-3 bottom-3 z-30 mx-auto max-w-(--t-max) rounded-theme bg-ink p-5 text-bg shadow-2xl">
-        <p className="mb-3 text-sm font-bold text-on-accent">Demo payment · no real charge</p>
+        <p className="mb-3 text-sm font-bold text-on-accent">Secure payment</p>
         <p className="mb-4 text-lg font-bold">Pay for order {status.publicRef}</p>
         <SlideToPay amount={formatCents(status.totalCents)} pending={false} onConfirm={onPaid} />
       </div>
@@ -552,7 +552,7 @@ function OrderDock({ triggerRef, count, estimate, status, onOpen, onDismiss, onP
       <div role="status" aria-live="polite" className="fixed inset-x-3 bottom-3 z-30 mx-auto max-w-(--t-max) rounded-theme bg-ink p-5 text-bg shadow-2xl">
         <div className="mb-3 flex items-center justify-between gap-4">
           <p>
-            <span className="display block text-xl text-on-accent">{status.payNow && status.paid ? "Payment confirmed (demo)" : stageLabel}</span>
+            <span className="display block text-xl text-on-accent">{status.payNow && status.paid ? "Payment confirmed" : stageLabel}</span>
             <span className="mt-1 block text-sm opacity-75">Ref <strong className="tracking-wide text-bg">{status.publicRef}</strong> · usually ready in {status.wait} min</span>
           </p>
           <button type="button" onClick={onDismiss} className="min-h-tap shrink-0 rounded-full border border-bg/30 px-4 font-semibold">Order more</button>
@@ -611,7 +611,7 @@ function BasketSheet({ returnFocusRef, lines, cart, notes, estimate, status, pay
         <>
           <div className="mb-4 grid grid-cols-2 gap-2">
             <button type="button" onClick={() => onPaymentChoice("pay_later")} className={`min-h-12 rounded-theme border-2 px-3 text-sm font-bold ${paymentChoice === "pay_later" ? "border-accent bg-accent text-on-accent" : "border-line"}`}>Pay after my meal</button>
-            <button type="button" onClick={() => onPaymentChoice("pay_now")} className={`min-h-12 rounded-theme border-2 px-3 text-sm font-bold ${paymentChoice === "pay_now" ? "border-accent bg-accent text-on-accent" : "border-line"}`}>Pay now (demo)</button>
+            <button type="button" onClick={() => onPaymentChoice("pay_now")} className={`min-h-12 rounded-theme border-2 px-3 text-sm font-bold ${paymentChoice === "pay_now" ? "border-accent bg-accent text-on-accent" : "border-line"}`}>Pay now</button>
           </div>
           <div className="mb-4">
             <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">Add a tip</p>
