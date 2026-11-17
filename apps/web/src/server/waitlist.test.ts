@@ -19,9 +19,9 @@ const key = () => (++n).toString(16).padStart(32, "0");
 const form = (over: Record<string, unknown> = {}) => ({
   restaurantName: "Die Blou Deur", restaurantType: "Casual dining", city: "Stellenbosch", locations: "1", tablesCount: "24", seatingCapacity: "",
   website: "", social: "", contactName: "Thandi Mokoena", contactPosition: "Owner", email: "Thandi@BlouDeur.example", phone: "082 123 4567",
-  preferredContact: "WhatsApp", bestTime: "", posSystem: "Pilot POS", posOther: "", orderingMethod: "", usesQr: "No", kitchenSystem: "Printed tickets",
+  preferredContact: "WhatsApp", bestTime: "", posSystem: "Pilot POS", posOther: "", orderingMethod: "A mix of both", usesQr: "No", kitchenSystem: "Printed tickets",
   paymentHandling: ["Cash", "Pay at the till"], dailyVolume: "50 to 150", improvements: ["Reduce waiter workload"],
-  featureInterests: ["QR table ordering", "Live kitchen dashboard"], biggestChallenge: "", requests: "", testTimeline: "", openToDemo: "Yes",
+  featureInterests: ["QR table ordering", "Live kitchen dashboard"], biggestChallenge: "", requests: "", testTimeline: "As soon as possible", openToDemo: "Yes",
   pilotInterest: "Yes", comments: "", consent: true, submissionKey: key(), companyUrl: "", elapsedMs: 60_000, ...over,
 });
 

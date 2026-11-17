@@ -20,8 +20,8 @@ const FORM: { title: string; intro: string; fields: Field[] }[] = [
     { name: "restaurantName", label: "Restaurant name", kind: "text", required: true, auto: "organization", full: true },
     { name: "restaurantType", label: "Restaurant type", kind: "select", options: RESTAURANT_TYPES, required: true },
     { name: "city", label: "Location / city", kind: "text", required: true, auto: "address-level2" },
-    { name: "locations", label: "Number of physical locations", kind: "number" },
-    { name: "tablesCount", label: "Approximate number of tables", kind: "number" },
+    { name: "locations", label: "Number of physical locations", kind: "number", required: true },
+    { name: "tablesCount", label: "Approximate number of tables", kind: "number", required: true },
     { name: "seatingCapacity", label: "Approximate seating capacity", kind: "number" },
     { name: "website", label: "Restaurant website", kind: "text", auto: "url", hint: "example.co.za" },
     { name: "social", label: "Instagram or social media", kind: "text", full: true },
@@ -30,18 +30,18 @@ const FORM: { title: string; intro: string; fields: Field[] }[] = [
     { name: "contactName", label: "Your full name", kind: "text", required: true, auto: "name" },
     { name: "contactPosition", label: "Position at the restaurant", kind: "select", options: POSITIONS, required: true },
     { name: "email", label: "Business email address", kind: "email", required: true, auto: "email" },
-    { name: "phone", label: "Phone number", kind: "tel", required: true, auto: "tel", hint: "082 123 4567 or +27 82 123 4567" },
-    { name: "preferredContact", label: "Preferred contact method", kind: "radio", options: CONTACT_METHODS, full: true },
+    { name: "phone", label: "Phone number", kind: "tel", required: true, auto: "tel", hint: "For example 0821234567" },
+    { name: "preferredContact", label: "Preferred contact method", kind: "radio", required: true, options: CONTACT_METHODS, full: true },
     { name: "bestTime", label: "Best time to contact", kind: "text", full: true, hint: "For example: weekdays before 11:00" },
   ] },
   { title: "Current operations", intro: "How your restaurant runs today.", fields: [
     { name: "posSystem", label: "What point-of-sale (POS) system does your restaurant currently use?", kind: "select", options: POS_SYSTEMS, required: true, full: true },
     { name: "posOther", label: "Which POS system?", kind: "text", required: true, full: true, showIf: (v) => v.posSystem === "Other" },
-    { name: "orderingMethod", label: "How do customers currently place orders?", kind: "radio", options: ORDERING_METHODS, full: true },
-    { name: "usesQr", label: "Do you currently use QR-code menus or ordering?", kind: "radio", options: QR_USE, full: true },
-    { name: "kitchenSystem", label: "How does the kitchen receive orders?", kind: "radio", options: KITCHEN_SYSTEMS, full: true },
+    { name: "orderingMethod", label: "How do customers currently place orders?", kind: "radio", required: true, options: ORDERING_METHODS, full: true },
+    { name: "usesQr", label: "Do you currently use QR-code menus or ordering?", kind: "radio", required: true, options: QR_USE, full: true },
+    { name: "kitchenSystem", label: "How does the kitchen receive orders?", kind: "radio", required: true, options: KITCHEN_SYSTEMS, full: true },
     { name: "paymentHandling", label: "How do you currently handle payments?", kind: "checks", options: PAYMENT_METHODS, full: true },
-    { name: "dailyVolume", label: "Approximately how many customers do you serve daily?", kind: "select", options: DAILY_VOLUMES, full: true },
+    { name: "dailyVolume", label: "Approximately how many customers do you serve daily?", kind: "select", required: true, options: DAILY_VOLUMES, full: true },
   ] },
   { title: "What you need", intro: "Tell us where SORA could help most.", fields: [
     { name: "improvements", label: "What would you most like SORA to improve?", kind: "checks", options: IMPROVEMENTS, full: true },
@@ -50,9 +50,9 @@ const FORM: { title: string; intro: string; fields: Field[] }[] = [
     { name: "requests", label: "Is there anything specific you would like SORA to offer?", kind: "area", full: true },
   ] },
   { title: "Final details", intro: "Timing and next steps.", fields: [
-    { name: "testTimeline", label: "How soon would you be interested in testing SORA?", kind: "radio", options: TIMELINES, full: true },
-    { name: "openToDemo", label: "Would you be open to an initial demonstration?", kind: "radio", options: YES_NO_MAYBE, full: true },
-    { name: "pilotInterest", label: "Would you be willing to participate in a pilot programme?", kind: "radio", options: YES_NO_MAYBE, full: true },
+    { name: "testTimeline", label: "How soon would you be interested in testing SORA?", kind: "radio", required: true, options: TIMELINES, full: true },
+    { name: "openToDemo", label: "Would you be open to an initial demonstration?", kind: "radio", required: true, options: YES_NO_MAYBE, full: true },
+    { name: "pilotInterest", label: "Would you be willing to participate in a pilot programme?", kind: "radio", required: true, options: YES_NO_MAYBE, full: true },
     { name: "comments", label: "Any additional comments?", kind: "area", full: true },
   ] },
 ];
@@ -187,7 +187,7 @@ function Input({ f, value, error, set }: { f: Field; value: string | string[]; e
     const toggle = (o: string) => set(f.name, many ? (picked(o) ? (value as string[]).filter((x) => x !== o) : [...(value as string[]), o]) : picked(o) ? "" : o);
     return (
       <fieldset className={cls} aria-describedby={described}>
-        <legend>{f.label}{many ? <em> (choose any)</em> : <em> (optional)</em>}</legend>
+        <legend>{f.label}{many ? <em> (choose any)</em> : f.required ? null : <em> (optional)</em>}</legend>
         <div className="opts">
           {f.options!.map((o, i) => (
             <label className="opt" key={o}>

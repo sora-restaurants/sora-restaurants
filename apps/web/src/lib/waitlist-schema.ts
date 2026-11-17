@@ -50,8 +50,8 @@ export const steps = {
     restaurantName: text(120, "Write the name of your restaurant."),
     restaurantType: pick(RESTAURANT_TYPES, "Choose the type of restaurant."),
     city: text(80, "Write the city or town the restaurant is in."),
-    locations: count(500, "Write a whole number, like 1."),
-    tablesCount: count(2000, "Write a whole number, like 24."),
+    locations: count(500, "Write a whole number, like 1.").refine((n) => n !== "", "Write a whole number, like 1."),
+    tablesCount: count(2000, "Write a whole number, like 24.").refine((n) => n !== "", "Write a whole number, like 24."),
     seatingCapacity: count(20000, "Write a whole number, like 80."),
     website: url,
     social: optional(120),
@@ -65,17 +65,17 @@ export const steps = {
       if (!phone) { ctx.addIssue({ code: "custom", message: "Write a phone number, like 082 123 4567 or +27 82 123 4567." }); return z.NEVER; }
       return phone;
     }),
-    preferredContact: optionalPick(CONTACT_METHODS),
+    preferredContact: pick(CONTACT_METHODS, "Choose how we should contact you."),
     bestTime: optional(80),
   }),
   operations: z.object({
     posSystem: pick(POS_SYSTEMS, "Choose your POS system, or “Not sure”."),
     posOther: optional(80),
-    orderingMethod: optionalPick(ORDERING_METHODS),
-    usesQr: optionalPick(QR_USE),
-    kitchenSystem: optionalPick(KITCHEN_SYSTEMS),
+    orderingMethod: pick(ORDERING_METHODS, "Choose how customers order."),
+    usesQr: pick(QR_USE, "Choose an answer."),
+    kitchenSystem: pick(KITCHEN_SYSTEMS, "Choose how the kitchen gets orders."),
     paymentHandling: many(PAYMENT_METHODS),
-    dailyVolume: optionalPick(DAILY_VOLUMES),
+    dailyVolume: pick(DAILY_VOLUMES, "Choose roughly how many customers."),
   }).superRefine((v, ctx) => {
     if (v.posSystem === "Other" && !v.posOther) ctx.addIssue({ code: "custom", path: ["posOther"], message: "Write the name of your POS system." });
   }),
@@ -86,9 +86,9 @@ export const steps = {
     requests: optional(2000),
   }),
   final: z.object({
-    testTimeline: optionalPick(TIMELINES),
-    openToDemo: optionalPick(YES_NO_MAYBE),
-    pilotInterest: optionalPick(YES_NO_MAYBE),
+    testTimeline: pick(TIMELINES, "Choose when you would like to test."),
+    openToDemo: pick(YES_NO_MAYBE, "Choose Yes, Maybe or No."),
+    pilotInterest: pick(YES_NO_MAYBE, "Choose Yes, Maybe or No."),
     comments: optional(2000),
   }),
 };
