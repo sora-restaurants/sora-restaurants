@@ -54,6 +54,12 @@ describe("waitlist applications", () => {
     expect(await listApplications(db)).toHaveLength(1);
   });
 
+  it("lets the database refuse a second row for the same email and restaurant, and keeps the function from staff", async () => {
+    await submitApplication(form(), db, "1.1.1.1");
+    await expect(pg.query("insert into restaurant_waitlist_applications (reference, submission_key, restaurant_name, restaurant_type, city, contact_name, contact_position, email, phone, pos_system, consent_at) values ('SORA-X', repeat('f', 32), 'DIE BLOU DEUR', 't', 'c', 'n', 'p', 'thandi@bloudeur.example', '1', 'p', now())")).rejects.toThrow(/unique/);
+    await expect(db.asUser(DEMO_USER, "select * from submit_waitlist_application('{}')")).rejects.toThrow(/permission/);
+  });
+
   it("refuses bots: a filled hidden field, or a form sent within seconds", async () => {
     expect(await submitApplication(form({ companyUrl: "http://spam.example" }), db, "1.1.1.1")).toMatchObject({ ok: false, httpStatus: 400 });
     expect(await submitApplication(form({ elapsedMs: 900 }), db, "1.1.1.1")).toMatchObject({ ok: false, httpStatus: 400 });

@@ -41,13 +41,6 @@ export async function submitApplication(input: unknown, db: Db, ip: string): Pro
     return { ok: false, httpStatus: 400, error: "We could not submit the form. Reload the page and try again." };
   }
 
-  const existing = await db.asService<{ reference: string; restaurant_name: string }>(
-    `select reference, restaurant_name from restaurant_waitlist_applications
-     where submission_key = $1 or (lower(email) = $2 and lower(restaurant_name) = lower($3)) order by created_at limit 1`,
-    [a.submissionKey, a.email, a.restaurantName],
-  );
-  if (existing[0]) return { ok: true, reference: existing[0].reference, restaurantName: existing[0].restaurant_name, replayed: true };
-
   const ipHash = hashIp(ip);
   const [{ n }] = await db.asService<{ n: number }>(
     "select count(*)::int as n from restaurant_waitlist_applications where ip_hash = $1 and created_at > now() - interval '1 hour'",
@@ -55,31 +48,23 @@ export async function submitApplication(input: unknown, db: Db, ip: string): Pro
   );
   if (n >= MAX_PER_HOUR) return { ok: false, httpStatus: 429, error: "Too many applications from this connection. Try again in an hour." };
 
-  // The lists go in as text and are cast twice (::text::jsonb): postgres.js JSON-encodes a jsonb parameter itself, PGlite does not.
-  const reference = newReference();
-  const saved = await db.asService<{ reference: string }>(
-    `insert into restaurant_waitlist_applications (
-       reference, submission_key, restaurant_name, restaurant_type, city, locations, tables_count, seating_capacity, website, social,
-       contact_name, contact_position, email, phone, preferred_contact, best_time, pos_system, pos_other, ordering_method, uses_qr,
-       kitchen_system, payment_handling, daily_volume, improvements, feature_interests, biggest_challenge, requests, test_timeline,
-       open_to_demo, pilot_interest, comments, consent_at, ip_hash)
-     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22::text::jsonb,$23,$24::text::jsonb,$25::text::jsonb,$26,$27,$28,$29,$30,$31, now(), $32)
-     on conflict (submission_key) do nothing returning reference`,
-    [
-      reference, a.submissionKey, a.restaurantName, a.restaurantType, a.city, nullable(a.locations), nullable(a.tablesCount),
-      nullable(a.seatingCapacity), nullable(a.website), nullable(a.social), a.contactName, a.contactPosition, a.email, a.phone,
-      nullable(a.preferredContact), nullable(a.bestTime), a.posSystem, a.posSystem === "Other" ? a.posOther : null,
-      nullable(a.orderingMethod), nullable(a.usesQr), nullable(a.kitchenSystem), JSON.stringify(a.paymentHandling),
-      nullable(a.dailyVolume), JSON.stringify(a.improvements), JSON.stringify(a.featureInterests), nullable(a.biggestChallenge),
-      nullable(a.requests), nullable(a.testTimeline), nullable(a.openToDemo), nullable(a.pilotInterest), nullable(a.comments), ipHash,
-    ],
+  // The database enforces one application per submission key and per email + restaurant, and answers a repeat with the first reference.
+  // Sent as text and cast twice (::text::jsonb): postgres.js JSON-encodes a jsonb parameter itself, PGlite does not.
+  const [saved] = await db.asService<{ reference: string; restaurant_name: string; replayed: boolean }>(
+    "select * from submit_waitlist_application($1::text::jsonb)",
+    [JSON.stringify({
+      reference: newReference(), submission_key: a.submissionKey, restaurant_name: a.restaurantName, restaurant_type: a.restaurantType,
+      city: a.city, locations: nullable(a.locations), tables_count: nullable(a.tablesCount), seating_capacity: nullable(a.seatingCapacity),
+      website: nullable(a.website), social: nullable(a.social), contact_name: a.contactName, contact_position: a.contactPosition,
+      email: a.email, phone: a.phone, preferred_contact: nullable(a.preferredContact), best_time: nullable(a.bestTime),
+      pos_system: a.posSystem, pos_other: a.posSystem === "Other" ? a.posOther : null, ordering_method: nullable(a.orderingMethod),
+      uses_qr: nullable(a.usesQr), kitchen_system: nullable(a.kitchenSystem), payment_handling: a.paymentHandling,
+      daily_volume: nullable(a.dailyVolume), improvements: a.improvements, feature_interests: a.featureInterests,
+      biggest_challenge: nullable(a.biggestChallenge), requests: nullable(a.requests), test_timeline: nullable(a.testTimeline),
+      open_to_demo: nullable(a.openToDemo), pilot_interest: nullable(a.pilotInterest), comments: nullable(a.comments), ip_hash: ipHash,
+    })],
   );
-  // A second request with the same key that raced this one wins the insert; both answer with its reference.
-  if (!saved[0]) {
-    const [first] = await db.asService<{ reference: string }>("select reference from restaurant_waitlist_applications where submission_key = $1", [a.submissionKey]);
-    return { ok: true, reference: first.reference, restaurantName: a.restaurantName, replayed: true };
-  }
-  return { ok: true, reference: saved[0].reference, restaurantName: a.restaurantName, replayed: false };
+  return { ok: true, reference: saved.reference, restaurantName: saved.restaurant_name, replayed: saved.replayed };
 }
 
 export type Filters = { q?: string; status?: string; city?: string; pos?: string };
