@@ -7,7 +7,7 @@ const MAX_PER_HOUR = 5;
 const MIN_FILL_MS = 4000;
 
 export type WaitlistResult =
-  | { ok: true; reference: string; restaurantName: string; replayed: boolean }
+  | { ok: true; reference: string; restaurantName: string; replayed: boolean; contact?: { contactName: string; email: string; city: string } }
   | { ok: false; httpStatus: 400 | 413 | 422 | 429 | 500; error: string; fields?: Record<string, string> };
 
 export type Application = {
@@ -46,7 +46,16 @@ export async function submitApplication(input: unknown, db: Db, ip: string): Pro
     "select count(*)::int as n from restaurant_waitlist_applications where ip_hash = $1 and created_at > now() - interval '1 hour'",
     [ipHash],
   );
-  if (n >= MAX_PER_HOUR) return { ok: false, httpStatus: 429, error: "Too many applications from this connection. Try again in an hour." };
+  if (n >= MAX_PER_HOUR) {
+    // A retry of an application already saved still gets its reference, even past the limit.
+    const [prev] = await db.asService<{ reference: string; restaurant_name: string }>(
+      `select reference, restaurant_name from restaurant_waitlist_applications
+       where submission_key = $1 or (lower(email) = lower($2) and lower(restaurant_name) = lower($3)) limit 1`,
+      [a.submissionKey, a.email, a.restaurantName],
+    );
+    if (prev) return { ok: true, reference: prev.reference, restaurantName: prev.restaurant_name, replayed: true };
+    return { ok: false, httpStatus: 429, error: "Too many applications from this connection. Try again in an hour." };
+  }
 
   // The database enforces one application per submission key and per email + restaurant, and answers a repeat with the first reference.
   // Sent as text and cast twice (::text::jsonb): postgres.js JSON-encodes a jsonb parameter itself, PGlite does not.
@@ -64,7 +73,10 @@ export async function submitApplication(input: unknown, db: Db, ip: string): Pro
       open_to_demo: nullable(a.openToDemo), pilot_interest: nullable(a.pilotInterest), comments: nullable(a.comments), ip_hash: ipHash,
     })],
   );
-  return { ok: true, reference: saved.reference, restaurantName: saved.restaurant_name, replayed: saved.replayed };
+  return {
+    ok: true, reference: saved.reference, restaurantName: saved.restaurant_name, replayed: saved.replayed,
+    contact: { contactName: a.contactName, email: a.email, city: a.city },
+  };
 }
 
 export type Filters = { q?: string; status?: string; city?: string; pos?: string };

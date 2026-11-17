@@ -1,6 +1,7 @@
 import { readCappedBody } from "../../../server/http.ts";
 import { prodDeps } from "../../../server/prod-deps.ts";
 import { MAX_WAITLIST_BODY_BYTES, submitApplication } from "../../../server/waitlist.ts";
+import { notifyNewApplication } from "../../../server/waitlist-email.ts";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -15,6 +16,7 @@ export async function POST(req: Request) {
   try {
     const result = await submitApplication(input, prodDeps().db, ip);
     if (!result.ok) return Response.json({ error: result.error, fields: result.fields }, { status: result.httpStatus });
+    if (!result.replayed && result.contact) await notifyNewApplication({ reference: result.reference, restaurantName: result.restaurantName, ...result.contact });
     return Response.json({ reference: result.reference, restaurantName: result.restaurantName }, { status: result.replayed ? 200 : 201 });
   } catch (error) {
     console.error("waitlist submission failed", error);
