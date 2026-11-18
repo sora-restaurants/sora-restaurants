@@ -28,10 +28,12 @@ const FEATURES: { title: string; text: string; art: ReactNode }[] = [
 ];
 
 const BENEFITS = [
-  { title: "Make the next round easy to order.", text: "Another drink, a side for the table or dessert: guests can send an order as soon as they decide." },
-  { title: "Give your team more room to serve.", text: "Guests can browse and order while waiters welcome arrivals, make recommendations and look after the room." },
-  { title: "Put the guest’s selection in front of the kitchen.", text: "Dishes, quantities and order notes arrive on one screen. Staff update preparation status as the order moves through service." },
-  { title: "Keep the menu in step with the kitchen.", text: "Update a price or mark a dish sold out, and the ordering menu reflects the change." },
+  "Make another drink or dessert easier to order.",
+  "Keep orders moving when waiters are busy.",
+  "Give your team more time to look after guests.",
+  "Send guests’ selections straight to the kitchen.",
+  "Let guests check their order without chasing staff.",
+  "Stop taking orders for dishes that have sold out.",
 ];
 
 const TABS = [
@@ -99,10 +101,10 @@ export default function Home() {
 
       <section id="restaurants" className="dark">
         <div className="wrap">
-          <div className="head" data-reveal><span className="eyebrow">For restaurants</span><h2>Make it easier to order the next round.</h2>
-            <p className="lead">A table is ready to order. Their waiter is helping someone else. With SORA, guests scan, choose and send their order from their own phone. Your team can keep serving while the kitchen receives the order.</p></div>
+          <div className="head" data-reveal><span className="eyebrow">For restaurants</span><h2>Built around your restaurant.</h2>
+            <p className="lead">Let guests order when they’re ready, while your team keeps service moving.</p></div>
           <ul className="benefits">
-            {BENEFITS.map((benefit) => <li key={benefit.title} data-reveal><div><h3>{benefit.title}</h3><p className="dim" style={{ marginTop: 10, fontSize: 16, lineHeight: 1.6, letterSpacing: 0 }}>{benefit.text}</p></div></li>)}
+            {BENEFITS.map((benefit, index) => <li key={benefit} data-reveal><span>{String(index + 1).padStart(2, "0")}</span>{benefit}</li>)}
           </ul>
           <div className="hero__cta" style={{ marginTop: 32 }}>
             <a className="btn" href="https://sora-restaurants.vercel.app/t/staging-demo-table-1">Try ordering from a table <Arrow /></a>
