@@ -12,10 +12,14 @@ import { NO_WANT, SPICE, COOKING, ADD_ONS, DRINK_SIZE, DRINK_ICE, DRINK_EXTRAS, 
 
 const money = new Intl.NumberFormat("en-ZA", { style: "currency", currency: "ZAR" });
 const formatCents = (cents: number) => money.format(cents / 100);
+type Stage = "received" | "preparing" | "ready" | "served" | "cancelled";
+// Kitchen statuses (orders.status) as the guest sees them.
+const STAGE: Record<string, Stage> = { submitted: "received", accepted: "received", preparing: "preparing", ready: "ready", served: "served", rejected: "cancelled", cancelled: "cancelled" };
+const STAGE_LABEL: Record<Stage, string> = { received: "Received", preparing: "Preparing", ready: "Ready", served: "Served, enjoy!", cancelled: "Order cancelled, please ask a waiter" };
 type Status =
   | { kind: "idle" }
   | { kind: "sending" }
-  | { kind: "placed"; publicRef: string; itemCount: number; totalCents: number; payNow: boolean; paid: boolean; stage: "received" | "preparing" | "ready"; wait: string }
+  | { kind: "placed"; publicRef: string; statusToken?: string; itemCount: number; totalCents: number; payNow: boolean; paid: boolean; stage: Stage; wait: string }
   | { kind: "error"; message: string };
 type Props = { menu: TableMenu; theme: ThemeId; qrToken: string; preview?: boolean };
 
@@ -30,6 +34,22 @@ const ERRORS: Record<string, string> = {
 export function Menu({ menu, theme, qrToken, preview = false }: Props) {
   const [cart, setCart] = useState<Record<string, number>>({});
   const [status, setStatus] = useState<Status>({ kind: "idle" });
+  // Follow the real kitchen status until the order is served or cancelled.
+  const statusToken = status.kind === "placed" ? status.statusToken : undefined;
+  const finished = status.kind === "placed" && (status.stage === "served" || status.stage === "cancelled");
+  useEffect(() => {
+    if (!statusToken || finished) return;
+    const poll = () => fetch(`/api/orders/status/${statusToken}`, { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { status?: string } | null) => {
+        const stage = d?.status ? STAGE[d.status] : undefined;
+        if (stage) setStatus((s) => (s.kind === "placed" && s.statusToken === statusToken ? { ...s, stage } : s));
+      })
+      .catch(() => {});
+    poll();
+    const id = setInterval(poll, 4000);
+    return () => clearInterval(id);
+  }, [statusToken, finished]);
   const [basketOpen, setBasketOpen] = useState(false);
   const [paymentChoice, setPaymentChoice] = useState<"pay_later" | "pay_now">("pay_later");
   const [splitWays, setSplitWays] = useState<1 | 2 | 3 | 4>(1);
@@ -107,11 +127,8 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
       if (result.ok) {
         sendReceipt(result.publicRef);
         const wait = demoWaitMinutes(count);
-        setStatus({ kind: "placed", publicRef: result.publicRef, itemCount: count, totalCents: estimate, payNow: paymentChoice === "pay_now", paid: false, stage: "received", wait });
+        setStatus({ kind: "placed", publicRef: result.publicRef, statusToken: result.statusToken, itemCount: count, totalCents: estimate, payNow: paymentChoice === "pay_now", paid: false, stage: "received", wait });
         setTableOrders((prev) => [{ ref: result.publicRef, total: estimate, count }, ...prev].slice(0, 5));
-        // Demo progression
-        setTimeout(() => setStatus((s) => s.kind === "placed" ? { ...s, stage: "preparing" } : s), 4000);
-        setTimeout(() => setStatus((s) => s.kind === "placed" ? { ...s, stage: "ready" } : s), 12000);
         setCart({});
         setBasketOpen(false);
         idempotencyKey.current = null;
@@ -550,13 +567,13 @@ function OrderDock({ triggerRef, count, estimate, status, onOpen, onDismiss, onP
     );
   }
   if (status.kind === "placed") {
-    const stageLabel = status.stage === "ready" ? "Ready" : status.stage === "preparing" ? "Preparing" : "Received";
+    const stageLabel = STAGE_LABEL[status.stage];
     return (
       <div role="status" aria-live="polite" className="fixed inset-x-3 bottom-3 z-30 mx-auto max-w-(--t-max) rounded-theme bg-ink p-5 text-bg shadow-2xl">
         <div className="mb-3 flex items-center justify-between gap-4">
           <p>
-            <span className="display block text-xl text-on-accent">{status.payNow && status.paid ? "Payment confirmed" : stageLabel}</span>
-            <span className="mt-1 block text-sm opacity-75">Ref <strong className="tracking-wide text-bg">{status.publicRef}</strong> · usually ready in {status.wait} min</span>
+            <span className="display block text-xl text-on-accent">{stageLabel}</span>
+            <span className="mt-1 block text-sm opacity-75">Ref <strong className="tracking-wide text-bg">{status.publicRef}</strong>{status.paid ? " · Paid" : ""}{status.stage === "received" || status.stage === "preparing" ? ` · usually ready in ${status.wait} min` : ""}</span>
           </p>
           <button type="button" onClick={onDismiss} className="min-h-tap shrink-0 rounded-full border border-bg/30 px-4 font-semibold">Order more</button>
         </div>
