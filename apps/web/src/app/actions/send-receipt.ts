@@ -1,45 +1,52 @@
 "use server";
 
-type ReceiptLine = { name: string; quantity: number; notes: string[]; priceCents: number };
+import { prodDeps } from "../../server/prod-deps.ts";
 
+const esc = (v: unknown) => String(v).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" })[c]!);
+
+/** Emails the receipt for a real order. Lines and total come from the database by status token, never from the client. */
+// shortcut: no per-order send limit; each email needs a real placed order, add a sent_at column if abused.
 export async function sendReceiptAction(input: {
   to: string;
-  publicRef: string;
-  lines: ReceiptLine[];
-  totalCents: number;
+  statusToken: string;
   tipPercent: number;
   splitWays: number;
   weeklySpecials: boolean;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
-  const to = input.to.trim();
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) return { ok: false, error: "invalid" };
+  const to = String(input.to ?? "").trim();
+  if (to.length > 200 || !/^[^s@<>]+@[^s@<>]+.[^s@<>]+$/.test(to)) return { ok: false, error: "invalid" };
+  if (!/^[0-9a-f]{32}$/.test(String(input.statusToken))) return { ok: false, error: "not_found" };
+  const tipPercent = [0, 10, 15, 20].includes(input.tipPercent) ? input.tipPercent : 0;
+  const splitWays = [1, 2, 3, 4].includes(input.splitWays) ? input.splitWays : 1;
 
   const key = process.env.RESEND_API_KEY;
   if (!key) return { ok: false, error: "not_configured" };
 
-  const tip = Math.round(input.totalCents * input.tipPercent / 100);
-  const grand = input.totalCents + tip;
-  const each = input.splitWays > 1 ? Math.round(grand / input.splitWays) : grand;
+  const [row] = await prodDeps().db.asService<{ s: { publicRef: string; totalCents: number; items: { name: string; quantity: number }[] | null } | null }>(
+    "select get_order_status($1) s", [input.statusToken]);
+  const order = row?.s;
+  if (!order) return { ok: false, error: "not_found" };
 
-  const rows = input.lines.map((l) => {
-    const note = l.notes.length ? `<div style="color:#666;font-size:12px">${l.notes.join(", ")}</div>` : "";
-    return `<tr><td style="padding:8px 0;border-bottom:1px solid #eee">${l.quantity}× ${l.name}${note}</td><td style="padding:8px 0;border-bottom:1px solid #eee;text-align:right;font-variant-numeric:tabular-nums">R ${(l.priceCents / 100).toFixed(2)}</td></tr>`;
-  }).join("");
+  const tip = Math.round(order.totalCents * tipPercent / 100);
+  const grand = order.totalCents + tip;
+  const each = splitWays > 1 ? Math.round(grand / splitWays) : grand;
+  const rows = (order.items ?? []).map((l) => `<tr><td style="padding:8px 0;border-bottom:1px solid #eee">${l.quantity}× ${esc(l.name)}</td></tr>`).join("");
+  const input2 = { publicRef: esc(order.publicRef), totalCents: order.totalCents, tipPercent, splitWays, weeklySpecials: Boolean(input.weeklySpecials) };
 
   const html = `
     <div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;max-width:480px;margin:0 auto;padding:24px;color:#111">
       <p style="margin:0;font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:#111;font-weight:700">Sora</p>
       <h1 style="margin:8px 0 4px;font-size:28px">Your receipt</h1>
-      <p style="margin:0 0 20px;color:#666">Order ${input.publicRef}</p>
+      <p style="margin:0 0 20px;color:#666">Order ${input2.publicRef}</p>
       <table style="width:100%;border-collapse:collapse">${rows}</table>
       <div style="margin-top:16px;font-size:15px">
-        <div style="display:flex;justify-content:space-between"><span>Subtotal</span><span>R ${(input.totalCents / 100).toFixed(2)}</span></div>
-        ${tip ? `<div style="display:flex;justify-content:space-between;margin-top:4px"><span>Tip ${input.tipPercent}%</span><span>R ${(tip / 100).toFixed(2)}</span></div>` : ""}
+        <div style="display:flex;justify-content:space-between"><span>Subtotal</span><span>R ${(input2.totalCents / 100).toFixed(2)}</span></div>
+        ${tip ? `<div style="display:flex;justify-content:space-between;margin-top:4px"><span>Tip ${input2.tipPercent}%</span><span>R ${(tip / 100).toFixed(2)}</span></div>` : ""}
         <div style="display:flex;justify-content:space-between;margin-top:8px;font-weight:700;font-size:18px"><span>Total</span><span>R ${(grand / 100).toFixed(2)}</span></div>
-        ${input.splitWays > 1 ? `<p style="margin:8px 0 0;color:#666;font-size:13px">Split ${input.splitWays} ways · about R ${(each / 100).toFixed(2)} each</p>` : ""}
+        ${input2.splitWays > 1 ? `<p style="margin:8px 0 0;color:#666;font-size:13px">Split ${input2.splitWays} ways · about R ${(each / 100).toFixed(2)} each</p>` : ""}
       </div>
       <p style="margin:24px 0 0;color:#666;font-size:13px">Thank you for ordering at Sora.</p>
-      ${input.weeklySpecials ? `<p style="margin:8px 0 0;color:#666;font-size:13px">You’ll also get our weekly specials.</p>` : ""}
+      ${input2.weeklySpecials ? `<p style="margin:8px 0 0;color:#666;font-size:13px">You’ll also get our weekly specials.</p>` : ""}
     </div>`;
 
   const res = await fetch("https://api.resend.com/emails", {
@@ -48,7 +55,7 @@ export async function sendReceiptAction(input: {
     body: JSON.stringify({
       from: process.env.RECEIPT_FROM || "Sora <receipts@sora.restaurant>",
       to: [to],
-      subject: `Your Sora receipt · ${input.publicRef}`,
+      subject: `Your Sora receipt · ${input2.publicRef}`,
       html,
     }),
   });

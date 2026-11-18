@@ -15,6 +15,8 @@ export type OwnerDashboardSnapshot = {
   restaurantName: string;
   timezone: string;
   acceptedOrderValueCents: number;
+  paidTodayCents: number;
+  orders: { id: string; publicRef: string; table: string; status: string; totalCents: number; paymentStatus: string; createdAt: string }[];
   tables: ManagedTable[];
   menu: OwnerMenuCategory[];
 };
@@ -33,5 +35,7 @@ export interface TableSessionAdapter {
   rotateQr?(tableId: string): Promise<OwnerDashboardSnapshot>;
   createTable?(label: string): Promise<OwnerDashboardSnapshot>;
   updateItem?(item: OwnerMenuItem): Promise<OwnerDashboardSnapshot>;
+  createItem?(menuId: string, name: string, priceCents: number): Promise<OwnerDashboardSnapshot>;
+  createCategory?(name: string): Promise<OwnerDashboardSnapshot>;
 }
 

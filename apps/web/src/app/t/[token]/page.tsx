@@ -15,8 +15,14 @@ export default async function TableMenuPage({ params }: { params: Promise<{ toke
   const [row] = await prodDeps().db.asService<{ m: TableMenu | null }>("select get_table_menu($1) m", [token]);
   if (!row?.m) notFound();
   if (row.m.orderingEnabled === false) return <OrderingUnavailable restaurant={row.m.restaurant} table={row.m.table} />;
-  // The staging demo table shows the full sample menu (photos, specials); every real table shows its own menu.
-  const preview = token.startsWith("staging-demo");
-  const menu = preview ? { ...DEMO_MENU, table: row.m.table } : row.m;
-  return <Menu menu={menu} theme={resolveTheme(row.m.theme)} qrToken={token} preview={preview} />;
+  // Every table, the demo included, shows the live menu (owner edits and sold-out apply). The demo adds the sample
+  // allergens, specials and prep times by dish id; there are no invented ratings or reviews.
+  const extras = new Map(DEMO_MENU.categories.flatMap((c) => c.items).map((i) => [i.id, i]));
+  const menu = token.startsWith("staging-demo")
+    ? { ...row.m, categories: row.m.categories.map((c) => ({ ...c, items: c.items.map((i) => {
+        const x = extras.get(i.id);
+        return x ? { ...i, special: x.special, allergens: x.allergens, prepTime: x.prepTime } : i;
+      }) })) }
+    : row.m;
+  return <Menu menu={menu} theme={resolveTheme(row.m.theme)} qrToken={token} />;
 }

@@ -68,7 +68,7 @@ function LiveBoard({ restaurant, auth }: { restaurant: Restaurant; auth: StaffAu
     [dispatch, getToken],
   );
 
-  return <KitchenBoard restaurant={restaurant.name} board={board} connection={connection} onAdvance={advance} />;
+  return <KitchenBoard restaurant={restaurant.name} board={board} connection={connection} onAdvance={advance} onSignOut={() => void auth.signOut()} />;
 }
 
 function SignIn({ auth }: { auth: StaffAuth }) {

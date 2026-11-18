@@ -18,3 +18,18 @@ describe("orderStatus", () => {
     expect((await orderStatus("x'; drop", deps)).status).toBe(404);
   });
 });
+
+describe("paid options", () => {
+  it("are priced by the server from its own list, and a client-sent price is refused", async () => {
+    const db = await freshDb();
+    const deps = testDeps(db);
+    const ok = await submitOrder({ qrToken: "demo-table-4-token", idempotencyKey: "key-addon-001", items: [{ menuItemId: BUNNY_CHOW, quantity: 2, notes: "Bacon, Extra hot sauce" }] }, deps);
+    expect(ok.ok).toBe(true);
+    const { rows } = await db.query<{ unit: number; total: number; base: number }>(
+      "select oi.unit_price_cents unit, o.total_cents total, mi.price_cents base from orders o join order_items oi on oi.order_id = o.id join menu_items mi on mi.id = oi.menu_item_id");
+    expect(rows[0].unit).toBe(rows[0].base + 2000 + 1200);
+    expect(rows[0].total).toBe(rows[0].unit * 2);
+    const forged = await submitOrder({ qrToken: "demo-table-4-token", idempotencyKey: "key-addon-002", items: [{ menuItemId: BUNNY_CHOW, quantity: 1, extraCents: -5000 }] }, deps);
+    expect(forged).toMatchObject({ ok: false, error: "unexpected_field" });
+  });
+});

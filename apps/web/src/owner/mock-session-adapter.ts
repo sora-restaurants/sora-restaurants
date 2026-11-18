@@ -24,6 +24,8 @@ export function createMockSessionAdapter(seed = INITIAL_TABLES): TableSessionAda
         restaurantName: "Sora Test Kitchen",
         timezone: "Africa/Johannesburg",
         acceptedOrderValueCents: 284_550,
+        paidTodayCents: 120_000,
+        orders: [],
         tables: tables.map((table) => ({ ...table })),
         menu: [],
       };

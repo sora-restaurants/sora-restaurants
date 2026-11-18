@@ -9,6 +9,7 @@ export type StaffAuth = {
   /** Resolves to an error message, or null on success. */
   signIn(email: string, password: string): Promise<string | null>;
   onChange(listener: () => void): () => void;
+  signOut(): Promise<void>;
 };
 
 const BAD_LOGIN = "That email and password did not match.";
@@ -21,6 +22,7 @@ function supabaseAuth(url: string, anonKey: string): StaffAuth {
     mode: "supabase",
     getToken: async () => (await supabase().auth.getSession()).data.session?.access_token ?? null,
     signIn: async (email, password) => ((await supabase().auth.signInWithPassword({ email, password })).error ? BAD_LOGIN : null),
+    signOut: async () => { await supabase().auth.signOut(); },
     onChange: (listener) => {
       const { data } = supabase().auth.onAuthStateChange(() => listener());
       return () => data.subscription.unsubscribe();
@@ -46,6 +48,7 @@ function devAuth(): StaffAuth {
       listeners.forEach((l) => l());
       return null;
     },
+    signOut: async () => { sessionStorage.removeItem(DEV_KEY); listeners.forEach((l) => l()); },
     onChange: (listener) => {
       listeners.add(listener);
       return () => listeners.delete(listener);

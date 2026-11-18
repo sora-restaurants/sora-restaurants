@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { addOnCost } from "../components/menu/customise-options.ts";
 import type { Deps, SubmitResult } from "./deps.ts";
 
 // .strict() rejects any field the client might use to steer price, restaurant or table.
@@ -53,7 +54,8 @@ export async function submitOrder(input: unknown, deps: Deps): Promise<SubmitRes
     const [row] = await deps.db.asService<{ r: { statusToken: string; publicRef: string; replayed: boolean } }>(
       // ::text first: postgres.js would JSON-encode a string bound straight to jsonb a second time.
       "select submit_order($1, $2, $3::text::jsonb) r",
-      [qrToken, idempotencyKey, JSON.stringify(items)],
+      // Paid options are priced here from the server's own list; the client never sends a price.
+      [qrToken, idempotencyKey, JSON.stringify(items.map((i) => ({ ...i, extraCents: addOnCost(i.notes ? i.notes.split(", ") : []) })))],
     );
     return { ok: true, ...row.r };
   } catch (error) {

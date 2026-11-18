@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { KitchenOrder } from "../server/deps.ts";
 import { type BoardState, type ColumnId, columns } from "./board-state.ts";
 
@@ -39,18 +39,20 @@ type Props = {
   board: BoardState;
   connection: Connection;
   onAdvance: (order: KitchenOrder, to: Target) => Promise<void>;
+  onSignOut?: () => void;
 };
 
-export function KitchenBoard({ restaurant, board, connection, onAdvance }: Props) {
+export function KitchenBoard({ restaurant, board, connection, onAdvance, onSignOut }: Props) {
   const now = useNow(30_000);
   const cols = columns(board);
+  useNewOrderChime(cols.find((c) => c.id === "new")?.orders.length ?? 0);
   const [activeColumn, setActiveColumn] = useState<ColumnId>("new");
 
   return (
     <div className="grid h-dvh grid-rows-[auto_auto_auto_minmax(0,1fr)] bg-[oklch(13%_0_0)] font-[family-name:var(--font-manrope)] font-extrabold text-white md:grid-rows-[auto_auto_minmax(0,1fr)]">
       <header className="flex items-center justify-between gap-3 border-b-4 border-white px-3 py-2 sm:px-4 sm:py-3">
         <h1 className="truncate text-xl uppercase tracking-tight sm:text-3xl">{restaurant}</h1>
-        <ConnectionPill connection={connection} />
+        <div className="flex items-center gap-2"><ConnectionPill connection={connection} />{onSignOut && <button type="button" onClick={onSignOut} className="min-h-12 border-2 border-white px-3 text-sm uppercase">Sign out</button>}</div>
       </header>
 
       {connection === "reconnecting" ? (
@@ -190,4 +192,23 @@ function useNow(intervalMs: number) {
     return () => clearInterval(id);
   }, [intervalMs]);
   return now;
+}
+
+/** A short two-tone chime whenever the number of new tickets goes up (not on first load). */
+function useNewOrderChime(newCount: number) {
+  const last = useRef<number | null>(null);
+  useEffect(() => {
+    if (last.current !== null && newCount > last.current) {
+      try {
+        const ctx = new AudioContext();
+        [880, 1320].forEach((hz, i) => {
+          const osc = ctx.createOscillator(); const gain = ctx.createGain();
+          osc.frequency.value = hz; gain.gain.value = 0.2;
+          osc.connect(gain).connect(ctx.destination);
+          osc.start(ctx.currentTime + i * 0.18); osc.stop(ctx.currentTime + i * 0.18 + 0.15);
+        });
+      } catch { /* audio blocked until the tablet is tapped once; the yellow card still shows */ }
+    }
+    last.current = newCount;
+  }, [newCount]);
 }

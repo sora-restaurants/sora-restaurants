@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { submitOrderAction } from "../../app/actions/submit-order.ts";
 import { sendReceiptAction } from "../../app/actions/send-receipt.ts";
+import { saveCheckoutAction } from "../../app/actions/save-checkout.ts";
 import type { ThemeId } from "../../themes/themes.ts";
 import type { MenuItem, TableMenu } from "./types.ts";
 import { SlideToPay } from "../order/SlideToPay.tsx";
@@ -34,6 +35,14 @@ const ERRORS: Record<string, string> = {
 export function Menu({ menu, theme, qrToken, preview = false }: Props) {
   const [cart, setCart] = useState<Record<string, number>>({});
   const [status, setStatus] = useState<Status>({ kind: "idle" });
+  // Keep the order tracker across a refresh (this tab only).
+  const trackKey = `sora-order-${qrToken}`;
+  useEffect(() => {
+    try { const saved = sessionStorage.getItem(trackKey); if (saved) setStatus(JSON.parse(saved)); } catch { /* storage blocked */ }
+  }, [trackKey]);
+  useEffect(() => {
+    try { if (status.kind === "placed" && status.statusToken) sessionStorage.setItem(trackKey, JSON.stringify(status)); } catch { /* storage blocked */ }
+  }, [status, trackKey]);
   // Follow the real kitchen status until the order is served or cancelled.
   const statusToken = status.kind === "placed" ? status.statusToken : undefined;
   const finished = status.kind === "placed" && (status.stage === "served" || status.stage === "cancelled");
@@ -68,12 +77,17 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
   const items = menu.categories.flatMap((category) => category.items);
   const lines = items.filter((item) => cart[item.id]);
   const count = lines.reduce((sum, item) => sum + cart[item.id], 0);
-  // Display only. The database resolves every trusted price from the menu item id.
-  const estimate = lines.reduce((sum, item) => {
-    const base = item.priceCents * cart[item.id];
-    const extras = (notes[item.id] ?? []).reduce((s, set) => s + addOnCost(set), 0);
-    return sum + base + extras;
-  }, 0);
+  // One order line per distinct set of options, so the kitchen sees each unit's choices.
+  const orderLines = lines.flatMap((item) => {
+    const byNotes = new Map<string, number>();
+    for (let u = 0; u < cart[item.id]; u++) {
+      const n = (notes[item.id]?.[u] ?? []).join(", ").slice(0, 200);
+      byNotes.set(n, (byNotes.get(n) ?? 0) + 1);
+    }
+    return [...byNotes].map(([n, quantity]) => ({ item, quantity, notes: n }));
+  });
+  // Display only. The server prices items and paid options itself, the same way.
+  const estimate = orderLines.reduce((sum, l) => sum + (l.item.priceCents + addOnCost(l.notes ? l.notes.split(", ") : [])) * l.quantity, 0);
 
   const setQuantity = (id: string, quantity: number) => {
     idempotencyKey.current = null;
@@ -98,20 +112,9 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
   async function placeOrder() {
     idempotencyKey.current ??= crypto.randomUUID();
     setStatus({ kind: "sending" });
-    const sendReceipt = (publicRef: string) => {
-      if (!emailReceipt.trim()) return;
-      const receiptLines = lines.map((item) => ({
-        name: item.name,
-        quantity: cart[item.id],
-        notes: (notes[item.id] ?? []).flat(),
-        priceCents: item.priceCents * cart[item.id],
-      }));
-      void sendReceiptAction({ to: emailReceipt, publicRef, lines: receiptLines, totalCents: estimate, tipPercent, splitWays, weeklySpecials });
-    };
-    if (qrToken === "preview") { // design-preview pages have no database
+    if (qrToken === "preview") { // design-preview pages have no database, so no receipt either
       const wait = demoWaitMinutes(count);
       const publicRef = "SORA-" + Math.floor(Math.random() * 9000 + 1000);
-      sendReceipt(publicRef);
       setStatus({ kind: "placed", publicRef, itemCount: count, totalCents: estimate, payNow: paymentChoice === "pay_now", paid: false, stage: "received", wait });
       setTableOrders((prev) => [{ ref: publicRef, total: estimate, count }, ...prev].slice(0, 5));
       setCart({});
@@ -122,10 +125,11 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
       const result = await submitOrderAction({
         qrToken,
         idempotencyKey: idempotencyKey.current,
-        items: lines.map((item) => ({ menuItemId: item.id, quantity: cart[item.id] })),
+        items: orderLines.map((l) => ({ menuItemId: l.item.id, quantity: l.quantity, ...(l.notes ? { notes: l.notes } : {}) })),
       });
       if (result.ok) {
-        sendReceipt(result.publicRef);
+        void saveCheckoutAction({ statusToken: result.statusToken, paymentChoice, tipPercent, splitWays });
+        if (emailReceipt.trim()) void sendReceiptAction({ to: emailReceipt, statusToken: result.statusToken, tipPercent, splitWays, weeklySpecials });
         const wait = demoWaitMinutes(count);
         setStatus({ kind: "placed", publicRef: result.publicRef, statusToken: result.statusToken, itemCount: count, totalCents: estimate, payNow: paymentChoice === "pay_now", paid: false, stage: "received", wait });
         setTableOrders((prev) => [{ ref: result.publicRef, total: estimate, count }, ...prev].slice(0, 5));
@@ -144,7 +148,8 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
     setAssistanceKind(kind);
     setAssistance("sending");
     setAssistanceOpen(false);
-    await new Promise((r) => setTimeout(r, 600));
+    const ok = qrToken === "preview" || (await fetch("/api/tables/call-waiter", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ qrToken }) }).then((res) => res.ok).catch(() => false));
+    if (!ok) { setAssistance("idle"); setAssistanceKind(null); setStatus({ kind: "error", message: "We couldn't reach the staff. Please wave to a waiter." }); return; }
     setAssistance("sent");
     setTimeout(() => { setAssistance("idle"); setAssistanceKind(null); }, 8000);
   }
@@ -244,7 +249,7 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
           </div>
         </div>
       )}
-      <OrderDock triggerRef={basketTrigger} count={count} estimate={estimate} status={status} onOpen={() => setBasketOpen(true)} onDismiss={() => setStatus({ kind: "idle" })} onPaid={() => setStatus((s) => s.kind === "placed" ? { ...s, paid: true } : s)} />
+      <OrderDock triggerRef={basketTrigger} count={count} estimate={estimate} status={status} onOpen={() => setBasketOpen(true)} onDismiss={() => { if (status.kind === "placed" && (status.stage === "served" || status.stage === "cancelled")) { try { sessionStorage.removeItem(trackKey); } catch { /* storage blocked */ } } setStatus({ kind: "idle" }); }} onPaid={() => setStatus((s) => s.kind === "placed" ? { ...s, paid: true } : s)} />
       {basketOpen && <BasketSheet returnFocusRef={basketTrigger} lines={lines} cart={cart} notes={notes} estimate={estimate} status={status} paymentChoice={paymentChoice} splitWays={splitWays} emailReceipt={emailReceipt} weeklySpecials={weeklySpecials} tipPercent={tipPercent} onPaymentChoice={setPaymentChoice} onSplit={setSplitWays} onEmail={setEmailReceipt} onWeekly={setWeeklySpecials} onTip={setTipPercent} onChange={setQuantity} onClose={closeBasket} onPlace={placeOrder} />}
     </div>
   );
@@ -573,7 +578,7 @@ function OrderDock({ triggerRef, count, estimate, status, onOpen, onDismiss, onP
         <div className="mb-3 flex items-center justify-between gap-4">
           <p>
             <span className="display block text-xl text-on-accent">{stageLabel}</span>
-            <span className="mt-1 block text-sm opacity-75">Ref <strong className="tracking-wide text-bg">{status.publicRef}</strong>{status.paid ? " · Paid" : ""}{status.stage === "received" || status.stage === "preparing" ? ` · usually ready in ${status.wait} min` : ""}</span>
+            <span className="mt-1 block text-sm opacity-75">Ref <strong className="tracking-wide text-bg">{status.publicRef}</strong>{status.paid ? " · Demo payment, not charged" : ""}{status.stage === "received" || status.stage === "preparing" ? ` · usually ready in ${status.wait} min` : ""}</span>
           </p>
           <button type="button" onClick={onDismiss} className="min-h-tap shrink-0 rounded-full border border-bg/30 px-4 font-semibold">Order more</button>
         </div>

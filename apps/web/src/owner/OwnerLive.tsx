@@ -32,9 +32,11 @@ function OwnerSession({ auth }: { auth: StaffAuth }) {
     closeSession: (tableId) => command(auth, "close", tableId),
     rotateQr: async (tableId) => { await post(auth, { action: "rotate", tableId }); return loadSnapshot(auth); },
     createTable: async (label) => { await post(auth, { action: "create", restaurantId: snapshot.restaurantId, label }); return loadSnapshot(auth); },
+    createItem: async (menuId, name, priceCents) => { await post(auth, { action: "createItem", menuId, name, description: "", priceCents }); return loadSnapshot(auth); },
+    createCategory: async (name) => { await post(auth, { action: "createCategory", restaurantId: snapshot.restaurantId, name }); return loadSnapshot(auth); },
     updateItem: async (item) => { await post(auth, { action: "updateItem", itemId: item.id, name: item.name, description: item.description, priceCents: item.priceCents, imageUrl: item.imageUrl, dietaryTags: item.dietaryTags, available: item.available, soldOut: item.soldOut }); return loadSnapshot(auth); },
   };
-  return <OwnerDashboard initial={snapshot} sessionAdapter={adapter} />;
+  return <OwnerDashboard initial={snapshot} sessionAdapter={adapter} onSignOut={() => void auth.signOut()} />;
 }
 
 async function loadSnapshot(auth: StaffAuth): Promise<OwnerDashboardSnapshot> {
