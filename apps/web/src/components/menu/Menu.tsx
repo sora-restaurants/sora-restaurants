@@ -78,18 +78,20 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
   async function placeOrder() {
     idempotencyKey.current ??= crypto.randomUUID();
     setStatus({ kind: "sending" });
-    if (preview) {
+    const sendReceipt = (publicRef: string) => {
+      if (!emailReceipt.trim()) return;
+      const receiptLines = lines.map((item) => ({
+        name: item.name,
+        quantity: cart[item.id],
+        notes: (notes[item.id] ?? []).flat(),
+        priceCents: item.priceCents * cart[item.id],
+      }));
+      void sendReceiptAction({ to: emailReceipt, publicRef, lines: receiptLines, totalCents: estimate, tipPercent, splitWays, weeklySpecials });
+    };
+    if (qrToken === "preview") { // design-preview pages have no database
       const wait = demoWaitMinutes(count);
       const publicRef = "SORA-" + Math.floor(Math.random() * 9000 + 1000);
-      if (emailReceipt.trim()) {
-        const receiptLines = lines.map((item) => ({
-          name: item.name,
-          quantity: cart[item.id],
-          notes: (notes[item.id] ?? []).flat(),
-          priceCents: item.priceCents * cart[item.id],
-        }));
-        void sendReceiptAction({ to: emailReceipt, publicRef, lines: receiptLines, totalCents: estimate, tipPercent, splitWays, weeklySpecials });
-      }
+      sendReceipt(publicRef);
       setStatus({ kind: "placed", publicRef, itemCount: count, totalCents: estimate, payNow: paymentChoice === "pay_now", paid: false, stage: "received", wait });
       setTableOrders((prev) => [{ ref: publicRef, total: estimate, count }, ...prev].slice(0, 5));
       setCart({});
@@ -103,6 +105,7 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
         items: lines.map((item) => ({ menuItemId: item.id, quantity: cart[item.id] })),
       });
       if (result.ok) {
+        sendReceipt(result.publicRef);
         const wait = demoWaitMinutes(count);
         setStatus({ kind: "placed", publicRef: result.publicRef, itemCount: count, totalCents: estimate, payNow: paymentChoice === "pay_now", paid: false, stage: "received", wait });
         setTableOrders((prev) => [{ ref: result.publicRef, total: estimate, count }, ...prev].slice(0, 5));
