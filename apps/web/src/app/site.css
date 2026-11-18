@@ -177,6 +177,10 @@
 .site .benefits { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 48px; }
 .site .benefits li { display: flex; gap: 20px; align-items: baseline; padding: 24px 0; border-top: 1px solid var(--line); font-size: clamp(18px, 2vw, 24px); letter-spacing: -0.02em; }
 .site .benefits li span { font-family: var(--font-geist-mono), monospace; font-size: 12px; color: var(--mute); }
+.site .benefits--problems li { align-items: flex-start; }
+.site .benefits--problems li > span { padding-top: 5px; flex: none; }
+.site .benefits--problems strong { display: block; font-weight: 600; line-height: 1.35; }
+.site .benefits--problems p { margin-top: 10px; font-size: 16px; line-height: 1.6; letter-spacing: 0; }
 @media (max-width: 700px) { .site .benefits { grid-template-columns: 1fr; } }
 
 /* showcase */

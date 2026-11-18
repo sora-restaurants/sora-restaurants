@@ -27,6 +27,15 @@ const FEATURES: { title: string; text: string; art: ReactNode }[] = [
   { title: "Works With Existing Devices", text: "Use current phones, tablets, and screens without specialised ordering hardware.", art: <div style={{ display: "flex", gap: 10, alignItems: "end", justifyContent: "center" }}>{[[26, 48], [62, 50], [88, 60]].map(([w, h]) => <span key={w} style={{ width: w, height: h, border: "1.5px solid var(--ink)", borderRadius: 5, background: "var(--paper)" }} />)}</div> },
 ];
 
+const BENEFITS = [
+  { problem: "Guests wait 10 minutes just to order.", solution: "They scan the QR code and order the moment they sit down." },
+  { problem: "Nobody orders a second round when the waiter is too busy to ask.", solution: "Another drink or dessert is one tap from the table." },
+  { problem: "You’re short-staffed again tonight.", solution: "Guests order themselves, so one waiter can cover more tables." },
+  { problem: "Wrong orders get sent back, and you pay for the food twice.", solution: "The kitchen sees exactly what the guest picked, in writing." },
+  { problem: "Guests order the special that’s finished.", solution: "Mark it sold out on your phone and it disappears from the menu." },
+  { problem: "You only find out how the night went after closing.", solution: "See what’s selling and which tables haven’t paid, live." },
+];
+
 const TABS = [
   { id: "guest", label: "Guest ordering", title: "The menu, on the guest's own phone", text: "A guest scans the table's code, picks dishes and sends the order. Sold-out items are marked, and a waiter is one tap away.", ui: <GuestPhone /> },
   { id: "kitchen", label: "Kitchen", title: "Every table's order on one screen", text: "New orders arrive as they are sent. Staff move each one through preparation to ready, and the guest's phone follows along.", ui: <KitchenBoard /> },
@@ -94,11 +103,21 @@ export default function Home() {
         <div className="wrap">
           <div className="head" data-reveal>
             <span className="eyebrow">For restaurants</span>
-            <h2>Fill tables faster. Fewer mistakes. Same staff.</h2>
-            <p className="lead">Guests scan, order and call a waiter from their table. Orders land on your kitchen screen exactly as ordered. You mark items sold out from your phone and see what’s selling live.</p>
-            <p>No app for guests. No new hardware. Your POS stays.</p>
+            <h2>Built around your restaurant.</h2>
+            <p className="lead">Let guests order when they’re ready, while your team keeps service moving.</p>
           </div>
-          <p style={{ fontSize: 20, fontWeight: 600 }}>Free pilot for sit-down restaurants in 2026.</p>
+          <ol className="benefits benefits--problems">
+            {BENEFITS.map((benefit, index) => (
+              <li key={benefit.problem} data-reveal>
+                <span>{String(index + 1).padStart(2, "0")}</span>
+                <div>
+                  <strong>{benefit.problem}</strong>
+                  <p className="dim">{benefit.solution}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+          <p style={{ marginTop: 32, fontSize: 20, fontWeight: 600 }}>Free pilot for sit-down restaurants in 2026.</p>
           <Link className="btn" href="/waitlist" style={{ marginTop: 20 }}>Join the pilot <Arrow /></Link>
           <p className="dim" style={{ marginTop: 24, fontSize: 14, maxWidth: "65ch" }}>Pilot orders also need to be entered into your POS. Direct POS integration is planned.</p>
         </div>
