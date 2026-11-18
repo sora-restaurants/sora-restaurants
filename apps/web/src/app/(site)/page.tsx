@@ -27,7 +27,12 @@ const FEATURES: { title: string; text: string; art: ReactNode }[] = [
   { title: "Works With Existing Devices", text: "Use current phones, tablets, and screens without specialised ordering hardware.", art: <div style={{ display: "flex", gap: 10, alignItems: "end", justifyContent: "center" }}>{[[26, 48], [62, 50], [88, 60]].map(([w, h]) => <span key={w} style={{ width: w, height: h, border: "1.5px solid var(--ink)", borderRadius: 5, background: "var(--paper)" }} />)}</div> },
 ];
 
-const BENEFITS = ["Guests can order while waiters help other tables.", "No compulsory app download for customers.", "Guests send their selections directly to the kitchen.", "Staff and guests can follow the same order status.", "Sold-out items can be removed from ordering.", "Designed for sit-down restaurants."];
+const BENEFITS = [
+  { title: "Make the next round easy to order.", text: "Another drink, a side for the table or dessert: guests can send an order as soon as they decide." },
+  { title: "Give your team more room to serve.", text: "Guests can browse and order while waiters welcome arrivals, make recommendations and look after the room." },
+  { title: "Put the guest’s selection in front of the kitchen.", text: "Dishes, quantities and order notes arrive on one screen. Staff update preparation status as the order moves through service." },
+  { title: "Keep the menu in step with the kitchen.", text: "Update a price or mark a dish sold out, and the ordering menu reflects the change." },
+];
 
 const TABS = [
   { id: "guest", label: "Guest ordering", title: "The menu, on the guest's own phone", text: "A guest scans the table's code, picks dishes and sends the order. Sold-out items are marked, and a waiter is one tap away.", ui: <GuestPhone /> },
@@ -94,12 +99,16 @@ export default function Home() {
 
       <section id="restaurants" className="dark">
         <div className="wrap">
-          <div className="head" data-reveal><span className="eyebrow">For restaurants</span><h2>Built around your restaurant.</h2>
-            <p className="lead">SORA runs alongside the way you already work, on devices you already own.</p></div>
+          <div className="head" data-reveal><span className="eyebrow">For restaurants</span><h2>Make it easier to order the next round.</h2>
+            <p className="lead">A table is ready to order. Their waiter is helping someone else. With SORA, guests scan, choose and send their order from their own phone. Your team can keep serving while the kitchen receives the order.</p></div>
           <ul className="benefits">
-            {BENEFITS.map((b, i) => <li key={b} data-reveal><span>{String(i + 1).padStart(2, "0")}</span>{b}</li>)}
+            {BENEFITS.map((benefit) => <li key={benefit.title} data-reveal><div><h3>{benefit.title}</h3><p className="dim" style={{ marginTop: 10, fontSize: 16, lineHeight: 1.6, letterSpacing: 0 }}>{benefit.text}</p></div></li>)}
           </ul>
-          <p className="dim" style={{ marginTop: 32, fontSize: 14, maxWidth: "60ch" }}>SORA sends QR orders to its own kitchen screen. Staff must also enter those orders in the restaurant’s existing POS for billing and reconciliation. Direct POS integration is planned. During a pilot, we will check this extra step with your staff before using SORA in service.</p>
+          <div className="hero__cta" style={{ marginTop: 32 }}>
+            <a className="btn" href="https://sora-restaurants.vercel.app/t/staging-demo-table-1">Try ordering from a table <Arrow /></a>
+            <Link className="btn btn--ghost" href="/waitlist">Discuss a restaurant pilot</Link>
+          </div>
+          <p className="dim" style={{ marginTop: 24, fontSize: 14, maxWidth: "75ch" }}>Pilot workflow: SORA handles QR ordering and its kitchen screen. Staff also enter orders in your existing POS for billing. Direct POS integration is planned; we will walk through the setup with your team before you agree to a pilot.</p>
         </div>
       </section>
 
