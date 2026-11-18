@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { WaitlistForm } from "../../../components/site/WaitlistForm.tsx";
 
 export const metadata: Metadata = {
+  alternates: { canonical: "/waitlist" },
   title: "Join the restaurant waitlist",
   description: "Tell us about your restaurant and join the SORA waitlist. SORA is preparing to welcome its first restaurant partners.",
 };

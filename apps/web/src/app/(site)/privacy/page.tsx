@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { EMAIL } from "../../../components/site/Chrome.tsx";
 
-export const metadata: Metadata = { title: "Website privacy notice", description: "What SORA collects when you enquire about a restaurant demonstration or pilot, and how to contact us about your information." };
+export const metadata: Metadata = { title: "Website privacy notice", description: "What SORA collects when you enquire about a restaurant demonstration or pilot, and how to contact us about your information.", alternates: { canonical: "/privacy" } };
 
 export default function PrivacyPage() {
   return (
@@ -16,6 +16,7 @@ export default function PrivacyPage() {
       <h2>Hosting and access</h2>
       <p>The website runs on Vercel and applications are stored in Supabase. These providers process information to operate their services, and processing may take place outside South Africa. SORA administrators review enquiries through a password-protected dashboard. Enquiry records are restricted from public database access.</p>
       <h2>Technical information and cookies</h2>
+      <p>While you fill in the waitlist, your browser keeps a draft in the current tab so a refresh does not lose your answers. You can clear the draft using “Clear saved details” on the form. A successful submission removes the draft.</p>
       <p>To limit spam, the application stores a salted hash of the internet address used to submit an enquiry, together with its submission time. Vercel may process connection addresses and request logs to deliver and protect the website. The admin area uses a session cookie for sign-in. The application does not set advertising cookies.</p>
       <h2>Keeping and deleting information</h2>
       <p>We keep enquiries while considering a restaurant for demonstrations or pilots and while following up with it. You can ask us to stop contacting you, correct your details or delete your enquiry by emailing <a className="link" href={`mailto:${EMAIL}`}>{EMAIL}</a>. We may ask for information to confirm the request relates to you before sharing or changing an enquiry.</p>

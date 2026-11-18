@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export const EMAIL = "Sora.administration@gmail.com";
 const LINKS: [string, string][] = [["Home", "/"], ["How It Works", "/#how"], ["Features", "/#features"], ["For Restaurants", "/#restaurants"], ["Contact", "/#contact"]];
@@ -13,6 +13,17 @@ export const Arrow = () => (
 export function Nav() {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
+  const toggle = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      setOpen(false);
+      toggle.current?.focus();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [open]);
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
     onScroll();
@@ -26,7 +37,7 @@ export function Nav() {
         <Link className="brand" href="/" onClick={close}>SORA</Link>
         <nav className="nav__links" aria-label="Main">{LINKS.map(([label, href]) => <Link key={label} href={href}>{label}</Link>)}</nav>
         <Link className="btn btn--sm nav__cta" href="/waitlist" onClick={close}>Join Waitlist</Link>
-        <button className="nav__toggle" type="button" aria-label="Menu" aria-expanded={open} aria-controls="nav-sheet" onClick={() => setOpen(!open)}><i /><i /></button>
+        <button ref={toggle} className="nav__toggle" type="button" aria-label="Menu" aria-expanded={open} aria-controls="nav-sheet" onClick={() => setOpen(!open)}><i /><i /></button>
       </div>
       <div className="nav__sheet" id="nav-sheet" inert={!open}>
         <div><div className="wrap">

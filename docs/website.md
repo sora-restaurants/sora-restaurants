@@ -1,33 +1,50 @@
 # Marketing site, waitlist and admin
 
-Lives in `apps/web` beside the ordering app, kept apart from it:
+The public website is https://sora-website-nine.vercel.app. It runs in the Vercel
+project `sora-8818/sora-website`, rooted at `apps/web` and connected to the GitHub
+repository `sora-restaurants/sora-restaurants`. Its production branch is
+`sora-website-waitlist`. The guest ordering demo uses the separate Vercel project
+`sora-restaurants`.
 
-| Part | Where |
-| --- | --- |
-| Homepage, `/waitlist`, `/privacy` | `apps/web/src/app/(site)/` |
-| Admin (`/admin`, `/admin/login`, `/admin/[id]`, `/admin/export`) | `apps/web/src/app/admin/` |
-| Styles (scoped under `.site`) | `apps/web/src/app/site.css` |
-| Components and product mockups | `apps/web/src/components/site/` |
-| Form options and validation (shared by browser and server) | `apps/web/src/lib/waitlist-schema.ts` |
-| Saving, listing, statistics, CSV | `apps/web/src/server/waitlist.ts` |
-| Admin sign-in | `apps/web/src/server/admin-auth.ts`, `admin-session.ts` |
-| Table | `supabase/migrations/20261115000000_waitlist.sql` |
+## Releases
 
-## Set up
+Commit website changes on `sora-website-waitlist` and push that branch. Vercel
+builds the production branch. The configured build command is
+`node ../../scripts/check-website-release.mjs && pnpm run build`.
+The release script rejects a different production Git branch. Older checkouts
+without the release script fail the build before they can replace the site.
 
-1. Apply the migration: `pnpm db:reset` locally, or `supabase db push` against the hosted project.
-2. Set the variables in `apps/web/.env.example`. `/admin` stays closed until `ADMIN_PASSWORD` and `ADMIN_SESSION_SECRET` are set.
-3. `pnpm dev`, then open `/`, `/waitlist` and `/admin`.
+For a manual deployment, verify the Vercel project is `sora-website` and deploy a
+clean checkout of the latest production branch. Check the public homepage,
+waitlist, privacy notice, and a test enquiry after release. Mark test enquiries as
+rejected and label their admin notes so they can be excluded from follow-up.
 
-## The public interest indicator is simulated
+## Backend
 
-The number on `/waitlist` comes from `apps/web/src/lib/interest-counter.ts`: a fixed function of the calendar day in
-Johannesburg that starts at 30 on 15 November 2026 and moves between 30 and 50. It is not read from the database and is
-labelled on the page as illustrative. Real application counts appear only in `/admin`.
+Apply `supabase/migrations/20261115000000_waitlist.sql` to the hosted database.
+The website uses `SUPABASE_URL` (or `NEXT_PUBLIC_SUPABASE_URL`) and the server-only
+`SUPABASE_SERVICE_ROLE_KEY` (or `SUPABASE_SECRET_KEY`) through the Supabase API.
+It can also use `DATABASE_URL` where API credentials are not configured.
+Public and restaurant staff roles cannot access waitlist records.
 
-## Not built yet
+Set `ADMIN_PASSWORD`, `ADMIN_SESSION_SECRET`, `WAITLIST_IP_SALT` and
+`NEXT_PUBLIC_SITE_URL` in Vercel. Never prefix server secrets with `NEXT_PUBLIC_`.
+Admin sign-in uses a shared password and an expiring session cookie. Login
+attempts are currently limited per server instance.
 
-- No confirmation email is sent. The success screen does not claim one was.
-- Spam protection is a hidden field, a minimum fill time and five applications an hour per connection. There is no CAPTCHA.
-- Admin sign-in is one shared password. Login attempts are limited per server instance.
-- The privacy policy is a draft and must have legal review before launch.
+## Public flow
+
+The short enquiry form accepts restaurant name/type/city, a contact name, and at
+least one email or phone number. Earlier detailed applications remain readable.
+There is no simulated signup counter. The 2026 sit-down restaurant pilot is free;
+future paid plans need agreement before paid service begins.
+
+The form stores a temporary draft in the same browser tab, preserves its retry
+key across refresh, and clears it after a successful submission or when the user
+chooses Clear saved details. Browser storage is optional. Signup still works if
+storage is unavailable. JavaScript-disabled visitors have an email alternative.
+
+No confirmation email is sent. Spam controls use a honeypot, minimum fill time,
+and a database-backed application count. The privacy notice describes actual
+collection and draft storage. Registered company and Information Officer details
+have not yet been supplied by the founder.

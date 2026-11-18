@@ -1,8 +1,11 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import type { Metadata } from "next";
 import { Arrow } from "../../components/site/Chrome.tsx";
 import { Chip, GuestPhone, HeroPhone, KitchenBoard, MenuItems, OrderTracker, OwnerDash, Qr, TableTent, Ticket, WaiterPanel } from "../../components/site/Mockups.tsx";
 import { Showcase } from "../../components/site/Showcase.tsx";
+
+export const metadata: Metadata = { alternates: { canonical: "/" } };
 
 const STEPS: { n: string; title: string; text: string; art: ReactNode }[] = [
   { n: "01", title: "Scan", text: "Customers scan the QR code placed at their table. No application downloads or account creation required.",

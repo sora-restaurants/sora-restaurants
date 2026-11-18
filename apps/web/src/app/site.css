@@ -229,6 +229,9 @@
 .site .field { display: grid; gap: 6px; align-content: start; border: 0; padding: 0; margin: 0; min-width: 0; }
 .site .field > label, .site .field > legend { font-size: 14px; font-weight: 500; padding: 0; }
 .site .field em { font-style: normal; font-weight: 400; color: var(--mute); }
+.site .draft-note { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px 16px; margin-top: 20px; color: var(--mute); font-size: 13px; }
+.site .draft-note button { min-height: 44px; padding: 0; border: 0; background: none; color: var(--ink); font: inherit; cursor: pointer; }
+.site .draft-note button:disabled { cursor: default; opacity: .6; }
 .site input[type="text"], .site input[type="email"], .site input[type="tel"], .site input[type="password"], .site input[type="search"], .site select, .site textarea {
   width: 100%; min-height: 48px; padding: 12px 14px; border: 1px solid #c9c9c9; border-radius: var(--r); background: var(--paper); color: var(--ink);
   font: 400 16px/1.4 var(--font-geist), system-ui, sans-serif; transition: border-color .2s; }

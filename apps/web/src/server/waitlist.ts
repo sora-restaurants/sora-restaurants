@@ -3,11 +3,10 @@ import type { Db } from "./deps.ts";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { apiFindExisting, apiRecentCount, apiInsert, apiList, apiGet, apiUpdate, apiStats } from "./waitlist-api.ts";
 export type WaitlistDb = Db | SupabaseClient;
-import { fieldErrors, STATUSES, submissionSchema, type Status } from "../lib/waitlist-schema.ts";
+import { fieldErrors, MIN_WAITLIST_FILL_MS, STATUSES, submissionSchema, type Status } from "../lib/waitlist-schema.ts";
 
 export const MAX_WAITLIST_BODY_BYTES = 32 * 1024;
 const MAX_PER_HOUR = 5;
-const MIN_FILL_MS = 4000;
 
 export type WaitlistResult =
   | { ok: true; reference: string; restaurantName: string; replayed: boolean }
@@ -40,7 +39,7 @@ export async function submitApplication(input: unknown, db: WaitlistDb, ip: stri
   const parsed = submissionSchema.safeParse(input);
   if (!parsed.success) return { ok: false, httpStatus: 422, error: "Some answers need another look.", fields: fieldErrors(parsed.error) };
   const a = parsed.data;
-  if (a.companyUrl !== "" || a.elapsedMs < MIN_FILL_MS) {
+  if (a.companyUrl !== "" || a.elapsedMs < MIN_WAITLIST_FILL_MS) {
     return { ok: false, httpStatus: 400, error: "We could not submit the form. Reload the page and try again." };
   }
 

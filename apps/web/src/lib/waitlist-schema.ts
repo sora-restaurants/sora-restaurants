@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+export const MIN_WAITLIST_FILL_MS = 4000;
+
 // One source for the form's options, the server's validation and the admin's labels. No server-only imports: the form uses it too.
 
 export const RESTAURANT_TYPES = ["Casual dining", "Fine dining", "Café / coffee shop", "Family restaurant", "Bar / pub with table service", "Fast casual", "Other"] as const;
