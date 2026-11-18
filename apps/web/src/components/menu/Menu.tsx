@@ -578,7 +578,9 @@ function OrderDock({ triggerRef, count, estimate, status, onOpen, onDismiss, onP
           <button type="button" onClick={onDismiss} className="min-h-tap shrink-0 rounded-full border border-bg/30 px-4 font-semibold">Order more</button>
         </div>
         <div className="relative mt-2 h-2 overflow-hidden rounded-full bg-bg/30">
-          <div className="absolute inset-y-0 left-0 w-1/2 animate-[charge_1.2s_ease-in-out_infinite] rounded-full bg-accent" style={{ animation: "charge 1.2s ease-in-out infinite" }} />
+          {status.stage === "served"
+            ? <div className="absolute inset-0 rounded-full bg-accent" />
+            : <div className="absolute inset-y-0 left-0 w-1/2 rounded-full bg-accent" style={{ animation: "charge 1.2s ease-in-out infinite" }} />}
         </div>
         <style>{`@keyframes charge { 0% { transform: translateX(-100%); } 100% { transform: translateX(300%); } }`}</style>
       </div>
