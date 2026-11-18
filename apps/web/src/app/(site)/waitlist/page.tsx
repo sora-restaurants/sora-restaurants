@@ -13,7 +13,7 @@ export default function WaitlistPage() {
         <span className="eyebrow">Restaurant waitlist</span>
         <h1>Be first in line.</h1>
         <p className="lead">Leave your restaurant and contact details. We will contact you to discuss a demonstration and whether a pilot suits your restaurant.</p>
-        <p className="dim">Pricing is being finalised. We will explain all fees before you agree to a pilot. Joining the waitlist is free.</p>
+        <p className="dim">The 2026 pilot is free for sit-down restaurants. Pricing for future paid plans is being finalised and will be agreed before any paid service begins.</p>
       </div>
       <WaitlistForm />
     </div>

@@ -27,15 +27,6 @@ const FEATURES: { title: string; text: string; art: ReactNode }[] = [
   { title: "Works With Existing Devices", text: "Use current phones, tablets, and screens without specialised ordering hardware.", art: <div style={{ display: "flex", gap: 10, alignItems: "end", justifyContent: "center" }}>{[[26, 48], [62, 50], [88, 60]].map(([w, h]) => <span key={w} style={{ width: w, height: h, border: "1.5px solid var(--ink)", borderRadius: 5, background: "var(--paper)" }} />)}</div> },
 ];
 
-const BENEFITS = [
-  "Make another drink or dessert easier to order.",
-  "Keep orders moving when waiters are busy.",
-  "Give your team more time to look after guests.",
-  "Send guests’ selections straight to the kitchen.",
-  "Let guests check their order without chasing staff.",
-  "Stop taking orders for dishes that have sold out.",
-];
-
 const TABS = [
   { id: "guest", label: "Guest ordering", title: "The menu, on the guest's own phone", text: "A guest scans the table's code, picks dishes and sends the order. Sold-out items are marked, and a waiter is one tap away.", ui: <GuestPhone /> },
   { id: "kitchen", label: "Kitchen", title: "Every table's order on one screen", text: "New orders arrive as they are sent. Staff move each one through preparation to ready, and the guest's phone follows along.", ui: <KitchenBoard /> },
@@ -56,7 +47,7 @@ export default function Home() {
               <Link className="btn" href="/waitlist">Join the Restaurant Waitlist <Arrow /></Link>
               <a className="btn btn--ghost" href="#how">Explore SORA</a>
             </div>
-            <p className="dim" style={{ fontSize: 14 }}>Now inviting restaurant pilot enquiries. Pricing is being finalised, and all fees will be agreed before a pilot.</p>
+            <p className="dim" style={{ fontSize: 14 }}>Free pilot for sit-down restaurants in 2026. Future paid plans will be explained before you agree to continue.</p>
           </div>
           <div className="stage" role="img" aria-label="Product demonstration with sample data: a guest scans the QR code on table 7, orders on their phone, and the order appears on the kitchen dashboard and turns ready.">
             <span className="mono stage__note">Product demonstration · sample data</span>
@@ -101,16 +92,15 @@ export default function Home() {
 
       <section id="restaurants" className="dark">
         <div className="wrap">
-          <div className="head" data-reveal><span className="eyebrow">For restaurants</span><h2>Built around your restaurant.</h2>
-            <p className="lead">Let guests order when they’re ready, while your team keeps service moving.</p></div>
-          <ul className="benefits">
-            {BENEFITS.map((benefit, index) => <li key={benefit} data-reveal><span>{String(index + 1).padStart(2, "0")}</span>{benefit}</li>)}
-          </ul>
-          <div className="hero__cta" style={{ marginTop: 32 }}>
-            <a className="btn" href="https://sora-restaurants.vercel.app/t/staging-demo-table-1">Try ordering from a table <Arrow /></a>
-            <Link className="btn btn--ghost" href="/waitlist">Discuss a restaurant pilot</Link>
+          <div className="head" data-reveal>
+            <span className="eyebrow">For restaurants</span>
+            <h2>Fill tables faster. Fewer mistakes. Same staff.</h2>
+            <p className="lead">Guests scan, order and call a waiter from their table. Orders land on your kitchen screen exactly as ordered. You mark items sold out from your phone and see what’s selling live.</p>
+            <p>No app for guests. No new hardware. Your POS stays.</p>
           </div>
-          <p className="dim" style={{ marginTop: 24, fontSize: 14, maxWidth: "75ch" }}>Pilot workflow: SORA handles QR ordering and its kitchen screen. Staff also enter orders in your existing POS for billing. Direct POS integration is planned; we will walk through the setup with your team before you agree to a pilot.</p>
+          <p style={{ fontSize: 20, fontWeight: 600 }}>Free pilot for sit-down restaurants in 2026.</p>
+          <Link className="btn" href="/waitlist" style={{ marginTop: 20 }}>Join the pilot <Arrow /></Link>
+          <p className="dim" style={{ marginTop: 24, fontSize: 14, maxWidth: "65ch" }}>Pilot orders also need to be entered into your POS. Direct POS integration is planned.</p>
         </div>
       </section>
 
