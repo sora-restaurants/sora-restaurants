@@ -1,5 +1,8 @@
 import { createHash, randomBytes } from "node:crypto";
 import type { Db } from "./deps.ts";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { apiFindExisting, apiRecentCount, apiInsert, apiList, apiGet, apiUpdate, apiStats } from "./waitlist-api.ts";
+export type WaitlistDb = Db | SupabaseClient;
 import { fieldErrors, STATUSES, submissionSchema, type Status } from "../lib/waitlist-schema.ts";
 
 export const MAX_WAITLIST_BODY_BYTES = 32 * 1024;
@@ -33,7 +36,7 @@ const newReference = () => `SORA-${Array.from(randomBytes(6), (b) => "23456789AB
 const nullable = (v: string | number) => (v === "" ? null : v);
 
 /** Validates and saves one application. Safe to retry: the same submission key, or the same restaurant and email, returns the first reference. */
-export async function submitApplication(input: unknown, db: Db, ip: string): Promise<WaitlistResult> {
+export async function submitApplication(input: unknown, db: WaitlistDb, ip: string): Promise<WaitlistResult> {
   const parsed = submissionSchema.safeParse(input);
   if (!parsed.success) return { ok: false, httpStatus: 422, error: "Some answers need another look.", fields: fieldErrors(parsed.error) };
   const a = parsed.data;
@@ -41,23 +44,24 @@ export async function submitApplication(input: unknown, db: Db, ip: string): Pro
     return { ok: false, httpStatus: 400, error: "We could not submit the form. Reload the page and try again." };
   }
 
-  const existing = await db.asService<{ reference: string; restaurant_name: string }>(
+  const existing = "asService" in db ? await db.asService<{ reference: string; restaurant_name: string }>(
     `select reference, restaurant_name from restaurant_waitlist_applications
-     where submission_key = $1 or (lower(email) = $2 and lower(restaurant_name) = lower($3)) order by created_at limit 1`,
-    [a.submissionKey, a.email, a.restaurantName],
-  );
+     where submission_key = $1 or (lower(email) = $2 and $2 <> '' and lower(restaurant_name) = lower($3))
+       or (phone = $4 and $4 <> '' and lower(restaurant_name) = lower($3)) order by created_at limit 1`,
+    [a.submissionKey, a.email, a.restaurantName, a.phone],
+  ) : await apiFindExisting(db, a);
   if (existing[0]) return { ok: true, reference: existing[0].reference, restaurantName: existing[0].restaurant_name, replayed: true };
 
   const ipHash = hashIp(ip);
-  const [{ n }] = await db.asService<{ n: number }>(
+  const [{ n }] = "asService" in db ? await db.asService<{ n: number }>(
     "select count(*)::int as n from restaurant_waitlist_applications where ip_hash = $1 and created_at > now() - interval '1 hour'",
     [ipHash],
-  );
+  ) : [{ n: await apiRecentCount(db, ipHash) }];
   if (n >= MAX_PER_HOUR) return { ok: false, httpStatus: 429, error: "Too many applications from this connection. Try again in an hour." };
 
   // The lists go in as text and are cast twice (::text::jsonb): postgres.js JSON-encodes a jsonb parameter itself, PGlite does not.
   const reference = newReference();
-  const saved = await db.asService<{ reference: string }>(
+  const saved = "asService" in db ? await db.asService<{ reference: string }>(
     `insert into restaurant_waitlist_applications (
        reference, submission_key, restaurant_name, restaurant_type, city, locations, tables_count, seating_capacity, website, social,
        contact_name, contact_position, email, phone, preferred_contact, best_time, pos_system, pos_other, ordering_method, uses_qr,
@@ -73,10 +77,12 @@ export async function submitApplication(input: unknown, db: Db, ip: string): Pro
       nullable(a.dailyVolume), JSON.stringify(a.improvements), JSON.stringify(a.featureInterests), nullable(a.biggestChallenge),
       nullable(a.requests), nullable(a.testTimeline), nullable(a.openToDemo), nullable(a.pilotInterest), nullable(a.comments), ipHash,
     ],
-  );
+  ) : await apiInsert(db, a, reference, ipHash);
   // A second request with the same key that raced this one wins the insert; both answer with its reference.
   if (!saved[0]) {
-    const [first] = await db.asService<{ reference: string }>("select reference from restaurant_waitlist_applications where submission_key = $1", [a.submissionKey]);
+    const [first] = "asService" in db
+      ? await db.asService<{ reference: string }>("select reference from restaurant_waitlist_applications where submission_key = $1", [a.submissionKey])
+      : await apiFindExisting(db, a);
     return { ok: true, reference: first.reference, restaurantName: a.restaurantName, replayed: true };
   }
   return { ok: true, reference: saved[0].reference, restaurantName: a.restaurantName, replayed: false };
@@ -84,7 +90,8 @@ export async function submitApplication(input: unknown, db: Db, ip: string): Pro
 
 export type Filters = { q?: string; status?: string; city?: string; pos?: string };
 
-export function listApplications(db: Db, f: Filters = {}): Promise<Application[]> {
+export function listApplications(db: WaitlistDb, f: Filters = {}): Promise<Application[]> {
+  if (!("asService" in db)) return apiList(db, f);
   const where: string[] = [];
   const params: unknown[] = [];
   const add = (sql: string, value: unknown) => { params.push(value); where.push(sql.replace("?", `$${params.length}`)); };
@@ -99,13 +106,15 @@ export function listApplications(db: Db, f: Filters = {}): Promise<Application[]
   );
 }
 
-export async function getApplication(db: Db, id: string): Promise<Application | null> {
+export async function getApplication(db: WaitlistDb, id: string): Promise<Application | null> {
   if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
+  if (!("asService" in db)) return apiGet(db, id);
   return (await db.asService<Application>(`select ${COLUMNS} from restaurant_waitlist_applications where id = $1`, [id]))[0] ?? null;
 }
 
-export async function updateApplication(db: Db, id: string, status: string, notes: string): Promise<boolean> {
+export async function updateApplication(db: WaitlistDb, id: string, status: string, notes: string): Promise<boolean> {
   if (!/^[0-9a-f-]{36}$/i.test(id) || !(STATUSES as readonly string[]).includes(status)) return false;
+  if (!("asService" in db)) return apiUpdate(db, id, status, notes);
   const rows = await db.asService<{ id: string }>(
     "update restaurant_waitlist_applications set status = $2, admin_notes = $3, updated_at = now() where id = $1 returning id",
     [id, status, notes.slice(0, 5000)],
@@ -120,7 +129,8 @@ export type Stats = {
 };
 
 /** Every figure is counted from saved applications; an empty table gives zeros and empty lists. */
-export async function waitlistStats(db: Db): Promise<Stats> {
+export async function waitlistStats(db: WaitlistDb): Promise<Stats> {
+  if (!("asService" in db)) return apiStats(db);
   const t = "restaurant_waitlist_applications";
   const [[totals], pos, features, byDay, cities] = await Promise.all([
     db.asService<{ total: number; fresh: number; contacted: number; approved: number; pilot: number }>(

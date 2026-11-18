@@ -21,13 +21,13 @@ const FEATURES: { title: string; text: string; art: ReactNode }[] = [
   { title: "Live Kitchen Dashboard", text: "Kitchen staff receive and manage incoming orders.", art: <Ticket table="Table 3" lines="1 × Bunny chow · 2 × Lager" age=""><Chip on>New</Chip></Ticket> },
   { title: "Real-Time Order Tracking", text: "Customers can follow orders as they progress.", art: <OrderTracker step={2} /> },
   { title: "Waiter Assistance", text: "Customers request help without leaving their seats.", art: <Row a={<b>Table 4 is calling</b>} b={<Chip on>Answer</Chip>} /> },
-  { title: "Flexible Payments", text: "Restaurants choose between pay-before-service and pay-after-service policies.", art: <div style={{ display: "grid", gap: 6 }}><Row a="Pay before service" b={<span className="switch on" />} /><Row a="Pay after service" b={<span className="switch" />} /></div> },
+  { title: "Payment Workflow", text: "The demo shows payment confirmation. Staff can record collection at the restaurant. Online checkout is simulated and makes no real charge.", art: <div style={{ display: "grid", gap: 6 }}><Row a="Pay at the restaurant" b={<span className="switch on" />} /><Row a="Online payment demo" b={<Chip>Simulated</Chip>} /></div> },
   { title: "Menu Management", text: "Edit menus, update products, and mark unavailable items as sold out.", art: <div style={{ display: "grid", gap: 6 }}><Row a="Lamb chops" b={<Chip>Sold out</Chip>} /><Row a="Rump steak" b={<Chip on>Available</Chip>} /></div> },
   { title: "Restaurant Analytics", text: "Understand QR ordering activity through a dedicated dashboard.", art: <div className="bars" style={{ height: 84 }}>{[20, 34, 52, 80, 100, 86, 58, 30].map((h, i) => <i key={i} className={i < 2 ? "lo" : ""} style={{ height: `${h}%` }} />)}</div> },
   { title: "Works With Existing Devices", text: "Use current phones, tablets, and screens without specialised ordering hardware.", art: <div style={{ display: "flex", gap: 10, alignItems: "end", justifyContent: "center" }}>{[[26, 48], [62, 50], [88, 60]].map(([w, h]) => <span key={w} style={{ width: w, height: h, border: "1.5px solid var(--ink)", borderRadius: 5, background: "var(--paper)" }} />)}</div> },
 ];
 
-const BENEFITS = ["No commission taken from individual orders.", "No compulsory app download for customers.", "Built to complement existing restaurant operations.", "On-site setup and staff training.", "Flexible payment policies.", "Designed for sit-down restaurants."];
+const BENEFITS = ["Guests can order while waiters help other tables.", "No compulsory app download for customers.", "Guests send their selections directly to the kitchen.", "Staff and guests can follow the same order status.", "Sold-out items can be removed from ordering.", "Designed for sit-down restaurants."];
 
 const TABS = [
   { id: "guest", label: "Guest ordering", title: "The menu, on the guest's own phone", text: "A guest scans the table's code, picks dishes and sends the order. Sold-out items are marked, and a waiter is one tap away.", ui: <GuestPhone /> },
@@ -49,6 +49,7 @@ export default function Home() {
               <Link className="btn" href="/waitlist">Join the Restaurant Waitlist <Arrow /></Link>
               <a className="btn btn--ghost" href="#how">Explore SORA</a>
             </div>
+            <p className="dim" style={{ fontSize: 14 }}>Now inviting restaurant pilot enquiries. Pricing is being finalised, and all fees will be agreed before a pilot.</p>
           </div>
           <div className="stage" role="img" aria-label="Product demonstration with sample data: a guest scans the QR code on table 7, orders on their phone, and the order appears on the kitchen dashboard and turns ready.">
             <span className="mono stage__note">Product demonstration · sample data</span>
@@ -78,7 +79,7 @@ export default function Home() {
       <section id="features" style={{ paddingTop: 0 }}>
         <div className="wrap">
           <hr className="rule" style={{ marginBottom: "clamp(72px, 10vw, 136px)" }} />
-          <div className="head" data-reveal><span className="eyebrow">Features</span><h2>Everything your restaurant needs.</h2></div>
+          <div className="head" data-reveal><span className="eyebrow">Explore the prototype</span><h2>Ordering and service, together.</h2><p className="lead">Try the working ordering demo. The interface previews below use sample data. Online payment processing and direct POS integrations are planned.</p><a className="link" href="https://sora-restaurants.vercel.app/t/staging-demo-table-1">Try the guest ordering demo →</a></div>
           <ul className="feats">
             {FEATURES.map((f) => (
               <li className="feat" key={f.title} data-reveal>
@@ -98,7 +99,7 @@ export default function Home() {
           <ul className="benefits">
             {BENEFITS.map((b, i) => <li key={b} data-reveal><span>{String(i + 1).padStart(2, "0")}</span>{b}</li>)}
           </ul>
-          <p className="dim" style={{ marginTop: 32, fontSize: 14, maxWidth: "60ch" }}>Direct integrations with point-of-sale systems are planned and are not available yet. Today SORA works next to your POS.</p>
+          <p className="dim" style={{ marginTop: 32, fontSize: 14, maxWidth: "60ch" }}>SORA sends QR orders to its own kitchen screen. Staff must also enter those orders in the restaurant’s existing POS for billing and reconciliation. Direct POS integration is planned. During a pilot, we will check this extra step with your staff before using SORA in service.</p>
         </div>
       </section>
 

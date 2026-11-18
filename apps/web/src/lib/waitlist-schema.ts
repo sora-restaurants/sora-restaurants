@@ -58,18 +58,21 @@ export const steps = {
   }),
   contact: z.object({
     contactName: text(120, "Write your full name."),
-    contactPosition: pick(POSITIONS, "Choose your position."),
-    email: z.string().transform((s) => clean(s).toLowerCase()).pipe(z.string().email("Write an email address with an @, like name@restaurant.co.za.").max(254)),
-    phone: z.string().transform((s, ctx) => {
+    contactPosition: pick(POSITIONS, "Choose your position.").optional().default("Other"),
+    email: z.string().optional().default("").transform((s) => clean(s).toLowerCase()).pipe(z.union([z.literal(""), z.string().email("Write an email address with an @, like name@restaurant.co.za.").max(254)])),
+    phone: z.string().optional().default("").transform((s, ctx) => {
+      if (clean(s) === "") return "";
       const phone = normalisePhone(s);
       if (!phone) { ctx.addIssue({ code: "custom", message: "Write a phone number, like 082 123 4567 or +27 82 123 4567." }); return z.NEVER; }
       return phone;
     }),
     preferredContact: optionalPick(CONTACT_METHODS),
     bestTime: optional(80),
+  }).superRefine((v, ctx) => {
+    if (!v.email && !v.phone) ctx.addIssue({ code: "custom", path: ["email"], message: "Add an email address or phone number so we can contact you." });
   }),
   operations: z.object({
-    posSystem: pick(POS_SYSTEMS, "Choose your POS system, or “Not sure”."),
+    posSystem: pick(POS_SYSTEMS, "Choose your POS system, or “Not sure”.").optional().default("Not sure"),
     posOther: optional(80),
     orderingMethod: optionalPick(ORDERING_METHODS),
     usesQr: optionalPick(QR_USE),

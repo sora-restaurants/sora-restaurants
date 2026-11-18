@@ -2,14 +2,14 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ReviewForm } from "../../../components/site/AdminForms.tsx";
 import { requireAdmin } from "../../../server/admin-session.ts";
-import { prodDeps } from "../../../server/prod-deps.ts";
+import { waitlistDb } from "../../../server/waitlist-deps.ts";
 import { getApplication } from "../../../server/waitlist.ts";
 
 const when = new Intl.DateTimeFormat("en-ZA", { timeZone: "Africa/Johannesburg", dateStyle: "medium", timeStyle: "short" });
 
 export default async function ApplicationPage({ params }: { params: Promise<{ id: string }> }) {
   await requireAdmin();
-  const a = await getApplication(prodDeps().db, (await params).id);
+  const a = await getApplication(waitlistDb(), (await params).id);
   if (!a) notFound();
 
   const list = (v: string[]) => (v.length ? v.join(", ") : null);

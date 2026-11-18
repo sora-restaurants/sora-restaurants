@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { ADMIN_COOKIE, adminConfigured, loginAllowed, newSession, passwordMatches, SESSION_HOURS } from "../../server/admin-auth.ts";
 import { requireAdmin } from "../../server/admin-session.ts";
-import { prodDeps } from "../../server/prod-deps.ts";
+import { waitlistDb } from "../../server/waitlist-deps.ts";
 import { updateApplication } from "../../server/waitlist.ts";
 
 export async function signIn(_: string, form: FormData): Promise<string> {
@@ -27,7 +27,7 @@ export async function signOut(): Promise<void> {
 export async function saveApplication(_: string, form: FormData): Promise<string> {
   await requireAdmin();
   const id = String(form.get("id"));
-  const saved = await updateApplication(prodDeps().db, id, String(form.get("status")), String(form.get("notes") ?? ""));
+  const saved = await updateApplication(waitlistDb(), id, String(form.get("status")), String(form.get("notes") ?? ""));
   if (!saved) return "Could not save. Reload the page and try again.";
   revalidatePath("/admin");
   return "Saved.";

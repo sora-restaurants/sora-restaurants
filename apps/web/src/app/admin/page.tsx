@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { POS_SYSTEMS, STATUS_LABELS, STATUSES } from "../../lib/waitlist-schema.ts";
 import { requireAdmin } from "../../server/admin-session.ts";
-import { prodDeps } from "../../server/prod-deps.ts";
+import { waitlistDb } from "../../server/waitlist-deps.ts";
 import { listApplications, waitlistStats, type Application, type Stats } from "../../server/waitlist.ts";
 import { signOut } from "./actions.ts";
 
@@ -24,7 +24,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
   const { q = "", status = "", city = "", pos = "" } = await searchParams;
   let stats: Stats, rows: Application[];
   try {
-    const db = prodDeps().db;
+    const db = waitlistDb();
     [stats, rows] = await Promise.all([waitlistStats(db), listApplications(db, { q, status, city, pos })]);
   } catch (error) {
     console.error("admin dashboard could not load", error);

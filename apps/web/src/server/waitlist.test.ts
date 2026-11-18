@@ -26,6 +26,18 @@ const form = (over: Record<string, unknown> = {}) => ({
 });
 
 describe("waitlist applications", () => {
+  it("accepts a short enquiry with either email or phone and keeps different phone contacts separate", async () => {
+    const base = { restaurantName: "Short enquiry", restaurantType: "Café / coffee shop", city: "Cape Town",
+      contactName: "Website test", consent: true, elapsedMs: 10_000 };
+    const email = await submitApplication({ ...base, email: "short@example.invalid", submissionKey: key() }, db, "1.1.1.1");
+    const phone = await submitApplication({ ...base, phone: "0820000001", submissionKey: key() }, db, "1.1.1.1");
+    const secondPhone = await submitApplication({ ...base, phone: "0820000002", submissionKey: key() }, db, "1.1.1.1");
+    expect(email).toMatchObject({ ok: true, replayed: false });
+    expect(phone).toMatchObject({ ok: true, replayed: false });
+    expect(secondPhone).toMatchObject({ ok: true, replayed: false });
+    expect(await listApplications(db)).toHaveLength(3);
+    expect(await submitApplication({ ...base, submissionKey: key() }, db, "1.1.1.1")).toMatchObject({ ok: false, httpStatus: 422 });
+  });
   it("saves a valid application, normalises the phone and email, and gives a reference", async () => {
     const r = await submitApplication(form(), db, "1.1.1.1");
     if (!r.ok) throw new Error(r.error);

@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 
 // The product pictures on the marketing site. All sample data; every use sits under a "product demonstration" label.
 
-const DEMO_URL = "https://sora-restaurants.vercel.app/demo";
+const DEMO_URL = "https://sora-restaurants.vercel.app/t/staging-demo-table-1";
 
 /** A real, scannable QR code (it opens the live demo), drawn as one path. */
 export function Qr({ className }: { className?: string }) {

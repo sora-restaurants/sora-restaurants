@@ -1,43 +1,28 @@
 import type { Metadata } from "next";
 import { EMAIL } from "../../../components/site/Chrome.tsx";
 
-export const metadata: Metadata = { title: "Privacy policy", description: "How SORA collects, uses and protects personal information under POPIA." };
+export const metadata: Metadata = { title: "Website privacy notice", description: "What SORA collects when you enquire about a restaurant demonstration or pilot, and how to contact us about your information." };
 
 export default function PrivacyPage() {
   return (
     <div className="wrap prose">
-      <span className="eyebrow">Last updated 15 November 2026</span>
-      <h1>Privacy policy</h1>
-      <p className="alert"><b>Draft for legal review.</b> This policy has not yet been reviewed by a legal professional. It must be reviewed, and SORA&rsquo;s registered details and Information Officer added, before launch.</p>
-      <p>SORA is a restaurant technology business in South Africa. This policy explains what personal information we collect through this website, why, and the rights you have under the Protection of Personal Information Act 4 of 2013 (POPIA).</p>
-
-      <h2>What we collect</h2>
-      <p>When you apply to the restaurant waitlist we collect what you type into the form:</p>
-      <ul>
-        <li>your restaurant&rsquo;s name, type, location and size, and its website or social media if you give them;</li>
-        <li>your name, position, business email address and phone number, and how you prefer to be contacted;</li>
-        <li>how the restaurant operates today: its point-of-sale system, ordering, kitchen and payment methods;</li>
-        <li>what you would like SORA to help with, and your interest in a demonstration or pilot.</li>
-      </ul>
-      <p>To stop spam we also keep a scrambled (hashed) form of the internet address the form was sent from. We do not store the address itself, and this site sets no advertising or tracking cookies.</p>
-
-      <h2>Why we collect it</h2>
-      <p>We use this information only to assess your application, to contact you about SORA, and to plan which restaurants we work with first. We collect it with your consent, which you give by ticking the box on the form.</p>
-
-      <h2>Who sees it</h2>
-      <p>Only SORA&rsquo;s own administrators. We do not sell your information or share it for marketing. It is stored with the hosting and database providers we use to run this website, which may process it on servers outside South Africa under their own data-protection terms.</p>
-
-      <h2>How long we keep it</h2>
-      <p>We keep an application for as long as we are considering working with the restaurant, and delete it when you ask us to or when it is no longer needed.</p>
-
-      <h2>Your rights</h2>
-      <p>You may ask us what information we hold about you, ask us to correct or delete it, withdraw your consent, or object to how we use it. Email <a className="link" href={`mailto:${EMAIL}`}>{EMAIL}</a> and we will respond. You may also complain to the Information Regulator of South Africa.</p>
-
-      <h2>Security</h2>
-      <p>Applications are sent over an encrypted connection and kept in a database that only SORA&rsquo;s server can read. Access to the administration area requires a sign-in.</p>
-
+      <span className="eyebrow">Last updated 18 November 2026</span>
+      <h1>Website privacy notice</h1>
+      <p>SORA is a project developing QR ordering tools for restaurants in South Africa. This notice covers enquiries submitted through this website. For questions about your information, contact the SORA team at <a className="link" href={`mailto:${EMAIL}`}>{EMAIL}</a>.</p>
+      <h2>Information you provide</h2>
+      <p>The waitlist asks for your restaurant’s name, type and city, your name, and an email address or phone number. You choose whether to provide both contact methods. Earlier versions of the form also asked for restaurant size, your role, POS and service methods, feature interests and pilot preferences. We may still hold those answers if you submitted them.</p>
+      <h2>How we use it</h2>
+      <p>With your consent, we use your enquiry to contact you about a demonstration or pilot and assess whether SORA suits your restaurant. Joining the waitlist does not commit you to a purchase. We do not sell enquiry information or use it for unrelated marketing.</p>
+      <h2>Hosting and access</h2>
+      <p>The website runs on Vercel and applications are stored in Supabase. These providers process information to operate their services, and processing may take place outside South Africa. SORA administrators review enquiries through a password-protected dashboard. Enquiry records are restricted from public database access.</p>
+      <h2>Technical information and cookies</h2>
+      <p>To limit spam, the application stores a salted hash of the internet address used to submit an enquiry, together with its submission time. Vercel may process connection addresses and request logs to deliver and protect the website. The admin area uses a session cookie for sign-in. The application does not set advertising cookies.</p>
+      <h2>Keeping and deleting information</h2>
+      <p>We keep enquiries while considering a restaurant for demonstrations or pilots and while following up with it. You can ask us to stop contacting you, correct your details or delete your enquiry by emailing <a className="link" href={`mailto:${EMAIL}`}>{EMAIL}</a>. We may ask for information to confirm the request relates to you before sharing or changing an enquiry.</p>
+      <h2>Your choices</h2>
+      <p>You can choose to email SORA instead of submitting this form. You can withdraw your consent to future contact and request access to your enquiry. You may also raise a privacy concern with South Africa’s Information Regulator.</p>
       <h2>Contact</h2>
-      <p>Questions about this policy: <a className="link" href={`mailto:${EMAIL}`}>{EMAIL}</a>.</p>
+      <p>Email the SORA team at <a className="link" href={`mailto:${EMAIL}`}>{EMAIL}</a> for enquiries about this notice or your information.</p>
     </div>
   );
 }
