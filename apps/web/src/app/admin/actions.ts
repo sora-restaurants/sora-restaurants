@@ -30,5 +30,6 @@ export async function saveApplication(_: string, form: FormData): Promise<string
   const saved = await updateApplication(waitlistDb(), id, String(form.get("status")), String(form.get("notes") ?? ""));
   if (!saved) return "Could not save. Reload the page and try again.";
   revalidatePath("/admin");
+  revalidatePath(`/admin/${id}`);
   return "Saved.";
 }

@@ -41,7 +41,7 @@ export default async function ApplicationPage({ params }: { params: Promise<{ id
             </section>
           ))}
         </div>
-        <ReviewForm id={a.id} status={a.status} notes={a.admin_notes} />
+        <ReviewForm key={a.id} id={a.id} status={a.status} notes={a.admin_notes} />
       </div>
     </main>
   );
