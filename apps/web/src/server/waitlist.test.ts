@@ -5,7 +5,7 @@ import { DEMO_USER } from "../../../../supabase/tests/fixtures";
 import type { Db } from "./deps.ts";
 import { adminConfigured, loginAllowed, newSession, passwordMatches, sessionValid } from "./admin-auth.ts";
 import { testDeps } from "./test-deps";
-import { getApplication, listApplications, submitApplication, toCsv, updateApplication, waitlistStats } from "./waitlist.ts";
+import { getApplication, listApplications, MAX_PER_HOUR, submitApplication, toCsv, updateApplication, waitlistStats } from "./waitlist.ts";
 
 let pg: PGlite;
 let db: Db;
@@ -72,11 +72,11 @@ describe("waitlist applications", () => {
     expect(await listApplications(db)).toHaveLength(0);
   });
 
-  it("allows five applications an hour from one connection, then answers 429", async () => {
-    for (let i = 0; i < 5; i++) {
+  it("allows MAX_PER_HOUR applications an hour from one connection, then answers 429", async () => {
+    for (let i = 0; i < MAX_PER_HOUR; i++) {
       expect(await submitApplication(form({ restaurantName: `Place ${i}`, email: `a${i}@x.example` }), db, "9.9.9.9")).toMatchObject({ ok: true });
     }
-    expect(await submitApplication(form({ restaurantName: "Place 6", email: "a6@x.example" }), db, "9.9.9.9")).toMatchObject({ ok: false, httpStatus: 429 });
+    expect(await submitApplication(form({ restaurantName: "Place X", email: "ax@x.example" }), db, "9.9.9.9")).toMatchObject({ ok: false, httpStatus: 429 });
     expect(await submitApplication(form({ restaurantName: "Elsewhere", email: "b@x.example" }), db, "8.8.8.8")).toMatchObject({ ok: true });
   });
 

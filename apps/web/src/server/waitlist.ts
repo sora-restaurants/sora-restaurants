@@ -6,7 +6,8 @@ export type WaitlistDb = Db | SupabaseClient;
 import { fieldErrors, MIN_WAITLIST_FILL_MS, STATUSES, submissionSchema, type Status } from "../lib/waitlist-schema.ts";
 
 export const MAX_WAITLIST_BODY_BYTES = 32 * 1024;
-const MAX_PER_HOUR = 5;
+// Generous so a group demo on one Wi-Fi works; still stops a script flooding the table.
+export const MAX_PER_HOUR = 50;
 
 export type WaitlistResult =
   | { ok: true; reference: string; restaurantName: string; replayed: boolean }
