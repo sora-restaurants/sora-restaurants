@@ -3,6 +3,10 @@ import { PHASE_PRODUCTION_BUILD, PHASE_PRODUCTION_SERVER } from "next/constants"
 import { assertNoDevLoginInProduction } from "./src/server/dev-staff-login.ts";
 
 export default function config(phase: string): NextConfig {
+  // TEMP: intentional failure so Vercel sends a deployment-failed email. Remove after the test.
+  if (phase === PHASE_PRODUCTION_BUILD) {
+    throw new Error("INTENTIONAL_BUILD_FAILURE: testing Vercel deployment failure email");
+  }
   // A production build or server with any dev-login setting fails here, before anything is compiled or served.
   assertNoDevLoginInProduction(process.env, phase === PHASE_PRODUCTION_BUILD || phase === PHASE_PRODUCTION_SERVER);
 
