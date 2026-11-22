@@ -4,6 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { apiFindExisting, apiRecentCount, apiInsert, apiList, apiGet, apiUpdate, apiStats } from "./waitlist-api.ts";
 export type WaitlistDb = Db | SupabaseClient;
 import { fieldErrors, MIN_WAITLIST_FILL_MS, STATUSES, submissionSchema, type Status } from "../lib/waitlist-schema.ts";
+import { notifyTelegram, waitlistAlert } from "./telegram.ts";
 
 export const MAX_WAITLIST_BODY_BYTES = 32 * 1024;
 // Generous so a group demo on one Wi-Fi works; still stops a script flooding the table.
@@ -85,6 +86,14 @@ export async function submitApplication(input: unknown, db: WaitlistDb, ip: stri
       : await apiFindExisting(db, a);
     return { ok: true, reference: first.reference, restaurantName: a.restaurantName, replayed: true };
   }
+  await notifyTelegram(waitlistAlert({
+    restaurantName: a.restaurantName,
+    city: a.city,
+    contactName: a.contactName,
+    email: a.email,
+    phone: a.phone,
+    reference: saved[0].reference,
+  }));
   return { ok: true, reference: saved[0].reference, restaurantName: a.restaurantName, replayed: false };
 }
 
