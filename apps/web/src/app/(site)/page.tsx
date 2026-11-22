@@ -31,12 +31,12 @@ const FEATURES: { title: string; text: string; art: ReactNode }[] = [
 ];
 
 const BENEFITS = [
-  { problem: "Guests wait 10 minutes just to order.", solution: "They scan the QR code and order the moment they sit down." },
+  { problem: "Guests wait too long just to order.", solution: "They scan the QR code and order the moment they sit down." },
   { problem: "Nobody orders a second round when the waiter is too busy to ask.", solution: "Another drink or dessert is one tap from the table." },
   { problem: "You’re short-staffed again tonight.", solution: "Guests order themselves, so one waiter can cover more tables." },
   { problem: "Wrong orders get sent back, and you pay for the food twice.", solution: "The kitchen sees exactly what the guest picked, in writing." },
   { problem: "Guests order the special that’s finished.", solution: "Mark it sold out on your phone and it disappears from the menu." },
-  { problem: "You only find out how the night went after closing.", solution: "See what’s selling and which tables haven’t paid, live." },
+  { problem: "You only find out how the night went after closing.", solution: "See what’s selling tonight, live." },
 ];
 
 const TABS = [
@@ -106,8 +106,8 @@ export default function Home() {
         <div className="wrap">
           <div className="head" data-reveal>
             <span className="eyebrow">For restaurants</span>
-            <h2>Built around your restaurant.</h2>
-            <p className="lead">Let guests order when they’re ready, while your team keeps service moving.</p>
+            <h2>Every busy night, you lose money waiting.</h2>
+            <p className="lead">Guests wait to order. Waiters run between tables. The kitchen gets orders wrong. SORA fixes all three.</p>
           </div>
           <ol className="benefits benefits--problems">
             {BENEFITS.map((benefit, index) => (
@@ -122,7 +122,7 @@ export default function Home() {
           </ol>
           <p style={{ marginTop: 32, fontSize: 20, fontWeight: 600 }}>Free pilot for sit-down restaurants in 2026.</p>
           <Link className="btn" href="/waitlist" style={{ marginTop: 20 }}>Join the pilot <Arrow /></Link>
-          <p className="dim" style={{ marginTop: 24, fontSize: 14, maxWidth: "65ch" }}>Pilot orders also need to be entered into your POS. Direct POS integration is planned.</p>
+          <p className="dim" style={{ marginTop: 24, fontSize: 14, maxWidth: "65ch" }}>Pilot: SORA runs next to your POS, so nothing changes at the till. Direct POS integration is planned; we’ll set it up with your team first.</p>
         </div>
       </section>
 
