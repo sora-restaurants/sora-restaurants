@@ -21,7 +21,6 @@ export default function WaitlistPage() {
           <span className="eyebrow">Launch interest indicator</span>
           <Counter value={interestCount()} />
           <p>Join the growing list of restaurants interested in SORA.</p>
-          <p className="counter__note">This figure is illustrative. It is a simulated indicator of launch interest, not a verified count of registered restaurants.</p>
         </div>
       </div>
       <WaitlistForm />
