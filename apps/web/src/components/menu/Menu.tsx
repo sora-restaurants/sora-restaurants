@@ -41,18 +41,18 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
     try { const saved = sessionStorage.getItem(trackKey); if (saved) setStatus(JSON.parse(saved)); } catch { /* storage blocked */ }
   }, [trackKey]);
   useEffect(() => {
-    try { if (status.kind === "placed" && status.statusToken) sessionStorage.setItem(trackKey, JSON.stringify(status)); } catch { /* storage blocked */ }
+    try { if (status.kind === "placed" && status.statusToken && !status.paid) sessionStorage.setItem(trackKey, JSON.stringify(status)); } catch { /* storage blocked */ }
   }, [status, trackKey]);
-  // Follow the real kitchen status until the order is served or cancelled.
+  // Follow the real kitchen status until the order is paid (staff may mark it paid after serving) or cancelled.
   const statusToken = status.kind === "placed" ? status.statusToken : undefined;
-  const finished = status.kind === "placed" && (status.stage === "served" || status.stage === "cancelled");
+  const finished = status.kind === "placed" && (status.paid || status.stage === "cancelled");
   useEffect(() => {
     if (!statusToken || finished) return;
     const poll = () => fetch(`/api/orders/status/${statusToken}`, { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : null))
-      .then((d: { status?: string } | null) => {
+      .then((d: { status?: string; paid?: boolean } | null) => {
         const stage = d?.status ? STAGE[d.status] : undefined;
-        if (stage) setStatus((s) => (s.kind === "placed" && s.statusToken === statusToken ? { ...s, stage } : s));
+        if (stage) setStatus((s) => (s.kind === "placed" && s.statusToken === statusToken ? { ...s, stage, paid: s.paid || d?.paid === true } : s));
       })
       .catch(() => {});
     poll();
@@ -152,6 +152,20 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
     if (!ok) { setAssistance("idle"); setAssistanceKind(null); setStatus({ kind: "error", message: "We couldn't reach the staff. Please wave to a waiter." }); return; }
     setAssistance("sent");
     setTimeout(() => { setAssistance("idle"); setAssistanceKind(null); }, 8000);
+  }
+
+  // Paid ends the visit on this phone: forget the order so a refresh or rescan cannot reopen or add to it.
+  if (status.kind === "placed" && status.paid) {
+    try { sessionStorage.removeItem(trackKey); } catch { /* storage blocked */ }
+    return (
+      <main data-theme={theme} data-mode="light" className="menu-shell grid min-h-dvh place-items-center bg-bg px-5 font-body text-ink antialiased">
+        <section role="status" className="w-full max-w-md text-center">
+          <p className="text-xs font-bold uppercase tracking-[0.2em] opacity-80">{menu.restaurant} · {menu.table}</p>
+          <h1 className="display mt-5 text-4xl">Paid — thank you</h1>
+          <p className="mt-3 leading-relaxed opacity-80">Your bill is settled. Thanks for dining with us. To order again, scan the table QR code.</p>
+        </section>
+      </main>
+    );
   }
 
   return (
