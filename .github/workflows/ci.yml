@@ -75,7 +75,8 @@ jobs:
           subject=$(printf '%s' "$MESSAGE" | head -n 1 | tr -cd '[:print:]' | cut -c1-120)
           text=$(printf '%s <b>Push %s</b>\nBranch: %s\nCommit: %s\nBy: %s\nSubject: %s\n<a href="%s">Open the action run</a>' \
             "$icon" "$status" "$BRANCH" "${SHA:0:7}" "$ACTOR" "$subject" "$RUN_URL")
-          curl -sS -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+          response=$(curl -sS -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
             -H "content-type: application/json" \
-            -d "$(jq -n --arg chat "$TELEGRAM_CHAT_ID" --arg text "$text" '{chat_id:$chat, text:$text, parse_mode:"HTML", disable_web_page_preview:true}')" \
-            >/dev/null
+            -d "$(jq -n --arg chat "$TELEGRAM_CHAT_ID" --arg text "$text" '{chat_id:$chat, text:$text, parse_mode:"HTML", disable_web_page_preview:true}')")
+          echo "$response"
+          echo "$response" | jq -e '.ok == true' >/dev/null
