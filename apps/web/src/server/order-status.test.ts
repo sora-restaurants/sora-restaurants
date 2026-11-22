@@ -11,9 +11,9 @@ describe("orderStatus", () => {
     const deps = testDeps(db);
     const result = await submitOrder({ qrToken: "demo-table-4-token", idempotencyKey: "key-status-01", items: [{ menuItemId: BUNNY_CHOW, quantity: 1 }] }, deps);
     if (!result.ok) throw new Error(result.error);
-    expect(await (await orderStatus(result.statusToken, deps)).json()).toEqual({ status: "submitted" });
+    expect(await (await orderStatus(result.statusToken, deps)).json()).toEqual({ status: "submitted", paid: false });
     await db.query("update orders set status = 'served'");
-    expect(await (await orderStatus(result.statusToken, deps)).json()).toEqual({ status: "served" });
+    expect(await (await orderStatus(result.statusToken, deps)).json()).toEqual({ status: "served", paid: false });
     expect((await orderStatus("0".repeat(32), deps)).status).toBe(404);
     expect((await orderStatus("x'; drop", deps)).status).toBe(404);
   });

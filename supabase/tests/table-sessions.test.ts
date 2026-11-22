@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import type { PGlite } from "@electric-sql/pglite";
 import { asStaff, freshDb } from "./db";
-import { BUNNY_CHOW, OWNER_USER, submitOrder } from "./fixtures";
+import { BUNNY_CHOW, OWNER_USER, WAITER_USER, submitOrder } from "./fixtures";
 
 let db: PGlite;
 beforeEach(async () => { db = await freshDb(); });
@@ -27,6 +27,26 @@ describe("table sessions", () => {
       .rejects.toThrow(/TABLE_SESSION_NOT_ACTIVE/);
     const rows = (await db.query<{ public_ref: string; table_session_id: string }>("select public_ref, table_session_id from orders")).rows;
     expect(rows).toEqual([{ public_ref: accepted.publicRef, table_session_id: expect.any(String) }]);
+  });
+
+  it("paying closes the table session once nothing is unpaid, and the next guest gets a new session", async () => {
+    const tableId = await demoTableId();
+    const sessions = () => db.query<{ id: string; status: string }>("select id, status from table_sessions where table_id = $1 order by opened_at", [tableId]);
+    await submitOrder(db, "demo-table-1-token", "session-paid-a", [{ menuItemId: BUNNY_CHOW, quantity: 1 }]);
+    await submitOrder(db, "demo-table-1-token", "session-paid-b", [{ menuItemId: BUNNY_CHOW, quantity: 1 }]);
+    const ids = (await db.query<{ id: string; status_token: string }>("select id, status_token from orders order by created_at, id")).rows;
+    await asStaff(db, WAITER_USER, "select mark_order_paid($1)", [ids[0].id]);
+    expect((await sessions()).rows.map((r) => r.status)).toEqual(["open"]); // the other order is still unpaid
+    await asStaff(db, WAITER_USER, "select mark_order_paid($1)", [ids[1].id]);
+    const closed = (await sessions()).rows;
+    expect(closed.map((r) => r.status)).toEqual(["closed"]);
+    expect((await db.query<{ s: { paymentStatus: string } }>("select get_order_status($1) s", [ids[1].status_token])).rows[0].s.paymentStatus).toBe("paid");
+    await expect(submitOrder(db, "demo-table-1-token", "session-paid-after", [{ menuItemId: BUNNY_CHOW, quantity: 1 }])).rejects.toThrow(/TABLE_SESSION_NOT_ACTIVE/);
+    await asStaff(db, OWNER_USER, "select open_table_session($1)", [tableId]);
+    await submitOrder(db, "demo-table-1-token", "session-next-guest", [{ menuItemId: BUNNY_CHOW, quantity: 1 }]);
+    const fresh = (await sessions()).rows[1];
+    expect(fresh.id).not.toBe(closed[0].id);
+    expect((await db.query("select 1 from orders where table_session_id = $1", [fresh.id])).rows).toHaveLength(1);
   });
 
   it("owner can close and reopen, but a waiter cannot", async () => {
