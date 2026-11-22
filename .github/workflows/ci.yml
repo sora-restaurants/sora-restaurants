@@ -28,9 +28,6 @@ jobs:
       - name: Install
         run: pnpm install --frozen-lockfile
 
-      - name: SEV1 test failure
-        run: echo "Intentional SEV1 test" && exit 1
-
       - name: Typecheck
         run: pnpm typecheck
 
