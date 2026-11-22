@@ -1,0 +1,82 @@
+name: CI and Telegram alert
+
+on:
+  push:
+    branches: [main, feature/full-qr-integration, sora-website-waitlist]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Tests, build, secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.18.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Unit tests
+        run: pnpm test
+
+      - name: Build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder
+          NEXT_PUBLIC_APP_URL: https://example.com
+        run: pnpm build
+
+      - name: Secret scan
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  notify:
+    name: Telegram result
+    needs: check
+    if: always() && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send sanitized alert
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          RESULT: ${{ needs.check.result }}
+          BRANCH: ${{ github.ref_name }}
+          SHA: ${{ github.sha }}
+          ACTOR: ${{ github.actor }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          MESSAGE: ${{ github.event.head_commit.message }}
+        run: |
+          if [ -z "$TELEGRAM_BOT_TOKEN" ] || [ -z "$TELEGRAM_CHAT_ID" ]; then
+            echo "Telegram secrets not set; skipping alert"
+            exit 0
+          fi
+          status="failed"
+          icon="❌"
+          if [ "$RESULT" = "success" ]; then status="succeeded"; icon="✅"; fi
+          if [ "$RESULT" = "cancelled" ]; then status="cancelled"; icon="⚠️"; fi
+          # Strip newlines and control chars from the commit subject. Never send source or secrets.
+          subject=$(printf '%s' "$MESSAGE" | head -n 1 | tr -cd '[:print:]' | cut -c1-120)
+          text=$(printf '%s <b>Push %s</b>\nBranch: %s\nCommit: %s\nBy: %s\nSubject: %s\n<a href="%s">Open the action run</a>' \
+            "$icon" "$status" "$BRANCH" "${SHA:0:7}" "$ACTOR" "$subject" "$RUN_URL")
+          curl -sS -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -H "content-type: application/json" \
+            -d "$(jq -n --arg chat "$TELEGRAM_CHAT_ID" --arg text "$text" '{chat_id:$chat, text:$text, parse_mode:"HTML", disable_web_page_preview:true}')" \
+            >/dev/null
