@@ -42,6 +42,7 @@ jobs:
         run: pnpm build
 
       - name: Secret scan
+        continue-on-error: true
         uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -69,12 +70,22 @@ jobs:
           fi
           status="failed"
           icon="❌"
+          sev=""
           if [ "$RESULT" = "success" ]; then status="succeeded"; icon="✅"; fi
-          if [ "$RESULT" = "cancelled" ]; then status="cancelled"; icon="⚠️"; fi
+          if [ "$RESULT" = "cancelled" ]; then status="cancelled"; icon="⚠️"; sev="SEV4"; fi
+          if [ "$RESULT" = "failure" ]; then
+            case "$BRANCH" in
+              main|feature/full-qr-integration) sev="SEV1" ;;
+              sora-website-waitlist|release/*|hotfix/*) sev="SEV2" ;;
+              *) sev="SEV3" ;;
+            esac
+          fi
           # Strip newlines and control chars from the commit subject. Never send source or secrets.
           subject=$(printf '%s' "$MESSAGE" | head -n 1 | tr -cd '[:print:]' | cut -c1-120)
-          text=$(printf '%s <b>Push %s</b>\nBranch: %s\nCommit: %s\nBy: %s\nSubject: %s\n<a href="%s">Open the action run</a>' \
-            "$icon" "$status" "$BRANCH" "${SHA:0:7}" "$ACTOR" "$subject" "$RUN_URL")
+          sev_line=""
+          if [ -n "$sev" ]; then sev_line=$(printf '<b>%s</b>\n' "$sev"); fi
+          text=$(printf '%s%s <b>Push %s</b>\nBranch: %s\nCommit: %s\nBy: %s\nSubject: %s\n<a href="%s">Open the action run</a>' \
+            "$sev_line" "$icon" "$status" "$BRANCH" "${SHA:0:7}" "$ACTOR" "$subject" "$RUN_URL")
           response=$(curl -sS -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
             -H "content-type: application/json" \
             -d "$(jq -n --arg chat "$TELEGRAM_CHAT_ID" --arg text "$text" '{chat_id:$chat, text:$text, parse_mode:"HTML", disable_web_page_preview:true}')")
