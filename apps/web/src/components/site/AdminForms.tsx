@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
-import { saveApplication, signIn } from "../../app/admin/actions.ts";
+import { removeApplication, saveApplication, signIn } from "../../app/admin/actions.ts";
 import { STATUS_LABELS, STATUSES } from "../../lib/waitlist-schema.ts";
 
 export function LoginForm() {
@@ -40,6 +40,15 @@ export function ReviewForm({ id, status, notes }: { id: string; status: string; 
         <button className="btn" type="submit" disabled={pending || !ready}>{pending ? "Saving…" : "Save"}</button>
         <span role="status" className="dim">{message}</span>
       </div>
+    </form>
+  );
+}
+
+export function DeleteButton({ id, name }: { id: string; name: string }) {
+  return (
+    <form action={removeApplication} onSubmit={(e) => { if (!confirm(`Delete the application from ${name}? This cannot be undone.`)) e.preventDefault(); }}>
+      <input type="hidden" name="id" value={id} />
+      <button className="btn" type="submit" style={{ background: "#b42318", borderColor: "#b42318" }}>Delete application</button>
     </form>
   );
 }

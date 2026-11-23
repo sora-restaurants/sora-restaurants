@@ -5,7 +5,7 @@ import { DEMO_USER } from "../../../../supabase/tests/fixtures";
 import type { Db } from "./deps.ts";
 import { adminConfigured, loginAllowed, newSession, passwordMatches, sessionValid } from "./admin-auth.ts";
 import { testDeps } from "./test-deps";
-import { getApplication, listApplications, MAX_PER_HOUR, submitApplication, toCsv, updateApplication, waitlistStats } from "./waitlist.ts";
+import { deleteApplication, getApplication, listApplications, MAX_PER_HOUR, submitApplication, toCsv, updateApplication, waitlistStats } from "./waitlist.ts";
 
 let pg: PGlite;
 let db: Db;
@@ -109,6 +109,9 @@ describe("admin review", () => {
     expect(s.byDay).toHaveLength(1);
 
     const csv = toCsv(await listApplications(db));
+    expect(await deleteApplication(db, durban.id)).toBe(true);
+    expect(await getApplication(db, durban.id)).toBeNull();
+    expect(await deleteApplication(db, durban.id)).toBe(false);
     expect(csv.split("\r\n")).toHaveLength(3);
     expect(csv).toContain(`"'=HYPERLINK(""x"")"`);
   });

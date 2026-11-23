@@ -1,7 +1,7 @@
 import { createHash, randomBytes } from "node:crypto";
 import type { Db } from "./deps.ts";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { apiFindExisting, apiRecentCount, apiInsert, apiList, apiGet, apiUpdate, apiStats } from "./waitlist-api.ts";
+import { apiFindExisting, apiRecentCount, apiInsert, apiList, apiGet, apiUpdate, apiDelete, apiStats } from "./waitlist-api.ts";
 export type WaitlistDb = Db | SupabaseClient;
 import { fieldErrors, MIN_WAITLIST_FILL_MS, STATUSES, submissionSchema, type Status } from "../lib/waitlist-schema.ts";
 import { notifyTelegram, waitlistAlert } from "./telegram.ts";
@@ -131,6 +131,12 @@ export async function updateApplication(db: WaitlistDb, id: string, status: stri
     [id, status, notes.slice(0, 5000)],
   );
   return rows.length === 1;
+}
+
+export async function deleteApplication(db: WaitlistDb, id: string): Promise<boolean> {
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return false;
+  if (!("asService" in db)) return apiDelete(db, id);
+  return (await db.asService<{ id: string }>("delete from restaurant_waitlist_applications where id = $1 returning id", [id])).length === 1;
 }
 
 export type Stats = {

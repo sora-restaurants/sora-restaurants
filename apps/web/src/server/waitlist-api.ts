@@ -69,6 +69,10 @@ export async function apiUpdate(db: SupabaseClient, id: string, status: string, 
   return rows.length === 1;
 }
 
+export async function apiDelete(db: SupabaseClient, id: string): Promise<boolean> {
+  return (await result<{ id: string }[]>(db.from(TABLE).delete().eq("id", id).select("id"))).length === 1;
+}
+
 type StatsRow = Pick<Application, "status" | "pilot_interest" | "pos_system" | "pos_other" | "feature_interests" | "created_at" | "city">;
 
 export async function apiStats(db: SupabaseClient): Promise<Stats> {
