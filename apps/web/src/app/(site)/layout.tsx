@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Analytics } from "@vercel/analytics/next";
 import type { ReactNode } from "react";
 import { Footer, Nav } from "../../components/site/Chrome.tsx";
 import { siteFonts } from "../site-fonts.ts";
@@ -21,6 +22,7 @@ export default function SiteLayout({ children }: { children: ReactNode }) {
       <Nav />
       <main>{children}</main>
       <Footer />
+      <Analytics />
     </div>
   );
 }
