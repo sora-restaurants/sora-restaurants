@@ -1,4 +1,5 @@
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
+import type { WaitlistDb } from "./waitlist.ts";
 
 // The /admin sign-in: one shared password (ADMIN_PASSWORD) and a signed, expiring cookie (ADMIN_SESSION_SECRET).
 // With either variable missing, nobody can sign in. shortcut: one shared password, move to per-person accounts
@@ -33,10 +34,14 @@ export function sessionValid(cookie: string | undefined, now: number, env: NodeJ
   return mac.length === expected.length && timingSafeEqual(Buffer.from(mac), Buffer.from(expected)) && Number(expires) > now;
 }
 
-// shortcut: counted per server instance, so several instances each allow their own 8 tries; move to a shared store if /admin is ever attacked.
-const attempts = new Map<string, { n: number; resetAt: number }>();
-export function loginAllowed(ip: string, now: number): boolean {
-  const a = attempts.get(ip);
-  if (!a || a.resetAt < now) { attempts.set(ip, { n: 1, resetAt: now + 15 * 60_000 }); return true; }
-  return ++a.n <= 8;
+/** Records a sign-in attempt in the database (shared by every server instance); false after 8 in 15 minutes. */
+export async function loginAllowed(db: WaitlistDb, ip: string): Promise<boolean> {
+  const ipHash = createHash("sha256").update(`admin:${process.env.ADMIN_SESSION_SECRET ?? ""}:${ip}`).digest("hex");
+  if (!("asService" in db)) {
+    const { data, error } = await db.rpc("admin_login_allowed", { ip: ipHash });
+    if (error) throw error;
+    return data === true;
+  }
+  const [row] = await db.asService<{ ok: boolean }>("select admin_login_allowed($1) as ok", [ipHash]);
+  return row.ok;
 }

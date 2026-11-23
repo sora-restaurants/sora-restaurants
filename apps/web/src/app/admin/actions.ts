@@ -11,7 +11,7 @@ import { deleteApplication, updateApplication } from "../../server/waitlist.ts";
 export async function signIn(_: string, form: FormData): Promise<string> {
   if (!adminConfigured()) return "Admin sign-in is not set up on this server. Set ADMIN_PASSWORD and ADMIN_SESSION_SECRET.";
   const ip = (await headers()).get("x-forwarded-for")?.split(",")[0].trim() || "unknown";
-  if (!loginAllowed(ip, Date.now())) return "Too many attempts. Wait 15 minutes and try again.";
+  if (!(await loginAllowed(waitlistDb(), ip))) return "Too many attempts. Wait 15 minutes and try again.";
   if (!passwordMatches(String(form.get("password") ?? ""))) return "That password is not right.";
   (await cookies()).set(ADMIN_COOKIE, newSession(Date.now()), {
     httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "strict", path: "/admin", maxAge: SESSION_HOURS * 3600,
