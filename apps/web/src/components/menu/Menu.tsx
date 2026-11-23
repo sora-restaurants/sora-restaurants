@@ -567,6 +567,12 @@ function OrderDock({ triggerRef, count, estimate, status, onOpen, onDismiss, onP
       <div className="fixed inset-x-3 bottom-3 z-30 mx-auto max-w-(--t-max) rounded-theme bg-ink p-5 text-bg shadow-2xl">
         <p className="mb-3 text-sm font-bold text-on-accent">Secure payment</p>
         <p className="mb-4 text-lg font-bold">Pay for order {status.publicRef}</p>
+        {/* shortcut: simulated wallets, no provider yet; swap for the provider's real Apple Pay / Google Pay buttons once there are test keys. */}
+        <div className="mb-3 grid grid-cols-2 gap-2">
+          <button type="button" onClick={onPaid} aria-label={`Pay ${formatCents(status.totalCents)} with Apple Pay (demo, no money moves)`} className="min-h-12 rounded-full bg-black font-semibold text-white ring-1 ring-bg/30 active:scale-95">Apple Pay</button>
+          <button type="button" onClick={onPaid} aria-label={`Pay ${formatCents(status.totalCents)} with Google Pay (demo, no money moves)`} className="min-h-12 rounded-full bg-white font-semibold text-black active:scale-95">Google Pay</button>
+        </div>
+        <p className="mb-3 text-center text-xs opacity-75">Demo – no money moves. Or slide to pay:</p>
         <SlideToPay amount={formatCents(status.totalCents)} pending={false} onConfirm={onPaid} />
       </div>
     );
