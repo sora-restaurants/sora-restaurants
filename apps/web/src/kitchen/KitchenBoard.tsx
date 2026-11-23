@@ -22,16 +22,16 @@ const STOP: Record<ColumnId, { to: Target; label: string }> = {
   ready: { to: "cancelled", label: "Cancel" },
 };
 
-// Solid, high-contrast blocks (WCAG: amber/green carry black text, blue carries white).
+// SORA black and white: three stages told apart by fill (new = white, cooking = grey, ready = outlined), all high contrast.
 const CARD: Record<ColumnId, string> = {
-  new: "kds-new bg-[oklch(82%_0.17_78)] text-black",
-  cooking: "bg-[oklch(42%_0.2_262)] text-white",
-  ready: "bg-[oklch(80%_0.21_145)] text-black",
+  new: "kds-new bg-white text-black",
+  cooking: "bg-[#262626] text-white",
+  ready: "border-2 border-white bg-[#0a0a0a] text-white",
 };
 const BUTTON: Record<ColumnId, string> = {
-  new: "bg-black text-[oklch(82%_0.17_78)]",
-  cooking: "bg-white text-[oklch(32%_0.2_262)]",
-  ready: "bg-black text-[oklch(80%_0.21_145)]",
+  new: "bg-black text-white",
+  cooking: "bg-white text-black",
+  ready: "bg-white text-black",
 };
 
 type Props = {
@@ -49,8 +49,8 @@ export function KitchenBoard({ restaurant, board, connection, onAdvance, onSignO
   const [activeColumn, setActiveColumn] = useState<ColumnId>("new");
 
   return (
-    <div className="grid h-dvh grid-rows-[auto_auto_auto_minmax(0,1fr)] bg-[oklch(13%_0_0)] font-[family-name:var(--font-manrope)] font-extrabold text-white md:grid-rows-[auto_auto_minmax(0,1fr)]">
-      <header className="flex items-center justify-between gap-3 border-b-4 border-white px-3 py-2 sm:px-4 sm:py-3">
+    <div className="grid h-dvh grid-rows-[auto_auto_auto_minmax(0,1fr)] bg-[#0a0a0a] font-[family-name:var(--font-geist)] font-bold text-white md:grid-rows-[auto_auto_minmax(0,1fr)]">
+      <header className="flex items-center justify-between gap-3 border-b border-[#262626] px-3 py-2 sm:px-4 sm:py-3">
         <h1 className="truncate text-xl uppercase tracking-tight sm:text-3xl">{restaurant}</h1>
         <div className="flex items-center gap-2"><ConnectionPill connection={connection} />{onSignOut && <button type="button" onClick={onSignOut} className="min-h-12 border-2 border-white px-3 text-sm uppercase">Sign out</button>}</div>
       </header>
@@ -63,7 +63,7 @@ export function KitchenBoard({ restaurant, board, connection, onAdvance, onSignO
         <div />
       )}
 
-      <nav aria-label="Kitchen stages" className="grid grid-cols-3 border-b-4 border-white md:hidden">
+      <nav aria-label="Kitchen stages" className="grid grid-cols-3 border-b border-[#262626] md:hidden">
         {cols.map((col) => (
           <button
             key={col.id}

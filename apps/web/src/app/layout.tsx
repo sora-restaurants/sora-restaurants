@@ -1,4 +1,4 @@
-import { Barlow, Barlow_Condensed, Cormorant_Garamond, Manrope, Source_Serif_4 } from "next/font/google";
+import { Barlow, Barlow_Condensed, Cormorant_Garamond, Geist, Manrope, Source_Serif_4 } from "next/font/google";
 import type { ReactNode } from "react";
 import "./globals.css";
 
@@ -8,12 +8,13 @@ const cormorant = Cormorant_Garamond({ subsets: ["latin"], weight: ["500", "600"
 const sourceSerif = Source_Serif_4({ subsets: ["latin"], variable: "--font-source-serif", preload: false });
 const manrope = Manrope({ subsets: ["latin"], variable: "--font-manrope", preload: false });
 const barlowCondensed = Barlow_Condensed({ subsets: ["latin"], weight: ["700", "800"], variable: "--font-barlow-condensed", preload: false });
+const geist = Geist({ subsets: ["latin"], variable: "--font-geist", preload: false }); // SORA staff screens, same face as the website
 const barlow = Barlow({ subsets: ["latin"], weight: ["400", "600"], variable: "--font-barlow", preload: false });
 
 export const metadata = { title: "Restaurant SaaS" };
 export const viewport = { width: "device-width", initialScale: 1 };
 
-const fontVariables = [cormorant, sourceSerif, manrope, barlowCondensed, barlow].map((f) => f.variable).join(" ");
+const fontVariables = [cormorant, sourceSerif, manrope, barlowCondensed, barlow, geist].map((f) => f.variable).join(" ");
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (

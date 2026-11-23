@@ -19,5 +19,5 @@ export function useColorMode(storageKey: string) {
 }
 
 export function ColorModeToggle({ mode, onToggle, className = "" }: { mode: ColorMode; onToggle: () => void; className?: string }) {
-  return <button type="button" onClick={onToggle} aria-label={`Switch to ${mode === "light" ? "dark" : "light"} mode`} className={`min-h-12 rounded-full border px-4 text-sm font-bold focus-visible:outline-2 focus-visible:outline-offset-2 ${className}`}><span aria-hidden="true">{mode === "light" ? "☾" : "☀"}</span> {mode === "light" ? "Dark" : "Light"}</button>;
+  return <button type="button" onClick={onToggle} aria-label={`Switch to ${mode === "light" ? "dark" : "light"} mode`} className={`min-h-12 rounded-[4px] border px-4 text-sm font-bold focus-visible:outline-2 focus-visible:outline-offset-2 ${className}`}><span aria-hidden="true">{mode === "light" ? "☾" : "☀"}</span> {mode === "light" ? "Dark" : "Light"}</button>;
 }

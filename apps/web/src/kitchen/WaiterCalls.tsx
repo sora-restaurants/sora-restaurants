@@ -66,7 +66,7 @@ function CallList({ token, onSignOut }: { token: string; onSignOut: () => void }
   }
 
   return (
-    <main className="min-h-dvh bg-[oklch(13%_0_0)] p-4 font-[family-name:var(--font-manrope)] font-extrabold text-white">
+    <main className="min-h-dvh bg-[#0a0a0a] p-4 font-[family-name:var(--font-geist)] font-bold text-white">
       <header className="mb-4 flex items-center justify-between gap-4 border-b-4 border-white pb-3">
         <h1 className="text-3xl uppercase">Waiter calls</h1>
         <p role="status" className={`px-3 py-1 text-xl uppercase ${offline ? "bg-[oklch(55%_0.22_28)]" : "bg-[oklch(80%_0.21_145)] text-black"}`}>
@@ -83,12 +83,12 @@ function CallList({ token, onSignOut }: { token: string; onSignOut: () => void }
           {calls.map((call) => {
             const minutes = Math.max(0, Math.floor((now - Date.parse(call.createdAt)) / 60_000));
             return (
-              <li key={call.id} className="flex flex-col gap-3 bg-[oklch(82%_0.17_78)] p-4 text-black">
+              <li key={call.id} className="flex flex-col gap-3 bg-white p-4 text-black rounded-[4px]">
                 <div className="flex items-baseline justify-between gap-3">
                   <p className="truncate text-4xl">{call.table}</p>
                   <p className="shrink-0 text-3xl tabular-nums">{minutes}′</p>
                 </div>
-                <button type="button" onClick={() => answer(call)} className="min-h-16 bg-black text-3xl uppercase text-[oklch(82%_0.17_78)] active:scale-[0.97]">
+                <button type="button" onClick={() => answer(call)} className="min-h-16 bg-black text-3xl uppercase text-white rounded-[4px] active:scale-[0.97]">
                   On my way
                 </button>
               </li>

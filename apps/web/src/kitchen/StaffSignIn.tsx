@@ -23,7 +23,7 @@ export function SignIn({ auth }: { auth: StaffAuth }) {
       <form onSubmit={submit} className="flex w-full max-w-md flex-col gap-4 text-left">
         <h1 className="text-4xl uppercase">Kitchen sign in</h1>
         {auth.mode === "dev" ? (
-          <p className="border-4 border-[oklch(82%_0.17_78)] p-3 text-xl text-[oklch(82%_0.17_78)]">
+          <p className="border border-[#262626] bg-[#151515] p-3 text-xl text-white rounded-[4px]">
             Local demo login. Seeded staff accounts only.
           </p>
         ) : null}
@@ -40,7 +40,7 @@ export function SignIn({ auth }: { auth: StaffAuth }) {
             {error}
           </p>
         ) : null}
-        <button type="submit" disabled={busy} className="min-h-16 bg-white text-3xl uppercase text-black disabled:opacity-60">
+        <button type="submit" disabled={busy} className="min-h-16 rounded-[4px] bg-white text-3xl uppercase text-black disabled:opacity-60">
           {busy ? "Signing in…" : "Sign in"}
         </button>
       </form>
@@ -50,7 +50,7 @@ export function SignIn({ auth }: { auth: StaffAuth }) {
 
 export function Screen({ children }: { children: React.ReactNode }) {
   return (
-    <main className="grid min-h-dvh place-items-center bg-[oklch(13%_0_0)] p-6 text-center font-[family-name:var(--font-manrope)] text-3xl font-extrabold text-white">
+    <main className="grid min-h-dvh place-items-center bg-[#0a0a0a] p-6 text-center font-[family-name:var(--font-geist)] text-3xl font-bold text-white">
       {children}
     </main>
   );
