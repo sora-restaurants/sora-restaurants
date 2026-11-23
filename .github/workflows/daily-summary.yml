@@ -1,0 +1,63 @@
+name: Daily engineering summary
+
+on:
+  schedule:
+    # 22:00 UTC = 00:00 SAST
+    - cron: "0 22 * * *"
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  summary:
+    name: Telegram daily summary
+    runs-on: ubuntu-latest
+    steps:
+      - name: Build and send summary
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          if [ -z "$TELEGRAM_BOT_TOKEN" ] || [ -z "$TELEGRAM_CHAT_ID" ]; then
+            echo "Telegram secrets not set; skipping"
+            exit 0
+          fi
+          day=$(TZ=Africa/Johannesburg date -d "yesterday" +%Y-%m-%d)
+          label=$(TZ=Africa/Johannesburg date -d "yesterday" +"%b %-d, %Y")
+          start=$(TZ=Africa/Johannesburg date -d "$day 00:00:00" -u +%Y-%m-%dT%H:%M:%SZ)
+          end=$(TZ=Africa/Johannesburg date -d "$day 00:00:00 +1 day" -u +%Y-%m-%dT%H:%M:%SZ)
+          runs=$(gh api --paginate "repos/$REPO/actions/runs?per_page=100&created=$start..$end" --jq '.workflow_runs[] | select(.event=="push") | [.conclusion, .head_branch, .display_title] | @tsv')
+          pushes=$(printf '%s\n' "$runs" | sed '/^$/d' | wc -l)
+          failed=$(printf '%s\n' "$runs" | awk -F'\t' '$1=="failure"' | wc -l)
+          fixes=$(printf '%s\n' "$runs" | awk -F'\t' 'BEGIN{IGNORECASE=1} $3 ~ /^(fix|ci: remove)/' | wc -l)
+          sev1_done=0; sev_open=0
+          while IFS=$'\t' read -r conclusion branch title; do
+            [ -z "$conclusion" ] && continue
+            [ "$conclusion" = "failure" ] || continue
+            case "$branch" in
+              main|feature/full-qr-integration) sev="SEV1" ;;
+              sora-website-waitlist|release/*|hotfix/*) sev="SEV2" ;;
+              *) sev="SEV3" ;;
+            esac
+            if [ "$sev" = "SEV1" ]; then sev1_done=$((sev1_done+1)); else sev_open=$((sev_open+1)); fi
+          done <<EOF
+          $runs
+          EOF
+          if [ "$sev_open" -gt 0 ]; then
+            takeaway="Live branch stable. $sev_open lower SEV still open."
+          elif [ "$failed" -gt 0 ]; then
+            takeaway="Failures were on the live branch and are closed."
+          else
+            takeaway="No failures. Builds stayed green."
+          fi
+          text=$(printf '📊 <b>Daily Engineering Summary</b> — <i>%s</i>\n\n🚀 <b>Deployments & Code</b>\n• <b>Pushes:</b> <b>%s</b>\n• <b>Failed Builds/Deploys:</b> <b>%s</b>\n• <b>Fixes Applied:</b> <b>%s</b>\n\n🚨 <b>Incidents (SEVs)</b>\n• <b>SEVs Completed:</b> <b>%s</b>\n• <b>SEVs Incomplete (Carry-over):</b> <b>%s</b>\n\n📝 <b>Quick Takeaway:</b> %s' \
+            "$label" "$pushes" "$failed" "$fixes" "$sev1_done" "$sev_open" "$takeaway")
+          response=$(curl -sS -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -H "content-type: application/json" \
+            -d "$(jq -n --arg chat "$TELEGRAM_CHAT_ID" --arg text "$text" '{chat_id:$chat, text:$text, parse_mode:"HTML", disable_web_page_preview:true}')")
+          echo "$response"
+          echo "$response" | jq -e '.ok == true' >/dev/null
