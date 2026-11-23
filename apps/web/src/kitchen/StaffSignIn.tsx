@@ -3,7 +3,7 @@
 import { type FormEvent, useState } from "react";
 import type { StaffAuth } from "./staff-auth.ts";
 
-// Shared by the kitchen board and the waiter screen.
+// The one staff sign-in: shared by the portal picker, owner, kitchen and waiter screens (one account, one session per browser).
 export function SignIn({ auth }: { auth: StaffAuth }) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -21,7 +21,8 @@ export function SignIn({ auth }: { auth: StaffAuth }) {
   return (
     <Screen>
       <form onSubmit={submit} className="flex w-full max-w-md flex-col gap-4 text-left">
-        <h1 className="text-4xl uppercase">Kitchen sign in</h1>
+        <h1 className="text-4xl uppercase">SORA staff sign in</h1>
+        <p className="text-base font-normal text-[#9b9b9b]">One login for the owner, kitchen and waiter screens.</p>
         {auth.mode === "dev" ? (
           <p className="border border-[#262626] bg-[#151515] p-3 text-xl text-white rounded-[4px]">
             Local demo login. Seeded staff accounts only.

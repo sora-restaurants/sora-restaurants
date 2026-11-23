@@ -52,7 +52,7 @@ export function KitchenBoard({ restaurant, board, connection, onAdvance, onSignO
     <div className="grid h-dvh grid-rows-[auto_auto_auto_minmax(0,1fr)] bg-[#0a0a0a] font-[family-name:var(--font-geist)] font-bold text-white md:grid-rows-[auto_auto_minmax(0,1fr)]">
       <header className="flex items-center justify-between gap-3 border-b border-[#262626] px-3 py-2 sm:px-4 sm:py-3">
         <h1 className="truncate text-xl uppercase tracking-tight sm:text-3xl">{restaurant}</h1>
-        <div className="flex items-center gap-2"><ConnectionPill connection={connection} />{onSignOut && <button type="button" onClick={onSignOut} className="min-h-12 border-2 border-white px-3 text-sm uppercase">Sign out</button>}</div>
+        <div className="flex items-center gap-2"><ConnectionPill connection={connection} /><a href="/staff" className="grid min-h-12 place-items-center border-2 border-white px-3 text-sm uppercase">Portals</a>{onSignOut && <button type="button" onClick={onSignOut} className="min-h-12 border-2 border-white px-3 text-sm uppercase">Sign out</button>}</div>
       </header>
 
       {connection === "reconnecting" ? (

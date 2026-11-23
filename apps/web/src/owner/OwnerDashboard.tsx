@@ -42,7 +42,7 @@ export function OwnerDashboard({ initial, sessionAdapter, onSignOut }: { initial
     <div className="mx-auto max-w-6xl">
       <header className="flex flex-wrap items-end justify-between gap-5 border-b border-black/10 pb-7">
         <div><p className="text-xs font-semibold tracking-tight uppercase tracking-[0.22em] text-[var(--owner-muted)]">Owner workspace</p><h1 className="mt-2 text-4xl font-semibold tracking-tight tracking-[-0.04em] sm:text-6xl">{snapshot.restaurantName}</h1></div>
-        <div className="flex items-center gap-2"><ColorModeToggle mode={mode} onToggle={toggle} className="border-[var(--owner-border)]" /><p className="rounded-[4px] border border-[var(--owner-border)] px-4 py-2 text-sm text-[var(--owner-muted)]">{snapshot.timezone}</p>{onSignOut && <button type="button" onClick={onSignOut} className="min-h-11 rounded-[4px] border border-[var(--owner-border)] px-4 text-sm font-bold">Sign out</button>}</div>
+        <div className="flex items-center gap-2"><ColorModeToggle mode={mode} onToggle={toggle} className="border-[var(--owner-border)]" /><p className="rounded-[4px] border border-[var(--owner-border)] px-4 py-2 text-sm text-[var(--owner-muted)]">{snapshot.timezone}</p><a href="/staff" className="grid min-h-11 place-items-center rounded-[4px] border border-[var(--owner-border)] px-4 text-sm font-bold">Portals</a>{onSignOut && <button type="button" onClick={onSignOut} className="min-h-11 rounded-[4px] border border-[var(--owner-border)] px-4 text-sm font-bold">Sign out</button>}</div>
       </header>
 
       <section className="grid gap-4 py-7 sm:grid-cols-3" aria-label="Restaurant summary">

@@ -1,8 +1,8 @@
 "use client";
 
-import { type FormEvent, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { type StaffAuth, staffAuth } from "../kitchen/staff-auth.ts";
-import { ColorModeToggle, useColorMode } from "../components/ColorModeToggle.tsx";
+import { SignIn } from "../kitchen/StaffSignIn.tsx";
 import { OwnerDashboard } from "./OwnerDashboard.tsx";
 import type { ManagedTable, OwnerDashboardSnapshot, SessionCommandResult, TableSessionAdapter } from "./session-contract.ts";
 
@@ -22,7 +22,7 @@ function OwnerSession({ auth }: { auth: StaffAuth }) {
       .then(async (res) => res.ok ? (await res.json()).snapshot : "forbidden").then(setSnapshot);
   }, [token]);
   if (token === undefined) return <OwnerScreen>Loading…</OwnerScreen>;
-  if (!token) return <OwnerSignIn auth={auth} />;
+  if (!token) return <SignIn auth={auth} />;
   if (snapshot === "forbidden") return <OwnerScreen>This account has no owner or manager access.</OwnerScreen>;
   if (!snapshot) return <OwnerScreen>Loading your restaurant…</OwnerScreen>;
 
@@ -64,17 +64,6 @@ async function post(auth: StaffAuth, body: object) {
   const token = await auth.getToken();
   const res = await fetch("/api/owner", { method: "POST", headers: { "content-type": "application/json", authorization: `Bearer ${token}` }, body: JSON.stringify(body) });
   if (!res.ok) throw new Error((await res.json()).error ?? "owner_command_failed");
-}
-
-function OwnerSignIn({ auth }: { auth: StaffAuth }) {
-  const { mode, toggle } = useColorMode("sora-owner-color-mode");
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault(); const form = new FormData(event.currentTarget); setBusy(true);
-    setError(await auth.signIn(String(form.get("email")), String(form.get("password")))); setBusy(false);
-  }
-  return <main data-mode={mode} className="owner-shell owner-login grid min-h-dvh font-[family-name:var(--font-geist)] place-items-center bg-[var(--owner-bg)] p-6 text-[var(--owner-text)]"><form onSubmit={submit} className="w-full max-w-md space-y-4 rounded-[4px] bg-[var(--owner-surface)] p-6 text-left shadow-xl sm:p-8"><div className="flex items-start justify-between gap-4"><h1 className="text-4xl font-semibold tracking-tight">Owner sign in</h1><ColorModeToggle mode={mode} onToggle={toggle} className="border-[var(--owner-border)]" /></div>{auth.mode === "dev" && <p className="rounded-[4px] border border-[var(--owner-border)] bg-[var(--owner-card)] p-3 text-sm text-[var(--owner-text)]">Local demo: owner@demo.test / demo-owner-pass</p>}<label className="block font-bold">Email<input name="email" type="email" autoComplete="username" required className="mt-2 min-h-14 w-full rounded-[4px] border border-[var(--owner-border)] bg-white px-4 text-[#0a0a0a] caret-[#0a0a0a]" /></label><label className="block font-bold">Password<input name="password" type="password" autoComplete="current-password" required className="mt-2 min-h-14 w-full rounded-[4px] border border-[var(--owner-border)] bg-white px-4 text-[#0a0a0a] caret-[#0a0a0a]" /></label>{error && <p role="alert" className="rounded-[4px] border border-[var(--owner-border)] bg-[var(--owner-card)] p-3 text-[var(--owner-text)]">{error}</p>}<button disabled={busy} className="min-h-14 w-full rounded-[4px] bg-[var(--owner-accent)] font-semibold tracking-tight text-[var(--owner-on-accent)]">{busy ? "Signing in…" : "Sign in"}</button></form></main>;
 }
 
 function OwnerScreen({ children }: { children: React.ReactNode }) {

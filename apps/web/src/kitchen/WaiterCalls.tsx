@@ -72,6 +72,7 @@ function CallList({ token, onSignOut }: { token: string; onSignOut: () => void }
         <p role="status" className={`px-3 py-1 text-xl uppercase ${offline ? "bg-[oklch(55%_0.22_28)]" : "bg-[oklch(80%_0.21_145)] text-black"}`}>
           {offline ? "Offline" : "● Live"}
         </p>
+        <a href="/staff" className="grid min-h-12 place-items-center border-2 border-white px-3 text-sm uppercase">Portals</a>
         <button type="button" onClick={onSignOut} className="min-h-12 border-2 border-white px-3 text-sm uppercase">Sign out</button>
       </header>
       {calls === null ? (
