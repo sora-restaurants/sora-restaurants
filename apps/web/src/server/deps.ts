@@ -12,7 +12,7 @@ export interface Deps {
 
 export type SubmitResult =
   | { ok: true; statusToken: string; publicRef: string; replayed: boolean }
-  | { ok: false; httpStatus: 400 | 404 | 409 | 413 | 422 | 500; error: string };
+  | { ok: false; httpStatus: 400 | 404 | 409 | 413 | 422 | 429 | 500; error: string };
 
 export type KitchenOrder = {
   id: string;

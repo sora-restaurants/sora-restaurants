@@ -31,6 +31,7 @@ export async function markPaid(req: Request, orderId: string, deps: Deps): Promi
     return new Response(null, { status: 204 });
   } catch (error) {
     if (error instanceof Error && error.message === "not_found") return Response.json({ error: "not_found" }, { status: 404 });
+    if (error instanceof Error && error.message === "not_payable") return Response.json({ error: "not_payable" }, { status: 409 });
     throw error;
   }
 }

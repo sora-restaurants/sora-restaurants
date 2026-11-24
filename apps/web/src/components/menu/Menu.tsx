@@ -29,8 +29,13 @@ const ERRORS: Record<string, string> = {
   table_not_found: "This table's QR code is no longer active. Please ask your waiter.",
   order_too_large: "That order is too large to send in one go. Please ask your waiter.",
   idempotency_conflict: "Your basket changed while the order was sending. Please review it and try again.",
+  rate_limited: "Lots of orders from this table just now. Please wait a few minutes or ask your waiter.",
   TABLE_SESSION_NOT_ACTIVE: "Ordering has closed for this table. Please ask a member of staff for help.",
 };
+
+// No real payment provider is connected yet, so the fake "Pay now" slider only shows on design previews or
+// a deployment that opts in with NEXT_PUBLIC_DEMO_PAYMENTS=1. Never set that on a live restaurant.
+const DEMO_PAYMENTS = process.env.NEXT_PUBLIC_DEMO_PAYMENTS === "1";
 
 export function Menu({ menu, theme, qrToken, preview = false }: Props) {
   const [cart, setCart] = useState<Record<string, number>>({});
@@ -250,7 +255,7 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
         </div>
       )}
       <OrderDock triggerRef={basketTrigger} count={count} estimate={estimate} status={status} onOpen={() => setBasketOpen(true)} onDismiss={() => { if (status.kind === "placed" && (status.stage === "served" || status.stage === "cancelled")) { try { sessionStorage.removeItem(trackKey); } catch { /* storage blocked */ } } setStatus({ kind: "idle" }); }} onPaid={() => setStatus((s) => s.kind === "placed" ? { ...s, paid: true } : s)} />
-      {basketOpen && <BasketSheet returnFocusRef={basketTrigger} lines={lines} cart={cart} notes={notes} estimate={estimate} status={status} paymentChoice={paymentChoice} splitWays={splitWays} emailReceipt={emailReceipt} weeklySpecials={weeklySpecials} tipPercent={tipPercent} onPaymentChoice={setPaymentChoice} onSplit={setSplitWays} onEmail={setEmailReceipt} onWeekly={setWeeklySpecials} onTip={setTipPercent} onChange={setQuantity} onClose={closeBasket} onPlace={placeOrder} />}
+      {basketOpen && <BasketSheet returnFocusRef={basketTrigger} lines={lines} cart={cart} notes={notes} estimate={estimate} status={status} paymentChoice={paymentChoice} splitWays={splitWays} emailReceipt={emailReceipt} weeklySpecials={weeklySpecials} tipPercent={tipPercent} onPaymentChoice={setPaymentChoice} onSplit={setSplitWays} onEmail={setEmailReceipt} onWeekly={setWeeklySpecials} onTip={setTipPercent} onChange={setQuantity} onClose={closeBasket} onPlace={placeOrder} showPayNow={DEMO_PAYMENTS || qrToken === "preview"} />}
     </div>
   );
 }
@@ -595,7 +600,7 @@ function OrderDock({ triggerRef, count, estimate, status, onOpen, onDismiss, onP
   return <div className="fixed inset-x-0 bottom-0 z-30 bg-linear-to-t from-bg via-bg to-transparent px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-8"><button ref={triggerRef} type="button" onClick={onOpen} aria-haspopup="dialog" className="mx-auto flex min-h-16 w-full max-w-(--t-max) items-center justify-between gap-4 rounded-theme bg-accent px-5 font-bold text-on-accent shadow-2xl active:scale-[0.99] focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ink"><span className="flex items-center gap-3"><span className="grid size-8 place-items-center rounded-full bg-on-accent text-sm text-accent">{count}</span>View your order</span><span className="tabular-nums">{formatCents(estimate)} <span aria-hidden="true">→</span></span></button></div>;
 }
 
-function BasketSheet({ returnFocusRef, lines, cart, notes, estimate, status, paymentChoice, splitWays, emailReceipt, weeklySpecials, tipPercent, onPaymentChoice, onSplit, onEmail, onWeekly, onTip, onChange, onClose, onPlace }: { returnFocusRef: React.RefObject<HTMLButtonElement | null>; lines: MenuItem[]; cart: Record<string, number>; notes: Record<string, string[][]>; estimate: number; status: Status; paymentChoice: "pay_later" | "pay_now"; splitWays: 1|2|3|4; emailReceipt: string; weeklySpecials: boolean; tipPercent: 0|10|15|20; onPaymentChoice: (c: "pay_later" | "pay_now") => void; onSplit: (n: 1|2|3|4) => void; onEmail: (v: string) => void; onWeekly: (v: boolean) => void; onTip: (p: 0|10|15|20) => void; onChange: (id: string, q: number) => void; onClose: () => void; onPlace: () => void }) {
+function BasketSheet({ returnFocusRef, lines, cart, notes, estimate, status, paymentChoice, splitWays, emailReceipt, weeklySpecials, tipPercent, onPaymentChoice, onSplit, onEmail, onWeekly, onTip, onChange, onClose, onPlace, showPayNow }: { showPayNow: boolean; returnFocusRef: React.RefObject<HTMLButtonElement | null>; lines: MenuItem[]; cart: Record<string, number>; notes: Record<string, string[][]>; estimate: number; status: Status; paymentChoice: "pay_later" | "pay_now"; splitWays: 1|2|3|4; emailReceipt: string; weeklySpecials: boolean; tipPercent: 0|10|15|20; onPaymentChoice: (c: "pay_later" | "pay_now") => void; onSplit: (n: 1|2|3|4) => void; onEmail: (v: string) => void; onWeekly: (v: boolean) => void; onTip: (p: 0|10|15|20) => void; onChange: (id: string, q: number) => void; onClose: () => void; onPlace: () => void }) {
   const dialogRef = useRef<HTMLElement | null>(null);
   const closeRef = useRef<HTMLButtonElement | null>(null);
   const descriptionId = useId();
@@ -636,10 +641,10 @@ function BasketSheet({ returnFocusRef, lines, cart, notes, estimate, status, pay
       )}
       {step === 2 && (
         <>
-          <div className="mb-4 grid grid-cols-2 gap-2">
+          {showPayNow && <div className="mb-4 grid grid-cols-2 gap-2">
             <button type="button" onClick={() => onPaymentChoice("pay_later")} className={`min-h-12 rounded-theme border-2 px-3 text-sm font-bold ${paymentChoice === "pay_later" ? "border-accent bg-accent text-on-accent" : "border-line"}`}>Pay after my meal</button>
             <button type="button" onClick={() => onPaymentChoice("pay_now")} className={`min-h-12 rounded-theme border-2 px-3 text-sm font-bold ${paymentChoice === "pay_now" ? "border-accent bg-accent text-on-accent" : "border-line"}`}>Pay now</button>
-          </div>
+          </div>}
           <div className="mb-4">
             <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">Add a tip</p>
             <div className="flex gap-2">

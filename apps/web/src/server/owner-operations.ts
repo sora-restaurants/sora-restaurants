@@ -79,7 +79,12 @@ export async function ownerCommand(req: Request, deps: Deps): Promise<Response> 
   } catch (error) {
     const message = error instanceof Error ? error.message : "internal";
     const conflict = ["SESSION_ALREADY_OPEN", "SESSION_ALREADY_CLOSED", "table_disabled"].find((code) => message.includes(code));
-    return Response.json({ error: conflict ?? "not_found" }, { status: conflict ? 409 : 404 });
+    if (conflict) return Response.json({ error: conflict }, { status: 409 });
+    if (message.includes("not_found")) return Response.json({ error: "not_found" }, { status: 404 });
+    if (/invalid_(item|label)/.test(message)) return Response.json({ error: "invalid_command" }, { status: 400 });
+    // Anything else is a real fault (database down, bad migration): log it instead of pretending the row was missing.
+    console.error("owner command failed", { action: command.action, error: message });
+    return Response.json({ error: "internal" }, { status: 500 });
   }
 }
 

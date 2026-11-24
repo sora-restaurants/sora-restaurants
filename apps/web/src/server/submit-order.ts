@@ -27,6 +27,7 @@ const SQL_ERRORS = {
   TABLE_SESSION_NOT_ACTIVE: 409,
   order_too_large: 413,
   item_unavailable: 422,
+  rate_limited: 429,
 } as const;
 
 type Failure = Extract<SubmitResult, { ok: false }>;
