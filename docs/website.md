@@ -36,8 +36,10 @@ attempts are currently limited per server instance.
 
 The short enquiry form accepts restaurant name/type/city, a contact name, and at
 least one email or phone number. Earlier detailed applications remain readable.
-There is no simulated signup counter. The 2026 sit-down restaurant pilot is free;
-future paid plans need agreement before paid service begins.
+There is no simulated signup counter. The Founding Restaurant Programme is a
+discounted, paid introductory partnership, never a free pilot; each restaurant's
+price is agreed in writing before paid service begins. Only list features the
+code implements; POS integration and online card payment are still in development.
 
 The form stores a temporary draft in the same browser tab, preserves its retry
 key across refresh, and clears it after a successful submission or when the user
