@@ -1,4 +1,5 @@
 import "server-only";
+import { log } from "./log.ts";
 
 const MAX_TEXT = 3500;
 
@@ -33,9 +34,9 @@ export async function notifyTelegram(text: string): Promise<void> {
         disable_web_page_preview: true,
       }),
     });
-    if (!res.ok) console.error("telegram notify failed", res.status);
+    if (!res.ok) log("warn", "telegram_notify_failed", { status: res.status });
   } catch (error) {
-    console.error("telegram notify failed", error instanceof Error ? error.message : "unknown");
+    log("warn", "telegram_notify_failed", { error: error instanceof Error ? error.message : "" });
   }
 }
 

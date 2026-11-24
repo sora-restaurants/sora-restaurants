@@ -1,3 +1,4 @@
+import { log, requestIdOf } from "./log.ts";
 import type { Deps } from "./deps.ts";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -26,7 +27,7 @@ export async function advanceOrder(req: Request, orderId: string, deps: Deps): P
     const message = error instanceof Error ? error.message : "";
     if (message === "not_found") return json(404, { error: "not_found" });
     if (message === "invalid_transition") return json(409, { error: "invalid_transition" });
-    console.error("kitchen_move failed", { error: message });
+    log("error", "kitchen_move failed", { requestId: requestIdOf(req), error: message });
     return json(500, { error: "internal" });
   }
   return json(200, { status: to });

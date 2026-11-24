@@ -2,6 +2,7 @@ import Link from "next/link";
 import { POS_SYSTEMS, STATUS_LABELS, STATUSES } from "../../lib/waitlist-schema.ts";
 import { requireAdmin } from "../../server/admin-session.ts";
 import { waitlistDb } from "../../server/waitlist-deps.ts";
+import { log } from "../../server/log.ts";
 import { listApplications, waitlistStats, type Application, type Stats } from "../../server/waitlist.ts";
 import { signOut } from "./actions.ts";
 
@@ -27,7 +28,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
     const db = waitlistDb();
     [stats, rows] = await Promise.all([waitlistStats(db), listApplications(db, { q, status, city, pos })]);
   } catch (error) {
-    console.error("admin dashboard could not load", error);
+    log("error", "admin_dashboard_failed", { error: error instanceof Error ? error.message : "" });
     return <main className="wrap adm"><p className="alert" role="alert">The database could not be reached. Check DATABASE_URL and that the waitlist migration has been applied.</p></main>;
   }
   const filtered = !!(q || status || city || pos);

@@ -1,3 +1,4 @@
+import { log } from "./log.ts";
 import { z } from "zod";
 import { addOnCost } from "../components/menu/customise-options.ts";
 import type { Deps, SubmitResult } from "./deps.ts";
@@ -61,7 +62,7 @@ export async function submitOrder(input: unknown, deps: Deps): Promise<SubmitRes
   } catch (error) {
     const message = error instanceof Error ? error.message : "";
     if (message in SQL_ERRORS) return fail(SQL_ERRORS[message as keyof typeof SQL_ERRORS], message);
-    console.error("submit_order failed", { error: message }); // payload deliberately not logged
+    log("error", "submit_order failed", { error: message }); // payload deliberately not logged
     return fail(500, "internal");
   }
 }

@@ -1,5 +1,6 @@
 // Emails for a new waitlist application: an alert to the Sora team and a confirmation to the applicant.
 // Off unless RESEND_API_KEY, RECEIPT_FROM and WAITLIST_ALERT_TO are all set. A failed email never fails the application.
+import { log } from "./log.ts";
 
 export type Mail = { to: string; subject: string; text: string };
 export type SendMail = (mail: Mail) => Promise<void>;
@@ -39,5 +40,5 @@ export function resendSender(env: NodeJS.ProcessEnv = process.env): { send: Send
 export async function notifyNewApplication(app: Parameters<typeof waitlistMails>[0], sender = resendSender()): Promise<void> {
   if (!sender) return;
   const results = await Promise.allSettled(waitlistMails(app, sender.alertTo).map(sender.send));
-  for (const r of results) if (r.status === "rejected") console.error("waitlist email failed", r.reason);
+  for (const r of results) if (r.status === "rejected") log("error", "waitlist_email_failed", { error: r.reason instanceof Error ? r.reason.message : String(r.reason) });
 }

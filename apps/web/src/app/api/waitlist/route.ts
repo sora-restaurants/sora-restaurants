@@ -1,6 +1,7 @@
 import { readCappedBody } from "../../../server/http.ts";
 import { waitlistDb } from "../../../server/waitlist-deps.ts";
 import { MAX_WAITLIST_BODY_BYTES, submitApplication } from "../../../server/waitlist.ts";
+import { log } from "../../../server/log.ts";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -17,7 +18,7 @@ export async function POST(req: Request) {
     if (!result.ok) return Response.json({ error: result.error, fields: result.fields }, { status: result.httpStatus });
     return Response.json({ reference: result.reference, restaurantName: result.restaurantName }, { status: result.replayed ? 200 : 201 });
   } catch (error) {
-    console.error("waitlist submission failed", error);
+    log("error", "waitlist_submit_failed", { error: error instanceof Error ? error.message : "" });
     return Response.json({ error: "We could not save your application just now. Your answers are still here; try again in a moment." }, { status: 500 });
   }
 }
