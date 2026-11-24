@@ -1,0 +1,77 @@
+{
+ "note": "Credits for the photographs in this folder: photos.mjs credits prints the footer block for the ones the pages use.",
+ "photos": [
+  {
+   "file": "photo-f183440854-1280.jpg",
+   "files": [
+    "photo-f183440854-500.jpg",
+    "photo-f183440854-960.jpg",
+    "photo-f183440854-1280.jpg"
+   ],
+   "id": "f183440854",
+   "alt": "Diagonal view of interior of restaurant Oiva on an evening in July 2025",
+   "by": "JIP",
+   "licence": "CC BY-SA 4.0",
+   "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+   "page": "https://commons.wikimedia.org/wiki/File:Diagonal_view_of_interior_of_restaurant_Oiva_on_an_evening_in_July_2025.jpg",
+   "source": "Wikimedia Commons"
+  },
+  {
+   "file": "photo-f179001453.jpg",
+   "files": [
+    "photo-f179001453-500.jpg",
+    "photo-f179001453-960.jpg",
+    "photo-f179001453.jpg"
+   ],
+   "id": "f179001453",
+   "alt": "Interior of restaurant Grill It! Tapiola Garden on an evening in September 2025",
+   "by": "JIP",
+   "licence": "CC BY-SA 4.0",
+   "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+   "page": "https://commons.wikimedia.org/wiki/File:Interior_of_restaurant_Grill_It!_Tapiola_Garden_on_an_evening_in_September_2025.jpg",
+   "source": "Wikimedia Commons"
+  },
+  {
+   "file": "photo-f192225928-960.jpg",
+   "files": [
+    "photo-f192225928-500.jpg",
+    "photo-f192225928-960.jpg"
+   ],
+   "id": "f192225928",
+   "alt": "Kitchen setup showcasing grilling equipment and cooking tools at a busy restaurant undefined",
+   "by": "Shixart1985",
+   "licence": "CC BY 2.0",
+   "licenceUrl": "https://creativecommons.org/licenses/by/2.0",
+   "page": "https://commons.wikimedia.org/wiki/File:Kitchen_setup_showcasing_grilling_equipment_and_cooking_tools_at_a_busy_restaurant_undefined.jpg",
+   "source": "Wikimedia Commons"
+  },
+  {
+   "file": "photo-f56809472.jpg",
+   "files": [
+    "photo-f56809472-500.jpg",
+    "photo-f56809472-960.jpg",
+    "photo-f56809472.jpg"
+   ],
+   "id": "f56809472",
+   "alt": "Cooking, 2015",
+   "by": "Matthias Ripp",
+   "licence": "CC BY 2.0",
+   "licenceUrl": "https://creativecommons.org/licenses/by/2.0",
+   "page": "https://commons.wikimedia.org/wiki/File:Cooking,_2015.jpg",
+   "source": "Wikimedia Commons"
+  },
+  {
+   "file": "photo-f22521835-500.jpg",
+   "files": [
+    "photo-f22521835-500.jpg"
+   ],
+   "id": "f22521835",
+   "alt": "Chateau neercanne",
+   "by": "Flickr user: Bert Kaufmann",
+   "licence": "CC BY 2.0",
+   "licenceUrl": "https://creativecommons.org/licenses/by/2.0",
+   "page": "https://commons.wikimedia.org/wiki/File:Chateau_neercanne.jpg",
+   "source": "Wikimedia Commons"
+  }
+ ]
+}

@@ -11,7 +11,7 @@ import type { Deps } from "./deps.ts";
  */
 type Env = Record<string, string | undefined>;
 
-const DEV_FLAGS = ["DEV_STAFF_LOGIN", "NEXT_PUBLIC_DEV_STAFF_LOGIN", "DEV_STAFF_LOGIN_SECRET"];
+const DEV_FLAGS = ["DEV_STAFF_LOGIN", "NEXT_PUBLIC_DEV_STAFF_LOGIN", "DEV_STAFF_LOGIN_SECRET", "DEV_SIMULATED_PAYMENTS"];
 
 /** Throws if any dev-login setting is present in production, so a stray .env line fails loudly instead of silently. */
 export function assertNoDevLoginInProduction(env: Env = process.env, production = env.NODE_ENV === "production") {

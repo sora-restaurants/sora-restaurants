@@ -7,6 +7,7 @@ import { saveCheckoutAction } from "../../app/actions/save-checkout.ts";
 import type { ThemeId } from "../../themes/themes.ts";
 import type { MenuItem, TableMenu } from "./types.ts";
 import { SlideToPay } from "../order/SlideToPay.tsx";
+import { newIdempotencyKey } from "../../lib/idempotency-key.ts";
 import { demoReviewsFor, type DemoReview } from "./demo-reviews.ts";
 import { demoWaitMinutes } from "./demo-extras.ts";
 import { NO_WANT, SPICE, COOKING, ADD_ONS, DRINK_SIZE, DRINK_ICE, DRINK_EXTRAS, COFFEE_MILK, COOL_DRINK_BRAND, COOL_DRINK_TYPE, CHEESECAKE_SLICE, SMOOTHIE_FLAVOUR, WATER_TYPE, STEAK_SIZE, WINGS_SIZE, FRIES_SIZE, FRIES_ADDONS, canChooseDoneness, isDrink, isCoffee, isHotDrink, addOnCost } from "./customise-options.ts";
@@ -110,7 +111,7 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
   };
 
   async function placeOrder() {
-    idempotencyKey.current ??= crypto.randomUUID();
+    idempotencyKey.current ??= newIdempotencyKey();
     setStatus({ kind: "sending" });
     if (qrToken === "preview") { // design-preview pages have no database, so no receipt either
       const wait = demoWaitMinutes(count);

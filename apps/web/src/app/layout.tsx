@@ -1,5 +1,6 @@
 import { Barlow, Barlow_Condensed, Cormorant_Garamond, Geist, Manrope, Source_Serif_4 } from "next/font/google";
 import type { ReactNode } from "react";
+import { ButtonHaptics } from "../components/ButtonHaptics";
 import "./globals.css";
 
 // Every theme's faces are exposed as CSS variables; the active theme picks its pair (globals.css).
@@ -11,15 +12,22 @@ const barlowCondensed = Barlow_Condensed({ subsets: ["latin"], weight: ["700", "
 const geist = Geist({ subsets: ["latin"], variable: "--font-geist", preload: false }); // SORA staff screens, same face as the website
 const barlow = Barlow({ subsets: ["latin"], weight: ["400", "600"], variable: "--font-barlow", preload: false });
 
-export const metadata = { title: "Restaurant SaaS" };
+export const metadata = {
+  title: "Restaurant SaaS",
+  // iPhone Safari otherwise turns order codes, prices and times into tap-to-call links before React loads,
+  // which breaks hydration and makes numbers on the menu and kitchen board tappable by accident.
+  formatDetection: { telephone: false, date: false, address: false, email: false },
+};
 export const viewport = { width: "device-width", initialScale: 1 };
 
 const fontVariables = [cormorant, sourceSerif, manrope, barlowCondensed, barlow, geist].map((f) => f.variable).join(" ");
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en-ZA" className={fontVariables}>
-      <body>{children}</body>
+    // suppressHydrationWarning applies to these two tags only: phone translators, dark modes and extensions
+    // add attributes here before React loads. Mismatches anywhere inside the page are still reported.
+    <html lang="en-ZA" className={fontVariables} suppressHydrationWarning>
+      <body suppressHydrationWarning><ButtonHaptics />{children}</body>
     </html>
   );
 }

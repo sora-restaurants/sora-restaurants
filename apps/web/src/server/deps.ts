@@ -21,5 +21,9 @@ export type KitchenOrder = {
   status: string;
   totalCents: number;
   createdAt: string;
+  /** Paid in the app (pay now). */
+  paid: boolean;
+  /** Pay after dinner and not yet paid: staff collect at the table. */
+  payAtTable: boolean;
   items: { name: string; quantity: number; notes: string }[];
 };
