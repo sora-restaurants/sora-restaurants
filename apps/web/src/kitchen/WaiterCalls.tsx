@@ -7,6 +7,7 @@ import { type StaffAuth, staffAuth } from "./staff-auth.ts";
 
 type Call = { id: string; table: string; createdAt: string };
 type Unpaid = { id: string; publicRef: string; table: string; status: string; totalCents: number };
+type FloorTable = { id: string; label: string; openedAt: string | null; orders: number; inKitchen: number; unpaidCents: number; calling: boolean };
 const POLL_MS = 3_000;
 
 /** Floor staff screen: tables asking for a waiter, oldest first, one big tap to answer. */
@@ -32,6 +33,7 @@ function WaiterSession({ auth }: { auth: StaffAuth }) {
 function CallList({ token, onSignOut }: { token: string; onSignOut: () => void }) {
   const [calls, setCalls] = useState<Call[] | null>(null);
   const [unpaid, setUnpaid] = useState<Unpaid[]>([]);
+  const [floor, setFloor] = useState<FloorTable[]>([]);
   const [offline, setOffline] = useState(false);
   const [now, setNow] = useState(() => Date.now());
 
@@ -42,6 +44,8 @@ function CallList({ token, onSignOut }: { token: string; onSignOut: () => void }
       setCalls((await res.json()).calls);
       const owed = await fetch("/api/staff/unpaid", { headers: { authorization: `Bearer ${token}` }, cache: "no-store" });
       if (owed.ok) setUnpaid((await owed.json()).orders);
+      const tables = await fetch("/api/staff/tables", { headers: { authorization: `Bearer ${token}` }, cache: "no-store" });
+      if (tables.ok) setFloor((await tables.json()).tables);
       setOffline(false);
     } catch {
       setOffline(true);
@@ -96,6 +100,24 @@ function CallList({ token, onSignOut }: { token: string; onSignOut: () => void }
           })}
         </ol>
       )}
+
+      {/* The floor at a glance: seated tables first, with time seated, food still cooking and money owed. */}
+      <h2 className="mb-3 mt-8 border-b-4 border-white pb-2 text-3xl uppercase">Tables</h2>
+      <ul className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        {floor.map((t) => (
+          <li key={t.id} className={`p-3 ${t.calling ? "bg-[oklch(82%_0.17_78)] text-black" : t.openedAt ? "border-4 border-white" : "border-2 border-[oklch(40%_0_0)] text-[oklch(60%_0_0)]"}`}>
+            <p className="truncate text-2xl">{t.label}</p>
+            {t.openedAt ? (
+              <p className="text-base uppercase">
+                {Math.max(0, Math.floor((now - Date.parse(t.openedAt)) / 60_000))}′ seated · {t.orders} orders
+                {t.inKitchen ? ` · ${t.inKitchen} cooking` : ""}
+                {t.unpaidCents ? ` · owes ${formatRand(t.unpaidCents)}` : ""}
+                {t.calling ? " · calling" : ""}
+              </p>
+            ) : <p className="text-base uppercase">Closed</p>}
+          </li>
+        ))}
+      </ul>
 
       {/* Walk-out protection: everything still to collect, oldest first. */}
       <h2 className="mb-3 mt-8 border-b-4 border-white pb-2 text-3xl uppercase">

@@ -31,6 +31,14 @@ async function verifyStaffToken(bearer: string): Promise<string | null> {
   return (await supabase.auth.getUser(bearer)).data.user?.id ?? null;
 }
 
+/** Emails a Supabase Auth invite; the new staff member sets their own password from the link. */
+async function inviteUser(email: string): Promise<string> {
+  const admin = createClient(env("NEXT_PUBLIC_SUPABASE_URL"), env("SUPABASE_SERVICE_ROLE_KEY"), { auth: { persistSession: false } });
+  const { data, error } = await admin.auth.admin.inviteUserByEmail(email);
+  if (error || !data.user) throw new Error(`invite_failed: ${error?.message ?? "no user"}`);
+  return data.user.id;
+}
+
 /** Real dependencies. Same role switching as the PGlite test harness, so RLS behaves identically. */
 export function prodDeps(): Deps {
   assertNoDevLoginInProduction();
@@ -55,5 +63,7 @@ export function prodDeps(): Deps {
     },
     verifyStaffToken,
     pollMs: 2000,
+    // Staff invites need the service key; without it the owner screen says invites aren't set up.
+    ...(process.env.SUPABASE_SERVICE_ROLE_KEY && process.env.NEXT_PUBLIC_SUPABASE_URL ? { inviteUser } : {}),
   };
 }

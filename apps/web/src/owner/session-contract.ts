@@ -13,6 +13,9 @@ export type ManagedTable = {
 export type OwnerDashboardSnapshot = {
   restaurantId?: string;
   restaurantName: string;
+  role?: string;
+  restaurants?: { id: string; name: string }[];
+  staff?: { id: string; email: string | null; role: string; status: string }[];
   timezone: string;
   acceptedOrderValueCents: number;
   paidTodayCents: number;
@@ -21,8 +24,16 @@ export type OwnerDashboardSnapshot = {
   menu: OwnerMenuCategory[];
 };
 
-export type OwnerMenuItem = { id: string; name: string; description: string; priceCents: number; imageUrl: string | null; dietaryTags: string[]; available: boolean; soldOut: boolean };
-export type OwnerMenuCategory = { id: string; name: string; items: OwnerMenuItem[] };
+export type OwnerMenuOption = { id: string; label: string; priceCents: number };
+export type OwnerMenuItem = { id: string; name: string; description: string; priceCents: number; imageUrl: string | null; dietaryTags: string[]; allergens?: string[]; options?: OwnerMenuOption[]; available: boolean; soldOut: boolean };
+export type OwnerMenuCategory = { id: string; name: string; station?: "kitchen" | "bar"; items: OwnerMenuItem[] };
+
+export type OwnerReport = {
+  from: string;
+  to: string;
+  days: { day: string; orders: number; totalCents: number; tipCents: number; paidCents: number }[];
+  topItems: { name: string; quantity: number; totalCents: number }[];
+};
 
 export type SessionCommandResult =
   | { ok: true; table: ManagedTable }
@@ -37,5 +48,8 @@ export interface TableSessionAdapter {
   updateItem?(item: OwnerMenuItem): Promise<OwnerDashboardSnapshot>;
   createItem?(menuId: string, name: string, priceCents: number): Promise<OwnerDashboardSnapshot>;
   createCategory?(name: string): Promise<OwnerDashboardSnapshot>;
+  /** Any other owner command (options, station, staff); returns the refreshed snapshot. */
+  command?(body: object): Promise<OwnerDashboardSnapshot>;
+  report?(from: string, to: string): Promise<OwnerReport>;
 }
 

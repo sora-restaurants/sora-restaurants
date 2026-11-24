@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { KitchenOrder } from "../server/deps.ts";
-import { type BoardState, type ColumnId, columns } from "./board-state.ts";
+import { type BoardState, type ColumnId, type Station, columns } from "./board-state.ts";
 
 export type Connection = "connecting" | "live" | "reconnecting" | "denied";
 export type Target = "preparing" | "ready" | "served" | "rejected" | "cancelled";
@@ -44,7 +44,10 @@ type Props = {
 
 export function KitchenBoard({ restaurant, board, connection, onAdvance, onSignOut }: Props) {
   const now = useNow(30_000);
-  const cols = columns(board);
+  const [station, setStation] = useStation();
+  const cols = columns(board, station);
+  const soundOn = useSoundUnlocked();
+  useWakeLock();
   useNewOrderChime(cols.find((c) => c.id === "new")?.orders.length ?? 0);
   const [activeColumn, setActiveColumn] = useState<ColumnId>("new");
 
@@ -52,9 +55,10 @@ export function KitchenBoard({ restaurant, board, connection, onAdvance, onSignO
     <div className="grid h-dvh grid-rows-[auto_auto_auto_minmax(0,1fr)] bg-[oklch(13%_0_0)] font-[family-name:var(--font-manrope)] font-extrabold text-white md:grid-rows-[auto_auto_minmax(0,1fr)]">
       <header className="flex items-center justify-between gap-3 border-b-4 border-white px-3 py-2 sm:px-4 sm:py-3">
         <h1 className="truncate text-xl uppercase tracking-tight sm:text-3xl">{restaurant}</h1>
-        <div className="flex items-center gap-2"><ConnectionPill connection={connection} />{onSignOut && <button type="button" onClick={onSignOut} className="min-h-12 border-2 border-white px-3 text-sm uppercase">Sign out</button>}</div>
+        <div className="flex items-center gap-2"><label className="sr-only" htmlFor="kds-station">Screen</label><select id="kds-station" value={station} onChange={(e) => setStation(e.target.value as Station)} className="min-h-12 border-2 border-white bg-black px-2 text-sm uppercase"><option value="all">All</option><option value="kitchen">Kitchen</option><option value="bar">Bar</option></select><ConnectionPill connection={connection} />{onSignOut && <button type="button" onClick={onSignOut} className="min-h-12 border-2 border-white px-3 text-sm uppercase">Sign out</button>}</div>
       </header>
 
+      {!soundOn && <p role="status" className="bg-[oklch(82%_0.17_78)] px-4 py-2 text-lg uppercase text-black">Tap anywhere to turn on the new-order sound</p>}
       {connection === "reconnecting" ? (
         <p role="alert" className="bg-[oklch(55%_0.22_28)] px-4 py-3 text-2xl uppercase">
           Connection lost — reconnecting. Tickets may be out of date.
@@ -194,13 +198,45 @@ function useNow(intervalMs: number) {
   return now;
 }
 
+/** Which station this screen shows, remembered per tablet. */
+function useStation(): [Station, (s: Station) => void] {
+  const [station, set] = useState<Station>("all");
+  useEffect(() => { try { const s = localStorage.getItem("sora-kds-station"); if (s === "kitchen" || s === "bar") set(s); } catch { /* storage blocked */ } }, []);
+  return [station, (s) => { set(s); try { localStorage.setItem("sora-kds-station", s); } catch { /* storage blocked */ } }];
+}
+
+// One context for the whole board; browsers only allow sound after the first tap.
+let audio: AudioContext | null = null;
+
+/** False until the first tap unlocks audio, so the kitchen knows to tap once. */
+function useSoundUnlocked() {
+  const [on, setOn] = useState(false);
+  useEffect(() => {
+    const unlock = () => { try { audio ??= new AudioContext(); void audio.resume().then(() => setOn(audio?.state === "running")); } catch { /* no audio */ } };
+    window.addEventListener("pointerdown", unlock);
+    return () => window.removeEventListener("pointerdown", unlock);
+  }, []);
+  return on;
+}
+
+/** Keeps the tablet screen awake while the board is open (re-taken when the tab comes back). */
+function useWakeLock() {
+  useEffect(() => {
+    let lock: { release(): Promise<void> } | null = null;
+    const take = () => { if (document.visibilityState === "visible") (navigator as Navigator & { wakeLock?: { request(t: "screen"): Promise<{ release(): Promise<void> }> } }).wakeLock?.request("screen").then((l) => { lock = l; }, () => {}); };
+    take();
+    document.addEventListener("visibilitychange", take);
+    return () => { document.removeEventListener("visibilitychange", take); void lock?.release().catch(() => {}); };
+  }, []);
+}
+
 /** A short two-tone chime whenever the number of new tickets goes up (not on first load). */
 function useNewOrderChime(newCount: number) {
   const last = useRef<number | null>(null);
   useEffect(() => {
     if (last.current !== null && newCount > last.current) {
       try {
-        const ctx = new AudioContext();
+        const ctx = (audio ??= new AudioContext());
         [880, 1320].forEach((hz, i) => {
           const osc = ctx.createOscillator(); const gain = ctx.createGain();
           osc.frequency.value = hz; gain.gain.value = 0.2;

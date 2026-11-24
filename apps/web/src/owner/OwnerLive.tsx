@@ -15,44 +15,55 @@ export function OwnerLive() {
 function OwnerSession({ auth }: { auth: StaffAuth }) {
   const [token, setToken] = useState<string | null | undefined>(undefined);
   const [snapshot, setSnapshot] = useState<OwnerDashboardSnapshot | null | "forbidden">(null);
+  // Which branch is shown; empty means the server picks the first one.
+  const [branch, setBranch] = useState("");
+  const q = branch ? `?restaurant=${branch}` : "";
   useEffect(() => { const refresh = () => auth.getToken().then(setToken); refresh(); return auth.onChange(refresh); }, [auth]);
   useEffect(() => {
     if (!token) return;
-    fetch("/api/owner", { headers: { authorization: `Bearer ${token}` } })
+    fetch(`/api/owner${q}`, { headers: { authorization: `Bearer ${token}` } })
       .then(async (res) => res.ok ? (await res.json()).snapshot : "forbidden").then(setSnapshot);
-  }, [token]);
+  }, [token, q]);
   if (token === undefined) return <OwnerScreen>Loading…</OwnerScreen>;
   if (!token) return <OwnerSignIn auth={auth} />;
   if (snapshot === "forbidden") return <OwnerScreen>This account has no owner or manager access.</OwnerScreen>;
   if (!snapshot) return <OwnerScreen>Loading your restaurant…</OwnerScreen>;
 
   const adapter: TableSessionAdapter = {
-    getSnapshot: async () => loadSnapshot(auth),
-    openSession: (tableId) => command(auth, "open", tableId),
-    closeSession: (tableId) => command(auth, "close", tableId),
-    rotateQr: async (tableId) => { await post(auth, { action: "rotate", tableId }); return loadSnapshot(auth); },
-    createTable: async (label) => { await post(auth, { action: "create", restaurantId: snapshot.restaurantId, label }); return loadSnapshot(auth); },
-    createItem: async (menuId, name, priceCents) => { await post(auth, { action: "createItem", menuId, name, description: "", priceCents }); return loadSnapshot(auth); },
-    createCategory: async (name) => { await post(auth, { action: "createCategory", restaurantId: snapshot.restaurantId, name }); return loadSnapshot(auth); },
-    updateItem: async (item) => { await post(auth, { action: "updateItem", itemId: item.id, name: item.name, description: item.description, priceCents: item.priceCents, imageUrl: item.imageUrl, dietaryTags: item.dietaryTags, available: item.available, soldOut: item.soldOut }); return loadSnapshot(auth); },
+    getSnapshot: async () => loadSnapshot(auth, q),
+    openSession: (tableId) => command(auth, "open", tableId, q),
+    closeSession: (tableId) => command(auth, "close", tableId, q),
+    rotateQr: async (tableId) => { await post(auth, { action: "rotate", tableId }); return loadSnapshot(auth, q); },
+    createTable: async (label) => { await post(auth, { action: "create", restaurantId: snapshot.restaurantId, label }); return loadSnapshot(auth, q); },
+    createItem: async (menuId, name, priceCents) => { await post(auth, { action: "createItem", menuId, name, description: "", priceCents }); return loadSnapshot(auth, q); },
+    createCategory: async (name) => { await post(auth, { action: "createCategory", restaurantId: snapshot.restaurantId, name }); return loadSnapshot(auth, q); },
+    updateItem: async (item) => { await post(auth, { action: "updateItem", itemId: item.id, name: item.name, description: item.description, priceCents: item.priceCents, imageUrl: item.imageUrl, dietaryTags: item.dietaryTags, allergens: item.allergens ?? [], available: item.available, soldOut: item.soldOut }); return loadSnapshot(auth, q); },
+    command: async (body) => { await post(auth, body); return loadSnapshot(auth, q); },
+    report: async (from, to) => {
+      const token = await auth.getToken();
+      const res = await fetch(`/api/owner/report?restaurant=${snapshot.restaurantId}&from=${from}&to=${to}`, { headers: { authorization: `Bearer ${token}` } });
+      if (!res.ok) throw new Error("report_failed");
+      return res.json();
+    },
   };
-  return <OwnerDashboard initial={snapshot} sessionAdapter={adapter} onSignOut={() => void auth.signOut()} />;
+  // key: a branch switch starts the dashboard fresh with that branch's snapshot.
+  return <OwnerDashboard key={snapshot.restaurantId} initial={snapshot} sessionAdapter={adapter} onSwitchBranch={(id) => { setSnapshot(null); setBranch(id); }} onSignOut={() => void auth.signOut()} />;
 }
 
-async function loadSnapshot(auth: StaffAuth): Promise<OwnerDashboardSnapshot> {
+async function loadSnapshot(auth: StaffAuth, q = ""): Promise<OwnerDashboardSnapshot> {
   const token = await auth.getToken();
-  const res = await fetch("/api/owner", { headers: { authorization: `Bearer ${token}` } });
+  const res = await fetch(`/api/owner${q}`, { headers: { authorization: `Bearer ${token}` } });
   return (await res.json()).snapshot;
 }
 
-async function command(auth: StaffAuth, action: "open" | "close", tableId: string): Promise<SessionCommandResult> {
+async function command(auth: StaffAuth, action: "open" | "close", tableId: string, q: string): Promise<SessionCommandResult> {
   const token = await auth.getToken();
   const res = await fetch("/api/owner", {
     method: "POST", headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
     body: JSON.stringify({ action, tableId }),
   });
   if (res.ok) {
-    const snapshot = await loadSnapshot(auth);
+    const snapshot = await loadSnapshot(auth, q);
     return { ok: true, table: snapshot.tables.find((candidate) => candidate.id === tableId) as ManagedTable };
   }
   const { error } = await res.json();

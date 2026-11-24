@@ -97,3 +97,22 @@ Neither is faked in this codebase.
 ## 6. Gap analysis and roadmap
 
 See [gap-analysis-and-roadmap-2026-11.md](gap-analysis-and-roadmap-2026-11.md).
+
+## 7. Built after the audit (round 2, tested)
+
+Migration `20261124000100_owner_tools.sql` (apply after the first one). Tests: `apps/web/src/server/owner-tools.test.ts`.
+
+| Item | What was built |
+|---|---|
+| O2 | Owners add their own options per dish (label + price) in the menu editor. Guests see them instead of the built-in list; `submit_order` prices them from the database. Dishes without owner options keep the old built-in list. |
+| O3 | Allergens column per dish (14 standard allergens), ticked in the owner menu editor, shown on every guest menu. |
+| O6 | Each menu category is set to Kitchen or Bar. Kitchen tickets carry the station; each tablet picks All / Kitchen / Bar. |
+| O7 | Kitchen board shows "Tap anywhere to turn on the new-order sound" until audio is unlocked, and keeps the screen awake (Wake Lock, where the browser supports it). |
+| O9 | Waiter screen has a Tables grid: seated time, orders, food still cooking, money owed, calling. |
+| O10 | Owners of more than one branch get a branch picker. Asking for a branch you don't own falls back to your own. |
+| O11 | Owner invites staff by email (waiter / kitchen / manager) and removes or restores access. Existing users are added directly; new ones get a Supabase invite email. **Needs `SUPABASE_SERVICE_ROLE_KEY` in Vercel** — without it the screen says invites aren't set up. |
+| O12 | Sales report for any date range up to a year: sales, tips and paid per day, top 20 dishes, CSV download. |
+| O15 | One receipt email per order. |
+| O17 | Basket line prices now include add-ons. |
+
+Still open: O1 (real payments), O4/O5 (monitoring, backups), O8 (ticket age colours), O13, O14 (split bill needs payments), O16, O18 (device testing). Not tested in a browser or on devices.

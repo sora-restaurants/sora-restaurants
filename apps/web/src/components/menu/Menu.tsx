@@ -9,7 +9,7 @@ import type { MenuItem, TableMenu } from "./types.ts";
 import { SlideToPay } from "../order/SlideToPay.tsx";
 import { demoReviewsFor, type DemoReview } from "./demo-reviews.ts";
 import { demoWaitMinutes } from "./demo-extras.ts";
-import { NO_WANT, SPICE, COOKING, ADD_ONS, DRINK_SIZE, DRINK_ICE, DRINK_EXTRAS, COFFEE_MILK, COOL_DRINK_BRAND, COOL_DRINK_TYPE, CHEESECAKE_SLICE, SMOOTHIE_FLAVOUR, WATER_TYPE, STEAK_SIZE, WINGS_SIZE, FRIES_SIZE, FRIES_ADDONS, canChooseDoneness, isDrink, isCoffee, isHotDrink, addOnCost } from "./customise-options.ts";
+import { NO_WANT, SPICE, COOKING, ADD_ONS, DRINK_SIZE, DRINK_ICE, DRINK_EXTRAS, COFFEE_MILK, COOL_DRINK_BRAND, COOL_DRINK_TYPE, CHEESECAKE_SLICE, SMOOTHIE_FLAVOUR, WATER_TYPE, STEAK_SIZE, WINGS_SIZE, FRIES_SIZE, FRIES_ADDONS, canChooseDoneness, isDrink, isCoffee, isHotDrink, lineExtraCents } from "./customise-options.ts";
 
 const money = new Intl.NumberFormat("en-ZA", { style: "currency", currency: "ZAR" });
 const formatCents = (cents: number) => money.format(cents / 100);
@@ -92,7 +92,7 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
     return [...byNotes].map(([n, quantity]) => ({ item, quantity, notes: n }));
   });
   // Display only. The server prices items and paid options itself, the same way.
-  const estimate = orderLines.reduce((sum, l) => sum + (l.item.priceCents + addOnCost(l.notes ? l.notes.split(", ") : [])) * l.quantity, 0);
+  const estimate = orderLines.reduce((sum, l) => sum + (l.item.priceCents + lineExtraCents(l.item, l.notes ? l.notes.split(", ") : [])) * l.quantity, 0);
 
   const setQuantity = (id: string, quantity: number) => {
     idempotencyKey.current = null;
@@ -267,6 +267,7 @@ function EmptyMenu() {
 
 function missingRequired(item: MenuItem, categoryName: string, note: string[]): string[] {
   const missing: string[] = [];
+  if (item.options?.length) return missing; // owner-set options replace the built-in required choices
   const name = item.name;
   if (/steak|ribeye/i.test(name)) {
     if (!STEAK_SIZE.some(s => note.includes(s.label))) missing.push("Size");
@@ -329,7 +330,18 @@ function MenuCard({ item, showRatings, categoryName, quantity, note, index, onCh
         </button>}
         {optsOpen && (
           <div className="mt-3 space-y-3">
-            {isDrink(item.name, categoryName) ? (
+            {item.options?.length ? (
+              <div>
+                <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">Options</p>
+                <div className="flex flex-wrap gap-2">
+                  {item.options.map((o) => {
+                    const label = o.priceCents ? `${o.label} (+${formatCents(o.priceCents)})` : o.label;
+                    const selected = note.includes(label);
+                    return <button key={o.id} type="button" aria-pressed={selected} onClick={() => onNote(item.id, selected ? note.filter((x) => x !== label) : [...note, label])} className={`rounded-full border px-3 py-1 text-xs font-bold ${selected ? "border-accent bg-accent text-on-accent" : "border-line"}`}>{label}</button>;
+                  })}
+                </div>
+              </div>
+            ) : isDrink(item.name, categoryName) ? (
               <>
                 {/^water$/i.test(item.name) ? (
                   <div>
@@ -634,7 +646,7 @@ function BasketSheet({ returnFocusRef, lines, cart, notes, estimate, status, pay
         <div className="mb-6 flex items-start justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-[0.18em] text-accent">Almost there</p><h2 id="basket-title" className="display mt-1 text-3xl">Your order</h2></div><button ref={closeRef} type="button" onClick={onClose} aria-label="Close basket" className="grid size-12 place-items-center rounded-full border border-line text-2xl focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-accent">×</button></div>
         {step === 1 && (
         <>
-          <ul className="divide-y divide-line/40 border-y border-line/40">{lines.map((item) => <li key={item.id} className="flex items-center justify-between gap-4 py-4"><div className="min-w-0"><h3 className="font-bold">{item.name}</h3>{(notes[item.id] ?? []).map((set, i) => set.length ? <p key={i} className="mt-1 text-xs text-muted">#{i + 1}: {set.join(", ")}</p> : null)}<p className="mt-1 text-sm tabular-nums text-muted">{formatCents(item.priceCents * cart[item.id])}</p></div><QuantityControl item={item} quantity={cart[item.id]} onChange={onChange} /></li>)}</ul>
+          <ul className="divide-y divide-line/40 border-y border-line/40">{lines.map((item) => <li key={item.id} className="flex items-center justify-between gap-4 py-4"><div className="min-w-0"><h3 className="font-bold">{item.name}</h3>{(notes[item.id] ?? []).map((set, i) => set.length ? <p key={i} className="mt-1 text-xs text-muted">#{i + 1}: {set.join(", ")}</p> : null)}<p className="mt-1 text-sm tabular-nums text-muted">{formatCents(Array.from({ length: cart[item.id] }, (_, u) => item.priceCents + lineExtraCents(item, notes[item.id]?.[u] ?? [])).reduce((a, b) => a + b, 0))}</p></div><QuantityControl item={item} quantity={cart[item.id]} onChange={onChange} /></li>)}</ul>
           <div className="flex items-center justify-between py-5 text-lg font-bold"><span>Estimated total</span><span className="tabular-nums">{formatCents(estimate)}</span></div>
           <button type="button" onClick={() => setStep(2)} disabled={lines.length === 0} className="flex min-h-16 w-full items-center justify-center rounded-theme bg-accent px-5 text-lg font-bold text-on-accent">Continue</button>
         </>

@@ -72,22 +72,22 @@ Effort: S = days, M = 1–3 weeks, L = a month or more / needs a partner.
 - [x] Mark-paid guard (F4), owner error logging (F5)
 - [ ] Apply migration; deploy this branch to sora-restaurants; decide on `NEXT_PUBLIC_DEMO_PAYMENTS` for the sales demo
 - [ ] Sentry + uptime monitor (O4); confirm Supabase backups (O5)
-- [ ] Allergens column + owner editing (O3)
-- [ ] "Tap to enable sound" + screen wake-lock on the kitchen board (O7)
+- [x] Allergens column + owner editing (O3)
+- [x] "Tap to enable sound" + screen wake-lock on the kitchen board (O7)
 - [ ] Device test: 3 phones, 1 kitchen tablet, Wi-Fi drop test (O18)
 - [ ] Pilot runbook: how to open/close tables, rotate a QR, mark paid, what to do if it's down
 
 ### Phase 2 — first 30 days of the pilot
 - Real payments with Yoco (or Paystack) in sandbox → live, webhook-verified (O1)
-- Owner-set modifiers replacing the hard-coded list (O2)
-- Kitchen/bar routing (O6), ticket age colours (O8)
-- Waiter table overview (O9)
-- Staff invites (O11), reports with date range + CSV (O12), receipt one-per-order limit (O15)
+- [x] Owner-set modifiers replacing the hard-coded list (O2)
+- [x] Kitchen/bar routing (O6); ticket age colours (O8) still to do
+- [x] Waiter table overview (O9)
+- [x] Staff invites (O11), reports with date range + CSV (O12), receipt one-per-order limit (O15)
 - Customer feedback after the meal
 
 ### Phase 3 — first 90 days
 - Real split bill (O14), group ordering
-- Multi-branch switcher (O10)
+- [x] Multi-branch switcher (O10)
 - Start Pilot POS partnership talks; build the POS bridge once approved
 - Promotions/upsell, collection orders
 - Move guest status to live updates (O13); retire the old ordering copy on the website branch (O16)

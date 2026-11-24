@@ -8,6 +8,8 @@ export interface Deps {
   db: Db;
   verifyStaffToken(bearer: string): Promise<string | null>;
   pollMs: number;
+  /** Sends a Supabase Auth invite and returns the new user id. Absent when no service key is configured. */
+  inviteUser?(email: string): Promise<string>;
 }
 
 export type SubmitResult =
@@ -21,5 +23,5 @@ export type KitchenOrder = {
   status: string;
   totalCents: number;
   createdAt: string;
-  items: { name: string; quantity: number; notes: string }[];
+  items: { name: string; quantity: number; notes: string; station?: "kitchen" | "bar" }[];
 };

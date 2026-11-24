@@ -18,4 +18,6 @@ export type MenuItem = {
   allergens?: string[];
   prepTime?: string;
   soldOut?: boolean;
+  /** Owner-set choices; when present they replace the built-in add-on list for this dish. */
+  options?: { id: string; label: string; priceCents: number }[];
 };

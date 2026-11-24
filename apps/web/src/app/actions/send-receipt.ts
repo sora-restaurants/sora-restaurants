@@ -27,6 +27,10 @@ export async function sendReceiptAction(input: {
   const order = row?.s;
   if (!order) return { ok: false, error: "not_found" };
 
+  // One receipt per order, so a placed order can't be used to spam an inbox.
+  const [claim] = await prodDeps().db.asService<{ ok: boolean }>("select claim_receipt($1) ok", [input.statusToken]);
+  if (!claim?.ok) return { ok: false, error: "already_sent" };
+
   const tip = Math.round(order.totalCents * tipPercent / 100);
   const grand = order.totalCents + tip;
   const each = splitWays > 1 ? Math.round(grand / splitWays) : grand;
