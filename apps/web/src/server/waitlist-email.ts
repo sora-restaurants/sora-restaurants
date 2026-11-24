@@ -10,12 +10,12 @@ export function waitlistMails(app: { reference: string; restaurantName: string; 
     {
       to: alertTo,
       subject: `New waitlist application: ${app.restaurantName} (${app.reference})`,
-      text: `${app.restaurantName} in ${app.city} applied for the Sora pilot.\nContact: ${app.contactName} <${app.email}>\nReference: ${app.reference}\n\nOpen /admin to review it.`,
+      text: `${app.restaurantName} in ${app.city} enquired about SORA.\nContact: ${app.contactName} <${app.email}>\nReference: ${app.reference}\n\nOpen /admin to review it.`,
     },
     {
       to: app.email,
-      subject: `Your Sora pilot application (${app.reference})`,
-      text: `Hi ${app.contactName},\n\nThanks for applying for the Sora pilot for ${app.restaurantName}. Your reference is ${app.reference}.\nWe review every application and will contact you soon.\n\nThe Sora team`,
+      subject: `Your SORA enquiry (${app.reference})`,
+      text: `Hi ${app.contactName},\n\nThanks for your enquiry about SORA for ${app.restaurantName}. Your reference is ${app.reference}.\nWe will contact you soon to arrange a demonstration and discuss the Founding Restaurant Programme.\n\nThe Sora team`,
     },
   ];
 }

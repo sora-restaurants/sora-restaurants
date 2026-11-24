@@ -1,50 +1,45 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import type { Metadata } from "next";
-import { Arrow } from "../../components/site/Chrome.tsx";
-import { Chip, GuestPhone, HeroPhone, KitchenBoard, MenuItems, OrderTracker, OwnerDash, Qr, TableTent, Ticket, WaiterPanel } from "../../components/site/Mockups.tsx";
-import { Showcase } from "../../components/site/Showcase.tsx";
+import { Arrow, EMAIL } from "../../components/site/Chrome.tsx";
+import { Chip, DEMO_URL, GuestPhone, HeroPhone, KitchenBoard, MenuItems, OrderTracker, OwnerDash, Qr, TableTent, Ticket, WaiterPanel } from "../../components/site/Mockups.tsx";
+import { Showcase, type Tab } from "../../components/site/Showcase.tsx";
 
 export const metadata: Metadata = { alternates: { canonical: "/" } };
 
 const STEPS: { n: string; title: string; text: string; art: ReactNode }[] = [
-  { n: "01", title: "Scan", text: "Customers scan the QR code placed at their table. No application downloads or account creation required.",
+  { n: "01", title: "Scan", text: "The guest scans the code on their table. No app to download, no account to create.",
     art: <div style={{ maxWidth: 130 }}><Qr /></div> },
-  { n: "02", title: "Order", text: "Customers browse the restaurant's menu and submit their orders directly from their phones.",
+  { n: "02", title: "Order", text: "They browse your menu on their own phone and send the order when they are ready.",
     art: <div className="ui" style={{ padding: 10, display: "grid", gap: 6 }}><MenuItems /></div> },
-  { n: "03", title: "Prepare", text: "Orders appear instantly on the restaurant's kitchen dashboard, allowing staff to manage preparation and update order statuses.",
+  { n: "03", title: "Prepare", text: "The order lands on the kitchen screen exactly as chosen. Staff move it from new to ready.",
     art: <div style={{ display: "grid", gap: 8 }}><Ticket table="Table 7" lines="2 × Boerewors roll · 1 × Chips, large" age="now"><Chip on>New</Chip></Ticket><Ticket table="Table 12" lines="2 × Lamb chops · 1 × Pap" age="6 min"><Chip>Preparing</Chip></Ticket></div> },
-  { n: "04", title: "Serve", text: "Customers follow their orders, request waiter assistance, and pay according to the restaurant's payment configuration.",
-    art: <div style={{ display: "grid", gap: 8 }}><OrderTracker step={3} /><div className="ui item"><span>Call a waiter</span><Chip on>Sent</Chip></div></div> },
+  { n: "04", title: "Serve", text: "The guest's phone follows the order to the table. Your waiter brings it out.",
+    art: <OrderTracker step={3} /> },
 ];
 
-const Row = ({ a, b }: { a: ReactNode; b: ReactNode }) => <div className="ui item" style={{ borderRadius: 6 }}><span>{a}</span>{b}</div>;
-const FEATURES: { title: string; text: string; art: ReactNode }[] = [
-  { title: "QR Table Ordering", text: "Customers order directly from their tables.", art: <div style={{ display: "flex", gap: 12, alignItems: "center" }}><div style={{ width: 76, flex: "none" }}><Qr /></div><span className="mono">TABLE 7<br />SCAN TO ORDER</span></div> },
-  { title: "Live Kitchen Dashboard", text: "Kitchen staff receive and manage incoming orders.", art: <Ticket table="Table 3" lines="1 × Bunny chow · 2 × Lager" age=""><Chip on>New</Chip></Ticket> },
-  { title: "Real-Time Order Tracking", text: "Customers can follow orders as they progress.", art: <OrderTracker step={2} /> },
-  { title: "Waiter Assistance", text: "Customers request help without leaving their seats.", art: <Row a={<b>Table 4 is calling</b>} b={<Chip on>Answer</Chip>} /> },
-  { title: "Payment Workflow", text: "The demo shows payment confirmation. Staff can record collection at the restaurant. Online checkout is simulated and makes no real charge.", art: <div style={{ display: "grid", gap: 6 }}><Row a="Pay at the restaurant" b={<span className="switch on" />} /><Row a="Online payment demo" b={<Chip>Simulated</Chip>} /></div> },
-  { title: "Menu Management", text: "Edit menus, update products, and mark unavailable items as sold out.", art: <div style={{ display: "grid", gap: 6 }}><Row a="Lamb chops" b={<Chip>Sold out</Chip>} /><Row a="Rump steak" b={<Chip on>Available</Chip>} /></div> },
-  { title: "Restaurant Analytics", text: "Understand QR ordering activity through a dedicated dashboard.", art: <div className="bars" style={{ height: 84 }}>{[20, 34, 52, 80, 100, 86, 58, 30].map((h, i) => <i key={i} className={i < 2 ? "lo" : ""} style={{ height: `${h}%` }} />)}</div> },
-  { title: "Works With Existing Devices", text: "Use current phones, tablets, and screens without specialised ordering hardware.", art: <div style={{ display: "flex", gap: 10, alignItems: "end", justifyContent: "center" }}>{[[26, 48], [62, 50], [88, 60]].map(([w, h]) => <span key={w} style={{ width: w, height: h, border: "1.5px solid var(--ink)", borderRadius: 5, background: "var(--paper)" }} />)}</div> },
+const TABS: Tab[] = [
+  { id: "guest", label: "Guests", title: "Order when they are ready, not when a waiter is free", ui: <GuestPhone />,
+    points: ["Your full menu on their own phone, with sold-out dishes marked", "Another round or dessert is one tap away", "A live status shows when the order is accepted, cooking and ready"] },
+  { id: "kitchen", label: "Kitchen", title: "Every order, clearly written, the moment it is sent", ui: <KitchenBoard />,
+    points: ["No handwriting to decode and no dockets to carry", "New, preparing and ready, at a glance", "If the connection drops, the screen reconnects and catches up by itself"] },
+  { id: "waiter", label: "Waiters", title: "Know which table needs you, and why", ui: <WaiterPanel />,
+    points: ["Calls from tables appear in one list, cleared with a tap", "Tables still to pay are listed with the amount", "Fewer trips just to take orders, more time with guests"] },
+  { id: "owner", label: "Owners", title: "See tonight's service while it is happening", ui: <OwnerDash />,
+    points: ["Orders, order value and average order through SORA", "Busiest hours and best-selling dishes", "Mark a dish sold out from your phone and guests see it as sold out"] },
 ];
 
-const BENEFITS = [
-  { problem: "Guests wait too long just to order.", solution: "They scan the QR code and order the moment they sit down." },
-  { problem: "Nobody orders a second round when the waiter is too busy to ask.", solution: "Another drink or dessert is one tap from the table." },
-  { problem: "You’re short-staffed again tonight.", solution: "Guests order themselves, so one waiter can cover more tables." },
-  { problem: "Wrong orders get sent back, and you pay for the food twice.", solution: "The kitchen sees exactly what the guest picked, in writing." },
-  { problem: "Guests order the special that’s finished.", solution: "Mark it sold out on your phone and it disappears from the menu." },
-  { problem: "You only find out how the night went after closing.", solution: "See what’s selling tonight, live." },
+const COMPARE: [string, string, string][] = [
+  ["Placing an order", "Guests wait for a menu, then wait again for someone to take the order.", "Guests order from their phone as soon as they sit down."],
+  ["Reaching the kitchen", "A handwritten docket is carried to the pass.", "The order appears on the kitchen screen, exactly as the guest chose it."],
+  ["A second round", "Depends on catching a busy waiter's eye.", "One tap from the table."],
+  ["A dish runs out", "Guests order it and the waiter returns with bad news.", "Switch it off and it shows as sold out on every phone."],
+  ["Asking for help", "Waving across the room.", "Call a waiter. Staff see which table is asking."],
+  ["How the night went", "Found out at close, from the till.", "Orders and value by the hour, on the owner dashboard."],
 ];
 
-const TABS = [
-  { id: "guest", label: "Guest ordering", title: "The menu, on the guest's own phone", text: "A guest scans the table's code, picks dishes and sends the order. Sold-out items are marked, and a waiter is one tap away.", ui: <GuestPhone /> },
-  { id: "kitchen", label: "Kitchen", title: "Every table's order on one screen", text: "New orders arrive as they are sent. Staff move each one through preparation to ready, and the guest's phone follows along.", ui: <KitchenBoard /> },
-  { id: "waiter", label: "Waiter", title: "Calls and unpaid tables, in one list", text: "Waiters see which table asked for help and which tables still have to pay, and clear each with a tap.", ui: <WaiterPanel /> },
-  { id: "owner", label: "Owner", title: "QR ordering activity at a glance", text: "Owners see how many orders came through SORA, what they were worth and when the room was busiest.", ui: <OwnerDash /> },
-];
+const NOW = ["QR ordering at every table", "Live kitchen screen", "Order tracking on the guest's phone", "Call a waiter", "Pay now or pay after the meal, set per restaurant, with staff marking bills paid", "Menu editing and a sold-out switch", "Owner dashboard", "Runs on the phones, tablets and screens you already have"];
+const NEXT = ["Direct POS integration. For now SORA runs next to your till, which stays as it is.", "Online card payment. The pay-now flow is built; no real payment gateway is connected yet."];
 
 export default function Home() {
   return (
@@ -52,16 +47,15 @@ export default function Home() {
       <section className="hero">
         <div className="wrap">
           <div className="hero__copy">
-            <span className="eyebrow">Built for the next generation of restaurants.</span>
+            <span className="eyebrow">Restaurant technology for South Africa</span>
             <h1>Your restaurant.<br /><span className="dim">Reimagined.</span></h1>
-            <p className="lead">SORA brings ordering, kitchen operations, and table service together in one seamless QR-powered experience.</p>
+            <p className="lead">Guests order from their table on their own phone. Orders go straight to the kitchen screen. A waiter is one tap away. Your team spends less time running orders and more time on hospitality.</p>
             <div className="hero__cta">
-              <Link className="btn" href="/waitlist">Join the Restaurant Waitlist <Arrow /></Link>
-              <a className="btn btn--ghost" href="#how">Explore SORA</a>
+              <Link className="btn" href="/waitlist">Book a demonstration <Arrow /></Link>
+              <a className="btn btn--ghost" href={DEMO_URL}>Try the guest demo</a>
             </div>
-            <p className="dim" style={{ fontSize: 14 }}>Free pilot for sit-down restaurants in 2026. Future paid plans will be explained before you agree to continue.</p>
           </div>
-          <div className="stage" role="img" aria-label="Product demonstration with sample data: a guest scans the QR code on table 7, orders on their phone, and the order appears on the kitchen dashboard and turns ready.">
+          <div className="stage" role="img" aria-label="Product demonstration with sample data: a guest scans the QR code on table 7, orders on their phone, and the order appears on the kitchen screen and turns ready.">
             <span className="mono stage__note">Product demonstration · sample data</span>
             <TableTent />
             <HeroPhone />
@@ -72,13 +66,13 @@ export default function Home() {
 
       <section id="how">
         <div className="wrap">
-          <div className="head" data-reveal><span className="eyebrow">How SORA works</span><h2>From the table to the kitchen in four steps.</h2></div>
+          <div className="head" data-reveal><span className="eyebrow">How it works</span><h2>From the table to the kitchen in four steps.</h2></div>
           <ol className="steps">
             {STEPS.map((s) => (
               <li className="step" key={s.n} data-reveal>
                 <span className="step__n">{s.n}</span>
-                <h3 style={{ fontSize: 26, letterSpacing: "-0.03em" }}>{s.title}</h3>
-                <p className="dim" style={{ fontSize: 15 }}>{s.text}</p>
+                <h3>{s.title}</h3>
+                <p className="dim">{s.text}</p>
                 <div className="step__art" aria-hidden="true">{s.art}</div>
               </li>
             ))}
@@ -86,60 +80,85 @@ export default function Home() {
         </div>
       </section>
 
-      <section id="features" style={{ paddingTop: 0 }}>
+      <section id="product" className="tight">
         <div className="wrap">
-          <hr className="rule" style={{ marginBottom: "clamp(72px, 10vw, 136px)" }} />
-          <div className="head" data-reveal><span className="eyebrow">Explore the prototype</span><h2>Ordering and service, together.</h2><p className="lead">Try the working ordering demo. The interface previews below use sample data. Online payment processing and direct POS integrations are planned.</p><a className="link" href="https://sora-restaurants.vercel.app/t/staging-demo-table-1">Try the guest ordering demo →</a></div>
-          <ul className="feats">
-            {FEATURES.map((f) => (
-              <li className="feat" key={f.title} data-reveal>
-                <div className="feat__art" aria-hidden="true">{f.art}</div>
-                <h3>{f.title}</h3>
-                <p>{f.text}</p>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </section>
-
-      <section id="restaurants" className="dark">
-        <div className="wrap">
-          <div className="head" data-reveal>
-            <span className="eyebrow">For restaurants</span>
-            <h2>Every busy night, you lose money waiting.</h2>
-            <p className="lead">Guests wait to order. Waiters run between tables. The kitchen gets orders wrong. SORA fixes all three.</p>
-          </div>
-          <ol className="benefits benefits--problems">
-            {BENEFITS.map((benefit, index) => (
-              <li key={benefit.problem} data-reveal>
-                <span>{String(index + 1).padStart(2, "0")}</span>
-                <div>
-                  <strong>{benefit.problem}</strong>
-                  <p className="dim">{benefit.solution}</p>
-                </div>
-              </li>
-            ))}
-          </ol>
-          <p style={{ marginTop: 32, fontSize: 20, fontWeight: 600 }}>Free pilot for sit-down restaurants in 2026.</p>
-          <Link className="btn" href="/waitlist" style={{ marginTop: 20 }}>Join the pilot <Arrow /></Link>
-          <p className="dim" style={{ marginTop: 24, fontSize: 14, maxWidth: "65ch" }}>Pilot: SORA runs next to your POS, so nothing changes at the till. Direct POS integration is planned; we’ll set it up with your team first.</p>
-        </div>
-      </section>
-
-      <section id="product">
-        <div className="wrap">
-          <div className="head" data-reveal><span className="eyebrow">Product showcase</span><h2>One system, four views.</h2></div>
+          <div className="head" data-reveal><span className="eyebrow">The product</span><h2>One system. Everyone in the room.</h2><p className="lead">The same order connects the guest, the kitchen, the floor and the owner. These are SORA's own screens, shown with sample data.</p></div>
           <Showcase tabs={TABS} />
         </div>
       </section>
 
-      <section className="cta dark">
-        <div className="wrap">
+      <section id="staff" className="dark">
+        <div className="wrap split">
           <div className="head" data-reveal>
-            <h2>The future of your restaurant starts here.</h2>
-            <p className="lead">Join the SORA restaurant waitlist and be among the first to explore a simpler way to manage table ordering.</p>
+            <span className="eyebrow">Waiter assistance</span>
+            <h2>SORA does not replace your waiters. It gives them time back.</h2>
           </div>
-          <Link className="btn" href="/waitlist">Join the Waitlist <Arrow /></Link>
+          <ol className="numbered" data-reveal>
+            <li><span>01</span><p><strong>Less running.</strong> Taking orders and carrying dockets is handled, so one waiter can look after more tables properly.</p></li>
+            <li><span>02</span><p><strong>Help when it is wanted.</strong> Guests tap “Call a waiter” and the floor sees which table, instead of guessing who is waving.</p></li>
+            <li><span>03</span><p><strong>The human part stays human.</strong> The welcome, the recommendation, the check-in at the table. That is still your team.</p></li>
+          </ol>
+        </div>
+      </section>
+
+      <section id="why">
+        <div className="wrap">
+          <div className="head" data-reveal><span className="eyebrow">Why SORA</span><h2>Compared with traditional ordering.</h2></div>
+          <div className="compare" role="table" aria-label="Traditional ordering compared with SORA">
+            <div className="compare__row compare__head" role="row"><span role="columnheader"><span className="sr">Moment</span></span><span role="columnheader">Traditional</span><span role="columnheader">With SORA</span></div>
+            {COMPARE.map(([moment, before, after]) => (
+              <div className="compare__row" role="row" key={moment} data-reveal>
+                <strong role="rowheader">{moment}</strong>
+                <span role="cell" className="dim"><em>Traditional: </em>{before}</span>
+                <span role="cell"><em>With SORA: </em>{after}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section id="features" className="tight">
+        <div className="wrap split">
+          <div className="head" data-reveal><span className="eyebrow">What is included</span><h2>Built and working today.</h2><p className="lead">We only list what SORA does now. What is still being built is marked as such.</p></div>
+          <div data-reveal>
+            <ul className="checks">{NOW.map((f) => <li key={f}>{f}</li>)}</ul>
+            <p className="mono checks__label">In development</p>
+            <ul className="checks checks--later">{NEXT.map((f) => <li key={f}>{f}</li>)}</ul>
+          </div>
+        </div>
+      </section>
+
+      <section id="founding" className="dark">
+        <div className="wrap split">
+          <div className="head" data-reveal>
+            <span className="eyebrow">Founding Restaurant Programme</span>
+            <h2>Be one of the first restaurants on SORA.</h2>
+            <p className="lead">We are working with a small group of sit-down restaurants to launch SORA. Founding restaurants join on a discounted, paid introductory partnership. The price is set around your restaurant and agreed with you in writing before any paid service starts.</p>
+            <Link className="btn" href="/waitlist">Become a founding restaurant <Arrow /></Link>
+          </div>
+          <ol className="numbered" data-reveal>
+            <li><span>01</span><p><strong>Introductory pricing.</strong> A reduced rate for founding restaurants, agreed up front.</p></li>
+            <li><span>02</span><p><strong>Set up with you.</strong> Your menu, tables and QR codes, prepared together before your first service.</p></li>
+            <li><span>03</span><p><strong>A direct line.</strong> You speak to the people building SORA, and your feedback shapes what comes next.</p></li>
+          </ol>
+        </div>
+      </section>
+
+      <section id="contact">
+        <div className="wrap contact">
+          <div className="head" data-reveal>
+            <span className="eyebrow">Contact</span>
+            <h2>See SORA in your restaurant.</h2>
+            <p className="lead">Send a short enquiry and we will arrange a demonstration. Or email us directly at <a className="link" href={`mailto:${EMAIL}`} style={{ color: "var(--ink)", overflowWrap: "anywhere" }}>{EMAIL}</a>.</p>
+            <div className="hero__cta">
+              <Link className="btn" href="/waitlist">Send an enquiry <Arrow /></Link>
+              <a className="btn btn--ghost" href={`mailto:${EMAIL}?subject=${encodeURIComponent("SORA demonstration")}`}>Email SORA</a>
+            </div>
+          </div>
+          <a className="contact__qr" href={DEMO_URL} data-reveal>
+            <Qr />
+            <span className="mono">Scan to try the guest menu</span>
+          </a>
         </div>
       </section>
     </>

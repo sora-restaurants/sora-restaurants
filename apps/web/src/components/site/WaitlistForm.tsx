@@ -92,8 +92,8 @@ export function WaitlistForm() {
 
   if (done) return (
     <div className="card done" role="status">
-      <h2 ref={heading} tabIndex={-1}>You’re on the list.</h2>
-      <p>We received your enquiry for {done.restaurantName}. We will contact you to discuss a demonstration and pilot availability.</p>
+      <h2 ref={heading} tabIndex={-1}>Thank you. We have your enquiry.</h2>
+      <p>We received your enquiry for {done.restaurantName}. We will contact you to arrange a demonstration and discuss the Founding Restaurant Programme.</p>
       <div className="ref"><span className="dim">Your reference</span><b>{done.reference}</b></div>
       <Link className="btn" href="/">Return to the homepage</Link>
     </div>
@@ -103,7 +103,7 @@ export function WaitlistForm() {
     <form className="card" method="post" onSubmit={submit} noValidate aria-labelledby="wl-heading">
       <h2 id="wl-heading" style={{ fontSize: "clamp(26px, 3vw, 36px)" }}>Tell us where to reach you.</h2>
       <p className="dim" style={{ margin: "12px 0 24px" }}>Add an email address or phone number. We can discuss your POS and restaurant setup during the follow-up.</p>
-      <noscript><p className="alert">Enable JavaScript to use this form, or email <a className="link" href="mailto:Sora.administration@gmail.com">Sora.administration@gmail.com</a> to enquire about the pilot.</p></noscript>
+      <noscript><p className="alert">Enable JavaScript to use this form, or email <a className="link" href="mailto:Sora.administration@gmail.com">Sora.administration@gmail.com</a> to enquire.</p></noscript>
       <div className="fields">
         {Object.entries(LABELS).map(([name, label]) => {
           const field = name as keyof typeof EMPTY;
@@ -136,7 +136,7 @@ export function WaitlistForm() {
       </label>
       {errors.consent ? <p className="err" id="consent-err">{errors.consent}</p> : null}
       {failure ? <p className="alert" role="alert">{failure} You can also <a className="link" href="mailto:Sora.administration@gmail.com">email SORA</a>.</p> : null}
-      <div className="form__nav"><span className="dim" style={{ fontSize: 14 }}>Free to join.</span><button className="btn" type="submit" disabled={busy || !ready} aria-busy={busy}>{busy ? "Submitting…" : "Join the waitlist"}</button></div>
+      <div className="form__nav"><span className="dim" style={{ fontSize: 14 }}>No commitment.</span><button className="btn" type="submit" disabled={busy || !ready} aria-busy={busy}>{busy ? "Submitting…" : "Send enquiry"}</button></div>
       <div className="draft-note">
         <small>Your details are saved in this browser tab until you submit or clear them.</small>
         <button type="button" className="link" disabled={busy || !ready} onClick={() => {

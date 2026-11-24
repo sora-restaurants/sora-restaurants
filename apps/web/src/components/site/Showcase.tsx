@@ -2,7 +2,7 @@
 
 import { useState, type KeyboardEvent, type ReactNode } from "react";
 
-export type Tab = { id: string; label: string; title: string; text: string; ui: ReactNode };
+export type Tab = { id: string; label: string; title: string; points: string[]; ui: ReactNode };
 
 /** The product showcase tabs. Arrow keys move between tabs, as a tab list should. */
 export function Showcase({ tabs }: { tabs: Tab[] }) {
@@ -28,7 +28,7 @@ export function Showcase({ tabs }: { tabs: Tab[] }) {
         <div className="show__copy">
           <span className="eyebrow">Product demonstration · sample data</span>
           <h3 style={{ fontSize: "clamp(24px, 3vw, 36px)", letterSpacing: "-0.03em", lineHeight: 1.1 }}>{tab.title}</h3>
-          <p className="dim">{tab.text}</p>
+          <ul className="checks">{tab.points.map((p) => <li key={p}>{p}</li>)}</ul>
         </div>
         <div className="show__ui" key={tab.id}>{tab.ui}</div>
       </div>
