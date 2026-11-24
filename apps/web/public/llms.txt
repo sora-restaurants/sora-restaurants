@@ -1,0 +1,39 @@
+# SORA
+
+> SORA is a South African QR table-ordering system for sit-down restaurants. Guests scan a code on their table, order from their own phone with no app or account, and the order goes straight to a live kitchen screen. Guests can call a waiter with one tap, and owners see orders and sales on a dashboard. SORA runs next to the restaurant's existing till.
+
+SORA is currently onboarding a small group of founding restaurants in South Africa on a discounted, paid introductory partnership. Pricing is agreed with each restaurant in writing before any paid service starts. Enquiries are free and carry no commitment.
+
+## What SORA does today
+
+- QR ordering at every table, on the guest's own phone (no app download, no account)
+- Live kitchen screen: orders arrive exactly as chosen and move from new to preparing to ready
+- Live order tracking on the guest's phone
+- "Call a waiter": staff see which table is asking for help
+- Pay now or pay after the meal, set per restaurant; staff mark bills as paid
+- Menu editing and a sold-out switch that updates every guest's phone
+- Owner dashboard with orders and order value by the hour
+- Runs on the phones, tablets and screens a restaurant already has
+
+## In development (not available yet)
+
+- Direct POS integration. For now SORA runs next to the restaurant's till, which stays as it is.
+- Online card payment. The pay-now flow is built, but no real payment gateway is connected yet.
+
+## Founding Restaurant Programme
+
+- Introductory pricing: a reduced rate for founding restaurants, agreed up front
+- Set up together: menu, tables and QR codes prepared with the restaurant before its first service
+- A direct line to the people building SORA
+
+## Pages
+
+- [Home](https://soraqr.co.za/): how SORA works, the product, comparison with traditional ordering, and the founding programme
+- [Book a demonstration](https://soraqr.co.za/waitlist): short enquiry form for restaurants
+- [Privacy notice](https://soraqr.co.za/privacy): how enquiry information is handled
+- [Guest demo](https://sora-restaurants.vercel.app/t/staging-demo-table-1): try the guest ordering experience with sample data
+
+## Contact
+
+- Email: Sora.administration@gmail.com
+- Location: South Africa
