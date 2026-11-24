@@ -6,7 +6,7 @@ import { assertNoDevLoginInProduction } from "./dev-staff-login.ts";
 afterEach(() => vi.unstubAllEnvs());
 
 describe("dev staff login can never reach production", () => {
-  for (const flag of ["DEV_STAFF_LOGIN", "NEXT_PUBLIC_DEV_STAFF_LOGIN", "DEV_STAFF_LOGIN_SECRET"]) {
+  for (const flag of ["DEV_STAFF_LOGIN", "NEXT_PUBLIC_DEV_STAFF_LOGIN", "DEV_STAFF_LOGIN_SECRET", "DEV_SIMULATED_PAYMENTS"]) {
     it(`a production build refuses to start when ${flag} is set`, () => {
       vi.stubEnv(flag, "1");
       expect(() => nextConfig(PHASE_PRODUCTION_BUILD)).toThrow(/dev staff login/i);
