@@ -144,9 +144,12 @@ describe("admin sign-in", () => {
     expect(sessionValid(undefined, now, env)).toBe(false);
   });
 
-  it("stops password guessing after 8 tries in 15 minutes", () => {
-    const tries = Array.from({ length: 9 }, () => loginAllowed("7.7.7.7", now));
+  it("stops password guessing after 8 tries in 15 minutes, across server instances", async () => {
+    const tries = [];
+    for (let i = 0; i < 9; i++) tries.push(await loginAllowed(db, "7.7.7.7"));
     expect(tries).toEqual([...Array(8).fill(true), false]);
-    expect(loginAllowed("7.7.7.7", now + 16 * 60_000)).toBe(true);
+    expect(await loginAllowed(db, "6.6.6.6")).toBe(true);
+    await pg.query("update admin_login_attempts set at = now() - interval '16 minutes'");
+    expect(await loginAllowed(db, "7.7.7.7")).toBe(true);
   });
 });
