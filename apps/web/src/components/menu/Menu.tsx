@@ -8,12 +8,12 @@ import type { ThemeId } from "../../themes/themes.ts";
 import type { MenuItem, TableMenu } from "./types.ts";
 import { SlideToPay } from "../order/SlideToPay.tsx";
 import { newIdempotencyKey } from "../../lib/idempotency-key.ts";
+import { formatRand } from "../../lib/money.ts";
 import { demoReviewsFor, type DemoReview } from "./demo-reviews.ts";
 import { demoWaitMinutes } from "./demo-extras.ts";
 import { NO_WANT, SPICE, COOKING, ADD_ONS, DRINK_SIZE, DRINK_ICE, DRINK_EXTRAS, COFFEE_MILK, COOL_DRINK_BRAND, COOL_DRINK_TYPE, CHEESECAKE_SLICE, SMOOTHIE_FLAVOUR, WATER_TYPE, STEAK_SIZE, WINGS_SIZE, FRIES_SIZE, FRIES_ADDONS, canChooseDoneness, isDrink, isCoffee, isHotDrink, addOnCost } from "./customise-options.ts";
 
-const money = new Intl.NumberFormat("en-ZA", { style: "currency", currency: "ZAR" });
-const formatCents = (cents: number) => money.format(cents / 100);
+const formatCents = formatRand; // by hand, not Intl: phone and server locale data differ and break hydration
 type Stage = "received" | "preparing" | "ready" | "served" | "cancelled";
 // Kitchen statuses (orders.status) as the guest sees them.
 const STAGE: Record<string, Stage> = { submitted: "received", accepted: "received", preparing: "preparing", ready: "ready", served: "served", rejected: "cancelled", cancelled: "cancelled" };
@@ -24,6 +24,8 @@ type Status =
   | { kind: "placed"; publicRef: string; statusToken?: string; itemCount: number; totalCents: number; payNow: boolean; paid: boolean; stage: Stage; wait: string }
   | { kind: "error"; message: string };
 type Props = { menu: TableMenu; theme: ThemeId; qrToken: string; preview?: boolean };
+
+const SUBMIT_TIMEOUT_MS = 15_000;
 
 const ERRORS: Record<string, string> = {
   item_unavailable: "Something in your order just sold out. Please check the menu and try again.",
@@ -73,6 +75,8 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
   const [filter, setFilter] = useState<string | null>(null);
   const [tableOrders, setTableOrders] = useState<{ ref: string; total: number; count: number }[]>([]);
   const idempotencyKey = useRef<string | null>(null);
+  const sending = useRef(false);
+  const attempt = useRef(0);
   const basketTrigger = useRef<HTMLButtonElement | null>(null);
   const closeBasket = useCallback(() => setBasketOpen(false), []);
   const items = menu.categories.flatMap((category) => category.items);
@@ -111,6 +115,10 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
   };
 
   async function placeOrder() {
+    // Set synchronously so a second tap before React re-renders the disabled button cannot send twice.
+    if (sending.current) return;
+    sending.current = true;
+    const thisAttempt = ++attempt.current;
     idempotencyKey.current ??= newIdempotencyKey();
     setStatus({ kind: "sending" });
     if (qrToken === "preview") { // design-preview pages have no database, so no receipt either
@@ -120,14 +128,23 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
       setTableOrders((prev) => [{ ref: publicRef, total: estimate, count }, ...prev].slice(0, 5));
       setCart({});
       setBasketOpen(false);
+      sending.current = false;
       return;
     }
+    // A Server Action cannot be aborted; after this long we stop waiting and let the guest retry with the same key.
+    const timer = setTimeout(() => {
+      if (attempt.current !== thisAttempt) return;
+      sending.current = false;
+      setStatus({ kind: "error", message: "This is taking too long. Your order may not have been sent. Tap Place order to try again; it won't be sent twice." });
+    }, SUBMIT_TIMEOUT_MS);
     try {
       const result = await submitOrderAction({
         qrToken,
         idempotencyKey: idempotencyKey.current,
         items: orderLines.map((l) => ({ menuItemId: l.item.id, quantity: l.quantity, ...(l.notes ? { notes: l.notes } : {}) })),
       });
+      // A newer retry owns the screen; its answer (same key) is the one to show.
+      if (attempt.current !== thisAttempt) return;
       if (result.ok) {
         void saveCheckoutAction({ statusToken: result.statusToken, paymentChoice, tipPercent, splitWays });
         if (emailReceipt.trim()) void sendReceiptAction({ to: emailReceipt, statusToken: result.statusToken, tipPercent, splitWays, weeklySpecials });
@@ -139,7 +156,10 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
         idempotencyKey.current = null;
       } else setStatus({ kind: "error", message: ERRORS[result.error] ?? "We couldn't send your order. Please try again." });
     } catch {
-      setStatus({ kind: "error", message: "No connection. Your order was not sent yet — please try again." });
+      if (attempt.current === thisAttempt) setStatus({ kind: "error", message: "No connection. Your order was not sent yet — please try again." });
+    } finally {
+      clearTimeout(timer);
+      if (attempt.current === thisAttempt) sending.current = false;
     }
   }
 
@@ -250,6 +270,9 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
           <p className="font-bold">Staff notified{assistanceKind ? ` · ${assistanceKind}` : ""}</p>
           <p className="mt-1 text-sm opacity-80">Someone will be with you shortly.</p>
         </div>
+      )}
+      {status.kind === "error" && !basketOpen && (
+        <p role="alert" className="fixed inset-x-3 bottom-24 z-20 mx-auto max-w-(--t-max) rounded-theme bg-ink p-4 font-bold text-bg shadow-xl sm:bottom-28">{status.message}</p>
       )}
       {assistanceOpen && (
         <div className="fixed inset-0 z-40 flex items-end bg-ink/50 backdrop-blur-sm" onMouseDown={(e) => e.target === e.currentTarget && setAssistanceOpen(false)}>
@@ -697,6 +720,7 @@ function BasketSheet({ returnFocusRef, lines, cart, notes, estimate, status, pay
             Email me the weekly specials
           </label>
           {totalLine}
+          {status.kind === "error" && <p role="alert" className="mb-4 rounded-theme border-2 border-accent p-3 text-sm font-bold">{status.message}</p>}
           <div className="flex gap-2">
             <button type="button" onClick={() => setStep(2)} className="min-h-14 flex-1 rounded-theme border-2 border-line text-sm font-bold">Back</button>
             <button type="button" onClick={onPlace} disabled={status.kind === "sending"} className="flex min-h-14 flex-[2] items-center justify-center gap-3 rounded-theme bg-accent text-lg font-bold text-on-accent disabled:opacity-65">{status.kind === "sending" ? <><span className="spinner" aria-hidden="true" />Sending…</> : "Place order"}</button>

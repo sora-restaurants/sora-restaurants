@@ -9,9 +9,9 @@ import EmbeddedPostgres from 'embedded-postgres';
 import pg from 'pg';
 import { CLUSTER_ROLES, DATABASE_STUB } from '../supabase/tests/real-pg.ts';
 
-const PORT = 54330;
+const PORT = Number(process.env.SORA_DB_PORT ?? 54330); // e2e tests run a second, throwaway cluster
 const DATABASE = 'sora';
-const DATA_DIR = path.resolve('.local-pg');
+const DATA_DIR = path.resolve(process.env.SORA_DB_DIR ?? '.local-pg');
 const ENV_FILE = path.resolve('apps/web/.env.local');
 const SUPERUSER = { user: 'postgres', password: 'postgres' }; // local-only cluster on 127.0.0.1
 
@@ -51,7 +51,9 @@ if (fresh) {
 }
 
 const databaseUrl = `postgresql://${SUPERUSER.user}:${SUPERUSER.password}@127.0.0.1:${PORT}/${DATABASE}`;
-if (!fs.existsSync(ENV_FILE)) {
+if (process.env.SORA_DB_PORT) {
+  // e2e cluster: the test app gets DATABASE_URL from playwright.config.ts; leave the demo's .env.local alone.
+} else if (!fs.existsSync(ENV_FILE)) {
   fs.writeFileSync(ENV_FILE, [
     '# Local demo (pnpm db:local). Never use these values outside this machine.',
     `DATABASE_URL=${databaseUrl}`,

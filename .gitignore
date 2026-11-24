@@ -11,3 +11,6 @@ next-env.d.ts
 .local-pg
 .vercel
 .local-mail
+.local-pg-e2e
+test-results
+playwright-report
