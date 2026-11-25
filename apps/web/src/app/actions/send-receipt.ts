@@ -14,7 +14,7 @@ export async function sendReceiptAction(input: {
   weeklySpecials: boolean;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
   const to = String(input.to ?? "").trim();
-  if (to.length > 200 || !/^[^s@<>]+@[^s@<>]+.[^s@<>]+$/.test(to)) return { ok: false, error: "invalid" };
+  if (to.length > 200 || !/^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(to)) return { ok: false, error: "invalid" };
   if (!/^[0-9a-f]{32}$/.test(String(input.statusToken))) return { ok: false, error: "not_found" };
   const tipPercent = [0, 10, 15, 20].includes(input.tipPercent) ? input.tipPercent : 0;
   const splitWays = [1, 2, 3, 4].includes(input.splitWays) ? input.splitWays : 1;
@@ -26,6 +26,10 @@ export async function sendReceiptAction(input: {
     "select get_order_status($1) s", [input.statusToken]);
   const order = row?.s;
   if (!order) return { ok: false, error: "not_found" };
+
+  // One receipt per order, so a placed order can't be used to spam an inbox.
+  const [claim] = await prodDeps().db.asService<{ ok: boolean }>("select claim_receipt($1) ok", [input.statusToken]);
+  if (!claim?.ok) return { ok: false, error: "already_sent" };
 
   const tip = Math.round(order.totalCents * tipPercent / 100);
   const grand = order.totalCents + tip;

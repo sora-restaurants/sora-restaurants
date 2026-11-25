@@ -60,6 +60,12 @@ export function isHotDrink(name: string, categoryName?: string): boolean {
   return /flat white|latte|cappuccino|espresso|hot chocolate|americano|mocha|chai/i.test(name);
 }
 
+/** Extra cost of one unit's choices: the dish's owner-set options if it has any, else the built-in list. Mirrors submit_order. */
+export function lineExtraCents(item: { options?: { label: string; priceCents: number }[] }, notes: string[]): number {
+  if (!item.options?.length) return addOnCost(notes);
+  return item.options.reduce((sum, o) => sum + (notes.some((n) => n === o.label || n.startsWith(`${o.label} (+`)) ? o.priceCents : 0), 0);
+}
+
 export function addOnCost(notes: string[]): number {
   const priced = [...ADD_ONS, ...CHEESECAKE_SLICE, ...WATER_TYPE, ...STEAK_SIZE, ...WINGS_SIZE, ...FRIES_ADDONS];
   return notes.reduce((sum, n) => {

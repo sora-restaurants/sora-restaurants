@@ -13,7 +13,8 @@ const OVERLAP = "interval '5 seconds'";
 
 const orderQuery = (condition: string) => `
   select o.id, o.public_ref, t.label, o.status, o.total_cents, o.created_at, o.updated_at, o.payment_choice, o.payment_status,
-    coalesce((select json_agg(json_build_object('name', oi.name_snapshot, 'quantity', oi.quantity, 'notes', oi.notes)
+    coalesce((select json_agg(json_build_object('name', oi.name_snapshot, 'quantity', oi.quantity, 'notes', oi.notes,
+                                'station', (select m.station from menu_items i join menus m on m.id = i.menu_id where i.id = oi.menu_item_id))
                               order by oi.name_snapshot)
               from order_items oi where oi.order_id = o.id), '[]') items
   from orders o join tables t on t.restaurant_id = o.restaurant_id and t.id = o.table_id

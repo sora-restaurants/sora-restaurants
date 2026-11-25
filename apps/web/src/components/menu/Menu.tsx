@@ -9,9 +9,10 @@ import type { MenuItem, TableMenu } from "./types.ts";
 import { SlideToPay } from "../order/SlideToPay.tsx";
 import { newIdempotencyKey } from "../../lib/idempotency-key.ts";
 import { formatRand } from "../../lib/money.ts";
+import { BillSplit } from "../order/BillSplit.tsx";
 import { demoReviewsFor, type DemoReview } from "./demo-reviews.ts";
 import { demoWaitMinutes } from "./demo-extras.ts";
-import { NO_WANT, SPICE, COOKING, ADD_ONS, DRINK_SIZE, DRINK_ICE, DRINK_EXTRAS, COFFEE_MILK, COOL_DRINK_BRAND, COOL_DRINK_TYPE, CHEESECAKE_SLICE, SMOOTHIE_FLAVOUR, WATER_TYPE, STEAK_SIZE, WINGS_SIZE, FRIES_SIZE, FRIES_ADDONS, canChooseDoneness, isDrink, isCoffee, isHotDrink, addOnCost } from "./customise-options.ts";
+import { NO_WANT, SPICE, COOKING, ADD_ONS, DRINK_SIZE, DRINK_ICE, DRINK_EXTRAS, COFFEE_MILK, COOL_DRINK_BRAND, COOL_DRINK_TYPE, CHEESECAKE_SLICE, SMOOTHIE_FLAVOUR, WATER_TYPE, STEAK_SIZE, WINGS_SIZE, FRIES_SIZE, FRIES_ADDONS, canChooseDoneness, isDrink, isCoffee, isHotDrink, lineExtraCents } from "./customise-options.ts";
 
 const formatCents = formatRand; // by hand, not Intl: phone and server locale data differ and break hydration
 type Stage = "received" | "preparing" | "ready" | "served" | "cancelled";
@@ -32,8 +33,13 @@ const ERRORS: Record<string, string> = {
   table_not_found: "This table's QR code is no longer active. Please ask your waiter.",
   order_too_large: "That order is too large to send in one go. Please ask your waiter.",
   idempotency_conflict: "Your basket changed while the order was sending. Please review it and try again.",
+  rate_limited: "Lots of orders from this table just now. Please wait a few minutes or ask your waiter.",
   TABLE_SESSION_NOT_ACTIVE: "Ordering has closed for this table. Please ask a member of staff for help.",
 };
+
+// No real payment provider is connected yet, so the fake "Pay now" slider only shows on design previews or
+// a deployment that opts in with NEXT_PUBLIC_DEMO_PAYMENTS=1. Never set that on a live restaurant.
+const DEMO_PAYMENTS = process.env.NEXT_PUBLIC_DEMO_PAYMENTS === "1";
 
 export function Menu({ menu, theme, qrToken, preview = false }: Props) {
   const [cart, setCart] = useState<Record<string, number>>({});
@@ -92,7 +98,7 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
     return [...byNotes].map(([n, quantity]) => ({ item, quantity, notes: n }));
   });
   // Display only. The server prices items and paid options itself, the same way.
-  const estimate = orderLines.reduce((sum, l) => sum + (l.item.priceCents + addOnCost(l.notes ? l.notes.split(", ") : [])) * l.quantity, 0);
+  const estimate = orderLines.reduce((sum, l) => sum + (l.item.priceCents + lineExtraCents(l.item, l.notes ? l.notes.split(", ") : [])) * l.quantity, 0);
 
   const setQuantity = (id: string, quantity: number) => {
     idempotencyKey.current = null;
@@ -288,7 +294,7 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
         </div>
       )}
       <OrderDock triggerRef={basketTrigger} count={count} estimate={estimate} status={status} onOpen={() => setBasketOpen(true)} onDismiss={() => { if (status.kind === "placed" && (status.stage === "served" || status.stage === "cancelled")) { try { sessionStorage.removeItem(trackKey); } catch { /* storage blocked */ } } setStatus({ kind: "idle" }); }} onPaid={() => setStatus((s) => s.kind === "placed" ? { ...s, paid: true } : s)} />
-      {basketOpen && <BasketSheet returnFocusRef={basketTrigger} lines={lines} cart={cart} notes={notes} estimate={estimate} status={status} paymentChoice={paymentChoice} splitWays={splitWays} emailReceipt={emailReceipt} weeklySpecials={weeklySpecials} tipPercent={tipPercent} onPaymentChoice={setPaymentChoice} onSplit={setSplitWays} onEmail={setEmailReceipt} onWeekly={setWeeklySpecials} onTip={setTipPercent} onChange={setQuantity} onClose={closeBasket} onPlace={placeOrder} />}
+      {basketOpen && <BasketSheet returnFocusRef={basketTrigger} lines={lines} cart={cart} notes={notes} estimate={estimate} status={status} paymentChoice={paymentChoice} splitWays={splitWays} emailReceipt={emailReceipt} weeklySpecials={weeklySpecials} tipPercent={tipPercent} onPaymentChoice={setPaymentChoice} onSplit={setSplitWays} onEmail={setEmailReceipt} onWeekly={setWeeklySpecials} onTip={setTipPercent} onChange={setQuantity} onClose={closeBasket} onPlace={placeOrder} showPayNow={DEMO_PAYMENTS || qrToken === "preview"} />}
     </div>
   );
 }
@@ -300,6 +306,7 @@ function EmptyMenu() {
 
 function missingRequired(item: MenuItem, categoryName: string, note: string[]): string[] {
   const missing: string[] = [];
+  if (item.options?.length) return missing; // owner-set options replace the built-in required choices
   const name = item.name;
   if (/steak|ribeye/i.test(name)) {
     if (!STEAK_SIZE.some(s => note.includes(s.label))) missing.push("Size");
@@ -362,7 +369,18 @@ function MenuCard({ item, showRatings, categoryName, quantity, note, index, onCh
         </button>}
         {optsOpen && (
           <div className="mt-3 space-y-3">
-            {isDrink(item.name, categoryName) ? (
+            {item.options?.length ? (
+              <div>
+                <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">Options</p>
+                <div className="flex flex-wrap gap-2">
+                  {item.options.map((o) => {
+                    const label = o.priceCents ? `${o.label} (+${formatCents(o.priceCents)})` : o.label;
+                    const selected = note.includes(label);
+                    return <button key={o.id} type="button" aria-pressed={selected} onClick={() => onNote(item.id, selected ? note.filter((x) => x !== label) : [...note, label])} className={`rounded-full border px-3 py-1 text-xs font-bold ${selected ? "border-accent bg-accent text-on-accent" : "border-line"}`}>{label}</button>;
+                  })}
+                </div>
+              </div>
+            ) : isDrink(item.name, categoryName) ? (
               <>
                 {/^water$/i.test(item.name) ? (
                   <div>
@@ -624,7 +642,10 @@ function OrderDock({ triggerRef, count, estimate, status, onOpen, onDismiss, onP
             <span className="display block text-xl text-on-accent">{stageLabel}</span>
             <span className="mt-1 block text-sm opacity-75">Ref <strong className="tracking-wide text-bg">{status.publicRef}</strong>{status.paid ? " · Demo payment, not charged" : ""}{status.stage === "received" || status.stage === "preparing" ? ` · usually ready in ${status.wait} min` : ""}</span>
           </p>
-          <button type="button" onClick={onDismiss} className="min-h-tap shrink-0 rounded-full border border-bg/30 px-4 font-semibold">Order more</button>
+          <span className="flex shrink-0 flex-wrap justify-end gap-2">
+            {status.statusToken && !status.payNow && <BillSplit token={status.statusToken} />}
+            <button type="button" onClick={onDismiss} className="min-h-tap shrink-0 rounded-full border border-bg/30 px-4 font-semibold">Order more</button>
+          </span>
         </div>
         <div className="relative mt-2 h-2 overflow-hidden rounded-full bg-bg/30">
           {status.stage === "served"
@@ -639,7 +660,7 @@ function OrderDock({ triggerRef, count, estimate, status, onOpen, onDismiss, onP
   return <div className="fixed inset-x-0 bottom-0 z-30 bg-linear-to-t from-bg via-bg to-transparent px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-8"><button ref={triggerRef} type="button" onClick={onOpen} aria-haspopup="dialog" className="mx-auto flex min-h-16 w-full max-w-(--t-max) items-center justify-between gap-4 rounded-theme bg-accent px-5 font-bold text-on-accent shadow-2xl active:scale-[0.99] focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ink"><span className="flex items-center gap-3"><span className="grid size-8 place-items-center rounded-full bg-on-accent text-sm text-accent">{count}</span>View your order</span><span className="tabular-nums">{formatCents(estimate)} <span aria-hidden="true">→</span></span></button></div>;
 }
 
-function BasketSheet({ returnFocusRef, lines, cart, notes, estimate, status, paymentChoice, splitWays, emailReceipt, weeklySpecials, tipPercent, onPaymentChoice, onSplit, onEmail, onWeekly, onTip, onChange, onClose, onPlace }: { returnFocusRef: React.RefObject<HTMLButtonElement | null>; lines: MenuItem[]; cart: Record<string, number>; notes: Record<string, string[][]>; estimate: number; status: Status; paymentChoice: "pay_later" | "pay_now"; splitWays: 1|2|3|4; emailReceipt: string; weeklySpecials: boolean; tipPercent: 0|10|15|20; onPaymentChoice: (c: "pay_later" | "pay_now") => void; onSplit: (n: 1|2|3|4) => void; onEmail: (v: string) => void; onWeekly: (v: boolean) => void; onTip: (p: 0|10|15|20) => void; onChange: (id: string, q: number) => void; onClose: () => void; onPlace: () => void }) {
+function BasketSheet({ returnFocusRef, lines, cart, notes, estimate, status, paymentChoice, splitWays, emailReceipt, weeklySpecials, tipPercent, onPaymentChoice, onSplit, onEmail, onWeekly, onTip, onChange, onClose, onPlace, showPayNow }: { showPayNow: boolean; returnFocusRef: React.RefObject<HTMLButtonElement | null>; lines: MenuItem[]; cart: Record<string, number>; notes: Record<string, string[][]>; estimate: number; status: Status; paymentChoice: "pay_later" | "pay_now"; splitWays: 1|2|3|4; emailReceipt: string; weeklySpecials: boolean; tipPercent: 0|10|15|20; onPaymentChoice: (c: "pay_later" | "pay_now") => void; onSplit: (n: 1|2|3|4) => void; onEmail: (v: string) => void; onWeekly: (v: boolean) => void; onTip: (p: 0|10|15|20) => void; onChange: (id: string, q: number) => void; onClose: () => void; onPlace: () => void }) {
   const dialogRef = useRef<HTMLElement | null>(null);
   const closeRef = useRef<HTMLButtonElement | null>(null);
   const descriptionId = useId();
@@ -673,17 +694,17 @@ function BasketSheet({ returnFocusRef, lines, cart, notes, estimate, status, pay
         <div className="mb-6 flex items-start justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-[0.18em] text-accent">Almost there</p><h2 id="basket-title" className="display mt-1 text-3xl">Your order</h2></div><button ref={closeRef} type="button" onClick={onClose} aria-label="Close basket" className="grid size-12 place-items-center rounded-full border border-line text-2xl focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-accent">×</button></div>
         {step === 1 && (
         <>
-          <ul className="divide-y divide-line/40 border-y border-line/40">{lines.map((item) => <li key={item.id} className="flex items-center justify-between gap-4 py-4"><div className="min-w-0"><h3 className="font-bold">{item.name}</h3>{(notes[item.id] ?? []).map((set, i) => set.length ? <p key={i} className="mt-1 text-xs text-muted">#{i + 1}: {set.join(", ")}</p> : null)}<p className="mt-1 text-sm tabular-nums text-muted">{formatCents(item.priceCents * cart[item.id])}</p></div><QuantityControl item={item} quantity={cart[item.id]} onChange={onChange} /></li>)}</ul>
+          <ul className="divide-y divide-line/40 border-y border-line/40">{lines.map((item) => <li key={item.id} className="flex items-center justify-between gap-4 py-4"><div className="min-w-0"><h3 className="font-bold">{item.name}</h3>{(notes[item.id] ?? []).map((set, i) => set.length ? <p key={i} className="mt-1 text-xs text-muted">#{i + 1}: {set.join(", ")}</p> : null)}<p className="mt-1 text-sm tabular-nums text-muted">{formatCents(Array.from({ length: cart[item.id] }, (_, u) => item.priceCents + lineExtraCents(item, notes[item.id]?.[u] ?? [])).reduce((a, b) => a + b, 0))}</p></div><QuantityControl item={item} quantity={cart[item.id]} onChange={onChange} /></li>)}</ul>
           <div className="flex items-center justify-between py-5 text-lg font-bold"><span>Estimated total</span><span className="tabular-nums">{formatCents(estimate)}</span></div>
           <button type="button" onClick={() => setStep(2)} disabled={lines.length === 0} className="flex min-h-16 w-full items-center justify-center rounded-theme bg-accent px-5 text-lg font-bold text-on-accent">Continue</button>
         </>
       )}
       {step === 2 && (
         <>
-          <div className="mb-4 grid grid-cols-2 gap-2">
+          {showPayNow && <div className="mb-4 grid grid-cols-2 gap-2">
             <button type="button" onClick={() => onPaymentChoice("pay_later")} className={`min-h-12 rounded-theme border-2 px-3 text-sm font-bold ${paymentChoice === "pay_later" ? "border-accent bg-accent text-on-accent" : "border-line"}`}>Pay after my meal</button>
             <button type="button" onClick={() => onPaymentChoice("pay_now")} className={`min-h-12 rounded-theme border-2 px-3 text-sm font-bold ${paymentChoice === "pay_now" ? "border-accent bg-accent text-on-accent" : "border-line"}`}>Pay now</button>
-          </div>
+          </div>}
           <div className="mb-4">
             <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">Add a tip</p>
             <div className="flex gap-2">

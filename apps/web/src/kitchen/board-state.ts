@@ -29,8 +29,18 @@ export const COLUMNS: { id: ColumnId; title: string; statuses: string[] }[] = [
   { id: "ready", title: "Ready", statuses: ["ready"] },
 ];
 
+export type Station = "all" | "kitchen" | "bar";
+
+/** Only the lines this screen cooks; tickets with nothing for this station are hidden. */
+export function forStation(orders: KitchenOrder[], station: Station): KitchenOrder[] {
+  if (station === "all") return orders;
+  return orders
+    .map((o) => ({ ...o, items: o.items.filter((i) => (i.station ?? "kitchen") === station) }))
+    .filter((o) => o.items.length > 0);
+}
+
 /** The board's three columns, each oldest ticket first. */
-export function columns(state: BoardState) {
-  const all = Object.values(state.orders).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+export function columns(state: BoardState, station: Station = "all") {
+  const all = forStation(Object.values(state.orders), station).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
   return COLUMNS.map((col) => ({ ...col, orders: all.filter((o) => col.statuses.includes(o.status)) }));
 }

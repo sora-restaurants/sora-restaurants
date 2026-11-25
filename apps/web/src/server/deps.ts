@@ -8,11 +8,13 @@ export interface Deps {
   db: Db;
   verifyStaffToken(bearer: string): Promise<string | null>;
   pollMs: number;
+  /** Sends a Supabase Auth invite and returns the new user id. Absent when no service key is configured. */
+  inviteUser?(email: string): Promise<string>;
 }
 
 export type SubmitResult =
   | { ok: true; statusToken: string; publicRef: string; replayed: boolean }
-  | { ok: false; httpStatus: 400 | 404 | 409 | 413 | 422 | 500; error: string };
+  | { ok: false; httpStatus: 400 | 404 | 409 | 413 | 422 | 429 | 500; error: string };
 
 export type KitchenOrder = {
   id: string;
@@ -25,5 +27,5 @@ export type KitchenOrder = {
   paid: boolean;
   /** Pay after dinner and not yet paid: staff collect at the table. */
   payAtTable: boolean;
-  items: { name: string; quantity: number; notes: string }[];
+  items: { name: string; quantity: number; notes: string; station?: "kitchen" | "bar" }[];
 };
