@@ -6,7 +6,7 @@ import { forStation } from "../kitchen/board-state.ts";
 import { lineExtraCents } from "../components/menu/customise-options.ts";
 import type { Deps, KitchenOrder } from "./deps.ts";
 import { kitchenStream } from "./kitchen-stream.ts";
-import { ownerCommand, ownerReport, ownerSnapshot } from "./owner-operations.ts";
+import { ownerCommand, ownerReport, ownerSnapshot, ownerStats } from "./owner-operations.ts";
 import { readEvents } from "./sse-test-helpers.ts";
 import { submitOrder } from "./submit-order.ts";
 import { testDeps } from "./test-deps.ts";
@@ -87,6 +87,26 @@ describe("reports and branches", () => {
     expect(report.days[0].orders).toBe(1);
     expect(report.topItems[0].quantity).toBe(2);
     expect((await ownerReport(owner("/report?from=2026-12-01&to=2026-01-01"), deps)).status).toBe(400);
+  });
+
+  it("dashboard stats for today, 7 and 30 days count QR orders by hour or by day, without rejected ones", async () => {
+    for (const key of ["k-st-0001", "k-st-0002", "k-st-0003", "k-st-0004"]) expect((await order(undefined, key)).ok).toBe(true);
+    const ids = (await db.query<{ id: string }>("select id from orders order by created_at")).rows.map((r) => r.id);
+    await db.query(`update orders set created_at = now() - interval '3 days' where id = '${ids[1]}'`);
+    await db.query(`update orders set created_at = now() - interval '10 days' where id = '${ids[2]}'`);
+    await db.query(`update orders set status = 'rejected' where id = '${ids[3]}'`);
+    await db.query(`update orders set tip_cents = 1000 where id = '${ids[0]}'`);
+    const stats = async (period: string) => (await ownerStats(owner(`/stats?period=${period}`), deps)).json();
+    const [today, week, month] = [await stats("today"), await stats("7d"), await stats("30d")];
+    expect([today.orders, week.orders, month.orders]).toEqual([1, 2, 3]);
+    expect(month.valueCents).toBe(3 * today.valueCents); // tips are not in the order value
+    expect([today.tipCents, month.tipCents]).toEqual([1000, 1000]);
+    expect(today.byTable).toEqual([{ table: expect.any(String), orders: 1, valueCents: today.valueCents, tipCents: 1000 }]);
+    expect(today.series.at(-1).label).toMatch(/^\d\d:00$/);
+    expect([week.series.length, month.series.length]).toEqual([7, 30]);
+    expect(month.topItems).toEqual([{ name: expect.any(String), quantity: 6 }]);
+    expect((await ownerStats(owner("/stats?period=year"), deps)).status).toBe(400);
+    expect((await ownerStats(owner("/stats", undefined, "token-nobody"), deps)).status).toBe(401);
   });
 
   it("an owner can't open another company's branch by changing the id", async () => {

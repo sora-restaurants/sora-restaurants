@@ -1,6 +1,6 @@
 import QRCode from "qrcode";
 import { z } from "zod";
-import type { OwnerDashboardSnapshot, OwnerReport } from "../owner/session-contract.ts";
+import type { OwnerDashboardSnapshot, OwnerReport, OwnerStats } from "../owner/session-contract.ts";
 import type { Deps } from "./deps.ts";
 
 const Allergens = z.array(z.string().trim().min(1).max(40)).max(14);
@@ -114,6 +114,45 @@ export async function ownerReport(req: Request, deps: Deps): Promise<Response> {
     where ${range} group by 1 order by 2 desc, 1 limit 20`, args);
   const report: OwnerReport = { from, to, days, topItems };
   return Response.json(report, { headers: { "cache-control": "no-store" } });
+}
+
+const PERIOD_DAYS = { today: 1, "7d": 7, "30d": 30 } as const;
+
+/** GET /api/owner/stats?restaurant=&period=today|7d|30d — QR order count and value (excl. tips, cancelled, rejected),
+ * a per-hour (today) or per-day chart and top dishes, in the restaurant's time zone. */
+export async function ownerStats(req: Request, deps: Deps): Promise<Response> {
+  const userId = await user(req, deps);
+  if (!userId) return Response.json({ error: "unauthorized" }, { status: 401 });
+  const { restaurant } = await ownedRestaurants(req, userId, deps);
+  if (!restaurant) return Response.json({ error: "forbidden" }, { status: 403 });
+  const period = new URL(req.url).searchParams.get("period") ?? "today";
+  if (!Object.hasOwn(PERIOD_DAYS, period)) return Response.json({ error: "invalid_period" }, { status: 400 });
+  const days = PERIOD_DAYS[period as OwnerStats["period"]];
+  const unit = period === "today" ? "hour" : "day";
+  const start = "(date_trunc('day', now() at time zone $2) - ($3::int - 1) * interval '1 day')";
+  const where = `o.restaurant_id = $1 and o.status not in ('cancelled','rejected') and o.created_at >= (${start} at time zone $2)`;
+  const args = [restaurant.id, restaurant.timezone, days];
+  // Today's chart starts at the first order's hour; 7 and 30 days show every day, empty ones as 0.
+  const series = await deps.db.asUser<OwnerStats["series"][number] & { valueCents: number }>(userId, `
+    with o as (select date_trunc($4, o.created_at at time zone $2) b, o.total_cents from orders o where ${where}),
+    s as (select generate_series(case when $4 = 'hour' then coalesce((select min(b) from o), date_trunc('hour', now() at time zone $2)) else ${start} end,
+      date_trunc($4, now() at time zone $2), ('1 ' || $4)::interval) b)
+    select to_char(s.b, case when $4 = 'hour' then 'HH24:MI' else 'YYYY-MM-DD' end) "label", count(o.b)::int orders,
+      coalesce(sum(o.total_cents), 0)::int "valueCents"
+    from s left join o on o.b = s.b group by s.b order by s.b`, [...args, unit]);
+  const topItems = await deps.db.asUser<OwnerStats["topItems"][number]>(userId, `
+    select oi.name_snapshot "name", sum(oi.quantity)::int quantity
+    from order_items oi join orders o on o.restaurant_id = oi.restaurant_id and o.id = oi.order_id
+    where ${where} group by 1 order by 2 desc, 1 limit 5`, args);
+  const byTable = await deps.db.asUser<OwnerStats["byTable"][number]>(userId, `
+    select t.label "table", count(*)::int orders, sum(o.total_cents)::int "valueCents", sum(o.tip_cents)::int "tipCents"
+    from orders o join tables t on t.restaurant_id = o.restaurant_id and t.id = o.table_id
+    where ${where} group by t.label order by 3 desc, 1`, args);
+  const stats: OwnerStats = { period: period as OwnerStats["period"],
+    orders: series.reduce((n, b) => n + b.orders, 0), valueCents: series.reduce((n, b) => n + b.valueCents, 0),
+    tipCents: byTable.reduce((n, t) => n + t.tipCents, 0),
+    series: series.map(({ label, orders }) => ({ label, orders })), topItems, byTable };
+  return Response.json(stats, { headers: { "cache-control": "no-store" } });
 }
 
 export async function ownerCommand(req: Request, deps: Deps): Promise<Response> {

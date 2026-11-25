@@ -45,6 +45,12 @@ function OwnerSession({ auth }: { auth: StaffAuth }) {
       if (!res.ok) throw new Error("report_failed");
       return res.json();
     },
+    stats: async (period) => {
+      const token = await auth.getToken();
+      const res = await fetch(`/api/owner/stats?restaurant=${snapshot.restaurantId}&period=${period}`, { headers: { authorization: `Bearer ${token}` } });
+      if (!res.ok) throw new Error("stats_failed");
+      return res.json();
+    },
   };
   // key: a branch switch starts the dashboard fresh with that branch's snapshot.
   return <OwnerDashboard key={snapshot.restaurantId} initial={snapshot} sessionAdapter={adapter} onSwitchBranch={(id) => { setSnapshot(null); setBranch(id); }} onSignOut={() => void auth.signOut()} />;

@@ -97,20 +97,20 @@
 }
 
 .owner-shell {
-  --owner-bg: #f4f1ec;
+  --owner-bg: #ffffff;
   --owner-surface: #ffffff;
-  --owner-card: #faf7f2;
-  --owner-text: #1c1917;
-  --owner-muted: #57534e;
-  --owner-border: rgb(28 25 23 / 0.12);
+  --owner-card: #f4f4f4;
+  --owner-text: #0a0a0a;
+  --owner-muted: #6a6a6a;
+  --owner-border: #e4e4e4;
 }
 .owner-shell[data-mode="dark"] {
-  --owner-bg: #171512;
-  --owner-surface: #25211d;
-  --owner-card: #2d2823;
-  --owner-text: #faf7f2;
-  --owner-muted: #c7c0b6;
-  --owner-border: rgb(250 247 242 / 0.16);
+  --owner-bg: #0a0a0a;
+  --owner-surface: #151515;
+  --owner-card: #1c1c1c;
+  --owner-text: #ffffff;
+  --owner-muted: #9b9b9b;
+  --owner-border: #262626;
   color-scheme: dark;
 }
 .owner-login input,

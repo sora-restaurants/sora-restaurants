@@ -35,6 +35,19 @@ export type OwnerReport = {
   topItems: { name: string; quantity: number; totalCents: number }[];
 };
 
+/** QR orders only (every order is a QR order); value excludes tips, cancelled and rejected orders. */
+export type OwnerStats = {
+  period: "today" | "7d" | "30d";
+  orders: number;
+  valueCents: number;
+  /** Tips on those orders, kept apart from the order value. */
+  tipCents: number;
+  /** Per hour ("17:00") for today, per day ("2026-11-25") for 7 and 30 days. */
+  series: { label: string; orders: number }[];
+  topItems: { name: string; quantity: number }[];
+  byTable: { table: string; orders: number; valueCents: number; tipCents: number }[];
+};
+
 export type SessionCommandResult =
   | { ok: true; table: ManagedTable }
   | { ok: false; code: "TABLE_DISABLED" | "SESSION_ALREADY_OPEN" | "SESSION_ALREADY_CLOSED" };
@@ -51,5 +64,6 @@ export interface TableSessionAdapter {
   /** Any other owner command (options, station, staff); returns the refreshed snapshot. */
   command?(body: object): Promise<OwnerDashboardSnapshot>;
   report?(from: string, to: string): Promise<OwnerReport>;
+  stats?(period: OwnerStats["period"]): Promise<OwnerStats>;
 }
 
