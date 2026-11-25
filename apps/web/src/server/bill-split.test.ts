@@ -86,7 +86,9 @@ describe("bill splitting", () => {
     expect(await orderPaid()).toBe("paid");
     expect(await unpaid()).toEqual({ orders: [], shares: [] });
     expect(await owes()).toBe(0);
-    expect((await bill(token)).shares.every((s) => s.paid)).toBe(true);
+    // Everything is paid, so the table session closes (next scan starts a fresh visit) and the bill is gone.
+    expect((await db.query<{ status: string }>("select status from table_sessions where table_id = $1", [tableId])).rows.map((r) => r.status)).toEqual(["closed"]);
+    expect((await guestBill(token, deps)).status).toBe(404);
   });
 
   it("another restaurant's staff can't split, see or settle the bill", async () => {
