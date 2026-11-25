@@ -4,7 +4,7 @@ import { type FormEvent, useState } from "react";
 import type { StaffAuth } from "./staff-auth.ts";
 
 // Shared by the kitchen board and the waiter screen.
-export function SignIn({ auth }: { auth: StaffAuth }) {
+export function SignIn({ auth, title = "Kitchen sign in" }: { auth: StaffAuth; title?: string }) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -21,7 +21,7 @@ export function SignIn({ auth }: { auth: StaffAuth }) {
   return (
     <Screen>
       <form onSubmit={submit} className="flex w-full max-w-md flex-col gap-4 text-left">
-        <h1 className="text-4xl uppercase">Kitchen sign in</h1>
+        <h1 className="text-4xl uppercase">{title}</h1>
         {auth.mode === "dev" ? (
           <p className="border-4 border-[oklch(82%_0.17_78)] p-3 text-xl text-[oklch(82%_0.17_78)]">
             Local demo login. Seeded staff accounts only.
