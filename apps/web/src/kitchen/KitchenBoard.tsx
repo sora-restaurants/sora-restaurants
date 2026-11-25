@@ -23,12 +23,12 @@ const STOP: Record<ColumnId, { to: Target; label: string }> = {
 };
 
 // Solid, high-contrast blocks (WCAG: amber/green carry black text, blue carries white).
-export const CARD: Record<ColumnId, string> = {
+const CARD: Record<ColumnId, string> = {
   new: "kds-new bg-[oklch(82%_0.17_78)] text-black",
   cooking: "bg-[oklch(42%_0.2_262)] text-white",
   ready: "bg-[oklch(80%_0.21_145)] text-black",
 };
-export const BUTTON: Record<ColumnId, string> = {
+const BUTTON: Record<ColumnId, string> = {
   new: "bg-black text-[oklch(82%_0.17_78)]",
   cooking: "bg-white text-[oklch(32%_0.2_262)]",
   ready: "bg-black text-[oklch(80%_0.21_145)]",
@@ -180,7 +180,7 @@ function Ticket({ order, column, now, onAdvance }: { order: KitchenOrder; column
   );
 }
 
-export function ConnectionPill({ connection }: { connection: Connection }) {
+function ConnectionPill({ connection }: { connection: Connection }) {
   const live = connection === "live";
   return (
     <p role="status" className={`shrink-0 px-2 py-1 text-sm uppercase sm:px-3 sm:text-xl ${live ? "bg-[oklch(80%_0.21_145)] text-black" : "bg-[oklch(55%_0.22_28)] text-white"}`}>
