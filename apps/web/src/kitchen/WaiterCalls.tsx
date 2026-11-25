@@ -1,7 +1,7 @@
 "use client";
 
-import { type FormEvent, type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
-import { ColorModeToggle, useColorMode } from "../components/ColorModeToggle.tsx";
+import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
+import { EYEBROW, Screen, Shell, SignIn } from "./StaffSignIn.tsx";
 import { formatRand } from "../lib/money.ts";
 import { type StaffAuth, staffAuth } from "./staff-auth.ts";
 
@@ -27,7 +27,7 @@ function WaiterSession({ auth }: { auth: StaffAuth }) {
   }, [auth]);
 
   if (token === undefined) return <Screen>Loading…</Screen>;
-  if (!token) return <WaiterSignIn auth={auth} />;
+  if (!token) return <SignIn auth={auth} title="Waiter sign in" demo="waiter@demo.test / demo-waiter-pass" />;
   return <CallList token={token} onSignOut={() => void auth.signOut()} />;
 }
 
@@ -174,30 +174,12 @@ function CallList({ token, onSignOut }: { token: string; onSignOut: () => void }
   );
 }
 
-const EYEBROW = "text-xs font-black uppercase tracking-[0.18em] text-[#C45C26]";
 // Thumb-sized action in the owner dashboard's button shape.
 const TAP = "min-h-14 w-full rounded-xl text-xl font-black transition-transform active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2";
 
 const minutesSince = (iso: string, now: number) => Math.max(0, Math.floor((now - Date.parse(iso)) / 60_000));
 
 /** Owner-dashboard page shell, with its light/dark tokens and toggle. */
-// Pass a function to place the light/dark toggle yourself; otherwise it sits top right.
-function Shell({ children, center = false }: { children: ReactNode | ((toggle: ReactNode) => ReactNode); center?: boolean }) {
-  const { mode, toggle } = useColorMode("sora-waiter-color-mode");
-  const button = <ColorModeToggle mode={mode} onToggle={toggle} className="border-[var(--owner-border)]" />;
-  return (
-    <main data-mode={mode} className={`owner-shell min-h-dvh bg-[var(--owner-bg)] px-3 py-4 font-[family-name:var(--font-manrope)] text-[var(--owner-text)] sm:px-6 ${center ? "owner-login grid place-items-center" : ""}`}>
-      <div className={`mx-auto w-full ${center ? "max-w-md" : "max-w-5xl"}`}>
-        {typeof children === "function" ? children(button) : <><div className="mb-2 flex justify-end">{button}</div>{children}</>}
-      </div>
-    </main>
-  );
-}
-
-function Screen({ children }: { children: ReactNode }) {
-  return <Shell center><p className="rounded-3xl bg-[var(--owner-surface)] p-6 text-center text-xl font-bold shadow-sm">{children}</p></Shell>;
-}
-
 /** An owner-dashboard section card: eyebrow, heading and a count. */
 function Section({ eyebrow, title, count, children }: { eyebrow: string; title: string; count: number; children: ReactNode }) {
   return (
@@ -247,28 +229,3 @@ function UnpaidRow({ table, amountCents, detail, onPaid }: { table: string; amou
   );
 }
 
-/** The owner sign-in card, worded for floor staff. */
-function WaiterSignIn({ auth }: { auth: StaffAuth }) {
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    setBusy(true);
-    setError(await auth.signIn(String(form.get("email")), String(form.get("password"))));
-    setBusy(false);
-  }
-  const field = "mt-2 min-h-14 w-full rounded-xl border border-[var(--owner-border)] bg-white px-4 text-[#1C1917] caret-[#1C1917]";
-  return (
-    <Shell center>
-      <form onSubmit={submit} className="w-full space-y-4 rounded-3xl bg-[var(--owner-surface)] p-6 text-left shadow-xl sm:p-8">
-        <h1 className="text-4xl font-black">Waiter sign in</h1>
-        {auth.mode === "dev" && <p className="rounded-xl bg-[#F5DFC1] p-3 text-sm text-[#70420F]">Local demo: waiter@demo.test / demo-waiter-pass</p>}
-        <label className="block font-bold">Email<input name="email" type="email" autoComplete="username" required className={field} /></label>
-        <label className="block font-bold">Password<input name="password" type="password" autoComplete="current-password" required className={field} /></label>
-        {error && <p role="alert" className="rounded-xl bg-[#F5DFC1] p-3 text-[#70420F]">{error}</p>}
-        <button disabled={busy} className="min-h-14 w-full rounded-xl bg-[#C45C26] font-black text-white">{busy ? "Signing in…" : "Sign in"}</button>
-      </form>
-    </Shell>
-  );
-}
