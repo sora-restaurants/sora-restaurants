@@ -600,7 +600,7 @@ function MenuCard({ item, showRatings, categoryName, quantity, note, index, onCh
         <div className="mt-auto flex justify-end pt-5">
           {item.soldOut ? <span className="inline-flex min-h-12 items-center rounded-full bg-highlight px-4 text-sm font-bold text-on-highlight">Sold out</span> : (() => {
             const missing = missingRequired(item, categoryName, note);
-            if (quantity === 0) return <button type="button" onClick={() => { if (missing.length > 0) { setOptsOpen(true); return; } onChange(item.id, 1); setOptsOpen(false); }} aria-label={`Add ${item.name}`} className="add-button focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ink">{missing.length > 0 ? (optsOpen ? `Choose ${missing[0]}` : <><span aria-hidden="true">＋</span> Add to order</>) : <><span aria-hidden="true">＋</span> Add to order</>}</button>;
+            if (quantity === 0) return <button type="button" onClick={() => { if (missing.length > 0) { setOptsOpen(true); return; } onChange(item.id, 1); setOptsOpen(Boolean(item.options?.length)); }} aria-label={`Add ${item.name}`} className="add-button focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ink">{missing.length > 0 ? (optsOpen ? `Choose ${missing[0]}` : <><span aria-hidden="true">＋</span> Add to order</>) : <><span aria-hidden="true">＋</span> Add to order</>}</button>;
             return <QuantityControl item={item} quantity={quantity} onChange={onChange} missing={missing} />;
           })()}
         </div>
