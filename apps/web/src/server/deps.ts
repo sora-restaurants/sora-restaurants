@@ -23,5 +23,5 @@ export type KitchenOrder = {
   status: string;
   totalCents: number;
   createdAt: string;
-  items: { name: string; quantity: number; notes: string; station?: "kitchen" | "bar" }[];
+  items: { name: string; quantity: number; notes: string; station?: "kitchen" | "bar"; prep?: "new" | "preparing" | "ready" }[];
 };

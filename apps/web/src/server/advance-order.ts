@@ -8,20 +8,23 @@ export type BoardMove = (typeof BOARD_MOVES)[number];
 
 const json = (status: number, body: object) => Response.json(body, { status });
 
-/** POST /api/kitchen/orders/:id/advance  { "to": "preparing" | "ready" | "served" | "rejected" | "cancelled" } */
+/** POST /api/kitchen/orders/:id/advance  { "to": "preparing" | "ready" | "served" | "rejected" | "cancelled", "station"?: "kitchen" | "bar" }
+ *  With a station, Start and Ready move only that screen's lines. */
 export async function advanceOrder(req: Request, orderId: string, deps: Deps): Promise<Response> {
   const bearer = req.headers.get("authorization")?.match(/^Bearer (.+)$/)?.[1];
   const userId = bearer ? await deps.verifyStaffToken(bearer) : null;
   if (!userId) return json(401, { error: "unauthorized" });
   if (!UUID.test(orderId)) return json(404, { error: "not_found" });
 
-  const to = await req.json().then((body: { to?: unknown }) => body?.to, () => undefined);
+  type Body = { to?: unknown; station?: unknown };
+  const { to, station = null }: Body = await req.json().then((b: Body) => b ?? {}, () => ({}));
   if (!BOARD_MOVES.includes(to as BoardMove)) return json(400, { error: "invalid_target" });
+  if (station !== null && station !== "kitchen" && station !== "bar") return json(400, { error: "invalid_station" });
 
   try {
     // One call, one transaction: a multi-step move (Start) happens completely or not at all.
     // Restaurant and role come from the staff user's session inside the database, never from the request.
-    await deps.db.asUser(userId, "select kitchen_move($1, $2)", [orderId, to]);
+    await deps.db.asUser(userId, "select kitchen_move($1, $2, $3)", [orderId, to, station]);
   } catch (error) {
     const message = error instanceof Error ? error.message : "";
     if (message === "not_found") return json(404, { error: "not_found" });

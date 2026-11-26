@@ -49,16 +49,17 @@ function LiveBoard({ restaurant, auth }: { restaurant: Restaurant; auth: StaffAu
   const { board, connection, dispatch } = useKitchenStream(restaurant.id, getToken);
 
   const advance = useCallback(
-    async (order: KitchenOrder, to: Target) => {
+    async (order: KitchenOrder, to: Target, station?: "kitchen" | "bar") => {
       const token = await getToken();
       const res = await fetch(`/api/kitchen/orders/${order.id}/advance`, {
         method: "POST",
         headers: { "content-type": "application/json", ...(token ? { authorization: `Bearer ${token}` } : {}) },
-        body: JSON.stringify({ to }),
+        body: JSON.stringify({ to, station }),
       });
       if (!res.ok && res.status !== 409) throw new Error(`advance ${res.status}`);
       // 409 means another tablet already moved it; the stream brings the true state either way.
-      if (res.ok) {
+      // A station move changes only some lines; the stream brings the result.
+      if (res.ok && !(station && (to === "preparing" || to === "ready"))) {
         dispatch(
           LEAVES_BOARD.includes(to)
             ? { event: "order_removed", data: { id: order.id, status: to } }

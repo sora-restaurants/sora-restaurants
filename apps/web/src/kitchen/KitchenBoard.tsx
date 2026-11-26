@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { KitchenOrder } from "../server/deps.ts";
 import { ColorModeToggle, useColorMode } from "../components/ColorModeToggle.tsx";
-import { type BoardState, type ColumnId, type Station, columns } from "./board-state.ts";
+import { type BoardState, type ColumnId, type Station, type StationOrder, columns } from "./board-state.ts";
 import { EYEBROW, STAFF_COLOR_KEY } from "./StaffSignIn.tsx";
 
 export type Connection = "connecting" | "live" | "reconnecting" | "denied";
@@ -41,7 +41,8 @@ type Props = {
   restaurant: string;
   board: BoardState;
   connection: Connection;
-  onAdvance: (order: KitchenOrder, to: Target) => Promise<void>;
+  /** station is set when a Kitchen or Bar screen moves only its own lines. */
+  onAdvance: (order: KitchenOrder, to: Target, station?: "kitchen" | "bar") => Promise<void>;
   onSignOut?: () => void;
 };
 
@@ -109,7 +110,7 @@ export function KitchenBoard({ restaurant, board, connection, onAdvance, onSignO
             </h2>
             <ol className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto overscroll-contain p-2 sm:gap-3 sm:p-3">
               {col.orders.map((order) => (
-                <Ticket key={order.id} order={order} column={col.id} now={now} onAdvance={onAdvance} />
+                <Ticket key={order.id} order={order} column={col.id} now={now} onAdvance={(o, to) => onAdvance(o, to, station === "all" ? undefined : station)} />
               ))}
             </ol>
           </section>
@@ -125,7 +126,7 @@ export function KitchenBoard({ restaurant, board, connection, onAdvance, onSignO
   );
 }
 
-function Ticket({ order, column, now, onAdvance }: { order: KitchenOrder; column: ColumnId; now: number; onAdvance: Props["onAdvance"] }) {
+function Ticket({ order, column, now, onAdvance }: { order: StationOrder; column: ColumnId; now: number; onAdvance: (order: KitchenOrder, to: Target) => Promise<void> }) {
   const [state, setState] = useState<"idle" | "sending" | "failed">("idle");
   const [confirming, setConfirming] = useState(false);
   const minutes = Math.max(0, Math.floor((now - Date.parse(order.createdAt)) / 60_000));
@@ -175,10 +176,10 @@ function Ticket({ order, column, now, onAdvance }: { order: KitchenOrder; column
         <button
           type="button"
           onClick={() => send(action.to)}
-          disabled={state === "sending" || confirming}
+          disabled={state === "sending" || confirming || !!order.waitingOn}
           className={`min-h-14 min-w-14 w-full rounded-xl text-2xl font-black transition-transform active:scale-[0.97] disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 sm:min-h-16 sm:text-3xl ${BUTTON[column]}`}
         >
-          {state === "sending" ? "…" : state === "failed" ? `Retry ${action.label}` : action.label}
+          {order.waitingOn ? `Waiting for ${order.waitingOn}` : state === "sending" ? "…" : state === "failed" ? `Retry ${action.label}` : action.label}
         </button>
         <button
           type="button"
