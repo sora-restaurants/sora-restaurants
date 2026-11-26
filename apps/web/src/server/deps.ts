@@ -27,5 +27,5 @@ export type KitchenOrder = {
   paid: boolean;
   /** Pay after dinner and not yet paid: staff collect at the table. */
   payAtTable: boolean;
-  items: { name: string; quantity: number; notes: string; station?: "kitchen" | "bar" }[];
+  items: { name: string; quantity: number; notes: string; station?: "kitchen" | "bar"; prep?: "new" | "preparing" | "ready" }[];
 };

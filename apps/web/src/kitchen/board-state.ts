@@ -31,16 +31,26 @@ export const COLUMNS: { id: ColumnId; title: string; statuses: string[] }[] = [
 
 export type Station = "all" | "kitchen" | "bar";
 
-/** Only the lines this screen cooks; tickets with nothing for this station are hidden. */
-export function forStation(orders: KitchenOrder[], station: Station): KitchenOrder[] {
+/** A ticket as one screen sees it; `waitingOn` names the other screen when this part is ready and that one is not. */
+export type StationOrder = KitchenOrder & { waitingOn?: "kitchen" | "bar" };
+
+/** Only the lines this screen makes, in this screen's own stage; tickets with nothing for this station are hidden. */
+export function forStation(orders: KitchenOrder[], station: Station): StationOrder[] {
   if (station === "all") return orders;
-  return orders
-    .map((o) => ({ ...o, items: o.items.filter((i) => (i.station ?? "kitchen") === station) }))
-    .filter((o) => o.items.length > 0);
+  return orders.flatMap((o) => {
+    const items = o.items.filter((i) => (i.station ?? "kitchen") === station);
+    if (items.length === 0) return [];
+    // Lines from before per-station progress have no prep: they follow the order.
+    const prep = (i: KitchenOrder["items"][number]) => i.prep ?? (o.status === "ready" ? "ready" : o.status === "preparing" ? "preparing" : "new");
+    const status = o.status === "ready" || items.every((i) => prep(i) === "ready") ? "ready"
+      : items.some((i) => prep(i) !== "new") ? "preparing" : "submitted";
+    const waitingOn = status === "ready" && o.status !== "ready" ? (station === "bar" ? "kitchen" : "bar") : undefined;
+    return [{ ...o, items, status, waitingOn }];
+  });
 }
 
 /** The board's three columns, each oldest ticket first. */
-export function columns(state: BoardState, station: Station = "all") {
+export function columns(state: BoardState, station: Station = "all"): { id: ColumnId; title: string; statuses: string[]; orders: StationOrder[] }[] {
   const all = forStation(Object.values(state.orders), station).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
   return COLUMNS.map((col) => ({ ...col, orders: all.filter((o) => col.statuses.includes(o.status)) }));
 }

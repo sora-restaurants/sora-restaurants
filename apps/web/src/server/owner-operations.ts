@@ -16,7 +16,7 @@ const Command = z.discriminatedUnion("action", [
   z.object({ action: z.literal("addOption"), itemId: z.string().uuid(), label: z.string().trim().min(1).max(60).regex(/^[^,]+$/),
     priceCents: z.number().int().min(0).max(100000) }).strict(),
   z.object({ action: z.literal("deleteOption"), optionId: z.string().uuid() }).strict(),
-  z.object({ action: z.literal("setStation"), menuId: z.string().uuid(), station: z.enum(["kitchen", "bar"]) }).strict(),
+  z.object({ action: z.literal("setStation"), menuId: z.string().uuid(), station: z.enum(["kitchen", "bar", "auto"]) }).strict(),
   z.object({ action: z.literal("inviteStaff"), restaurantId: z.string().uuid(), email: z.string().trim().email().max(200),
     role: z.enum(["manager", "kitchen", "waiter"]) }).strict(),
   z.object({ action: z.literal("setStaffStatus"), membershipId: z.string().uuid(), status: z.enum(["active", "inactive"]) }).strict(),
@@ -54,8 +54,8 @@ export async function ownerSnapshot(req: Request, deps: Deps): Promise<Response>
     select coalesce(sum(total_cents), 0)::int cents, coalesce(sum(total_cents) filter (where payment_status = 'paid'), 0)::int paid from orders
     where restaurant_id = $1 and status not in ('cancelled','rejected')
       and created_at >= (date_trunc('day', now() at time zone $2) at time zone $2)`, [restaurant.id, restaurant.timezone]);
-  const menuRows = await deps.db.asUser<{ category_id: string; category_name: string; station: "kitchen" | "bar"; item_id: string | null; item_name: string | null; description: string | null; price_cents: number | null; image_url: string | null; dietary_tags: string[] | null; allergens: string[] | null; available: boolean | null; sold_out: boolean | null; options: { id: string; label: string; priceCents: number }[] | string | null }>(userId, `
-    select m.id category_id, m.name category_name, m.station, i.id item_id, i.name item_name, i.description,
+  const menuRows = await deps.db.asUser<{ category_id: string; category_name: string; station: "kitchen" | "bar" | "auto"; item_id: string | null; item_name: string | null; description: string | null; price_cents: number | null; image_url: string | null; dietary_tags: string[] | null; allergens: string[] | null; available: boolean | null; sold_out: boolean | null; options: { id: string; label: string; priceCents: number }[] | string | null }>(userId, `
+    select m.id category_id, m.name category_name, coalesce(m.station, 'auto') station, i.id item_id, i.name item_name, i.description,
       i.price_cents, i.image_url, i.dietary_tags, i.allergens, i.available, i.sold_out,
       (select coalesce(json_agg(json_build_object('id', o.id, 'label', o.label, 'priceCents', o.price_cents) order by o.sort_order), '[]')
          from menu_item_options o where o.menu_item_id = i.id) options

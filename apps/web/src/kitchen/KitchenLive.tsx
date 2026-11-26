@@ -27,15 +27,15 @@ function saveChoice(id: string | null) {
 }
 
 /** Kitchen tablet: sign in, pick up the staff member's restaurant, show its live board. */
-export function KitchenLive() {
+export function KitchenLive({ screen = "kitchen" }: { screen?: "kitchen" | "bar" } = {}) {
   const auth = useMemo(staffAuth, []);
   if (!auth) {
     return <Screen>Kitchen board is not configured: set the Supabase variables, or the dev login for a local demo.</Screen>;
   }
-  return <KitchenSession auth={auth} />;
+  return <KitchenSession auth={auth} screen={screen} />;
 }
 
-function KitchenSession({ auth }: { auth: StaffAuth }) {
+function KitchenSession({ auth, screen }: { auth: StaffAuth; screen: "kitchen" | "bar" }) {
   const [token, setToken] = useState<string | null | undefined>(undefined);
   const [restaurants, setRestaurants] = useState<Restaurant[] | null>(null);
   const [chosen, setChosen] = useState<string | null>(() => readChoice());
@@ -88,25 +88,26 @@ function KitchenSession({ auth }: { auth: StaffAuth }) {
     setChosen(null);
     void auth.signOut();
   };
-  return <LiveBoard key={restaurant.id} restaurant={restaurant} auth={auth} onSignOut={signOut} />;
+  return <LiveBoard key={restaurant.id} restaurant={restaurant} auth={auth} onSignOut={signOut} screen={screen} />;
 }
 
-function LiveBoard({ restaurant, auth, onSignOut }: { restaurant: Restaurant; auth: StaffAuth; onSignOut: () => void }) {
+function LiveBoard({ restaurant, auth, onSignOut, screen }: { restaurant: Restaurant; auth: StaffAuth; onSignOut: () => void; screen: "kitchen" | "bar" }) {
   // Always the current token, so reconnects after a refresh keep working.
   const getToken = useCallback(() => auth.getToken(), [auth]);
   const { board, connection, dispatch } = useKitchenStream(restaurant.id, getToken);
 
   const advance = useCallback(
-    async (order: KitchenOrder, to: Target) => {
+    async (order: KitchenOrder, to: Target, station?: "kitchen" | "bar") => {
       const token = await getToken();
       const res = await fetch(`/api/kitchen/orders/${order.id}/advance`, {
         method: "POST",
         headers: { "content-type": "application/json", ...(token ? { authorization: `Bearer ${token}` } : {}) },
-        body: JSON.stringify({ to }),
+        body: JSON.stringify({ to, station }),
       });
       if (!res.ok && res.status !== 409) throw new Error(`advance ${res.status}`);
       // 409 means another tablet already moved it; the stream brings the true state either way.
-      if (res.ok) {
+      // A station move changes only some lines; the stream brings the result.
+      if (res.ok && !(station && (to === "preparing" || to === "ready"))) {
         dispatch(
           LEAVES_BOARD.includes(to)
             ? { event: "order_removed", data: { id: order.id, status: to } }
@@ -117,7 +118,7 @@ function LiveBoard({ restaurant, auth, onSignOut }: { restaurant: Restaurant; au
     [dispatch, getToken],
   );
 
-  return <KitchenBoard restaurant={restaurant.name} board={board} connection={connection} onAdvance={advance} onSignOut={onSignOut} />;
+  return <KitchenBoard restaurant={restaurant.name} board={board} connection={connection} onAdvance={advance} onSignOut={onSignOut} screen={screen} />;
 }
 
 function SignIn({ auth }: { auth: StaffAuth }) {

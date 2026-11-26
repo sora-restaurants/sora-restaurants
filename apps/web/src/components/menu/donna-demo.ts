@@ -99,6 +99,7 @@ export const DONNA_SERVING_UNTIL = { breakfast: "12:00", toastiesAndWraps: "16:0
 /** Where each of Donna's dishes goes on screen: [block, sub-block?, sub-sub-block?], from its section and name. */
 function placeDonna(section: string, name: string): string[] {
   const s = section.toLowerCase();
+  if (/milkshake|smoothie/.test(s)) return ["Smoothies & shakes"]; // own Bar sections, so the bar gets them
   if (/breakfast/.test(s)) {
     if (/smoothie/i.test(name)) return ["Smoothies & shakes"];
     if (/pancake/i.test(name)) return ["Breakfast", "Pancakes"];

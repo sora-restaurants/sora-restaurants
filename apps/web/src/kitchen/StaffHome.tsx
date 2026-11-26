@@ -7,7 +7,8 @@ import { Screen, SignIn } from "./StaffSignIn.tsx";
 // One sign-in for every staff screen; each portal still checks the account's role on the server.
 const PORTALS = [
   { href: "/owner", title: "Owner", text: "Tables, QR codes, menu and today's orders." },
-  { href: "/kitchen", title: "Kitchen", text: "Live order board for the kitchen screen." },
+  { href: "/kitchen", title: "Kitchen", text: "Live order board for the kitchen: food only." },
+  { href: "/bar", title: "Bar", text: "Live order board for the bar: drinks only." },
   { href: "/waiter", title: "Waiter", text: "Table calls and unpaid tables." },
 ];
 
@@ -40,7 +41,7 @@ function StaffSession({ auth }: { auth: StaffAuth }) {
             </li>
           ))}
         </ul>
-        <p className="text-sm text-[#9b9b9b]">You stay signed in on this device for all three. A screen your account can&apos;t use says so.</p>
+        <p className="text-sm text-[#9b9b9b]">You stay signed in on this device for every screen. A screen your account can&apos;t use says so.</p>
       </div>
     </main>
   );

@@ -26,7 +26,7 @@ export type OwnerDashboardSnapshot = {
 
 export type OwnerMenuOption = { id: string; label: string; priceCents: number };
 export type OwnerMenuItem = { id: string; name: string; description: string; priceCents: number; imageUrl: string | null; dietaryTags: string[]; allergens?: string[]; options?: OwnerMenuOption[]; available: boolean; soldOut: boolean };
-export type OwnerMenuCategory = { id: string; name: string; station?: "kitchen" | "bar"; items: OwnerMenuItem[] };
+export type OwnerMenuCategory = { id: string; name: string; station?: "kitchen" | "bar" | "auto"; items: OwnerMenuItem[] };
 
 export type OwnerReport = {
   from: string;

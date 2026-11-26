@@ -121,7 +121,7 @@ describe("kitchen board", () => {
     expect(snapshot.event).toBe("snapshot");
     expect(snapshot.data.orders).toHaveLength(1);
     expect(snapshot.data.orders[0]).toMatchObject({ table: "Table 4", totalCents: 28500 });
-    expect(snapshot.data.orders[0].items).toContainEqual({ name: "Rooibos iced tea", quantity: 1, notes: "no ice", station: "kitchen" });
+    expect(snapshot.data.orders[0].items).toContainEqual({ name: "Rooibos iced tea", quantity: 1, notes: "no ice", station: "bar", prep: "new" });
   });
 
   it("Restaurant B credentials on A's board get 403 and no data", async () => {

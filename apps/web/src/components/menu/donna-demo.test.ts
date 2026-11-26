@@ -95,6 +95,11 @@ describe("Donna's blocks", () => {
     expect(entriesOf(find(layout, "Juices")!).map((e) => e.item.name)).toEqual(["Orange Juice"]);
   });
 
+  it("shows a Milkshakes section with the smoothies", () => {
+    const moved = donnaLayout([...categories, sec("Milkshakes", "Bar One Milkshake")]);
+    expect(entriesOf(find(moved, "Smoothies & shakes")!).map((e) => e.item.name)).toContain("Bar One Milkshake");
+  });
+
   it("splits Mains into smaller blocks, and lists Starters with headings", () => {
     expect(find(layout, "Mains")?.showAs).toBe("blocks");
     expect(names(find(layout, "Mains")?.children)).toEqual(["Pasta & risotto", "Pizza", "Meat & chicken", "Seafood", "Toasties & wraps"]);
