@@ -1,6 +1,7 @@
 "use client";
 
-import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { newCalls, playCallChime, useCallSound, useSoundUnlocked } from "./call-chime.ts";
 import { EYEBROW, Screen, Shell, SignIn } from "./StaffSignIn.tsx";
 import { formatRand } from "../lib/money.ts";
 import { type StaffAuth, staffAuth } from "./staff-auth.ts";
@@ -38,6 +39,17 @@ function CallList({ token, onSignOut }: { token: string; onSignOut: () => void }
   const [floor, setFloor] = useState<FloorTable[]>([]);
   const [offline, setOffline] = useState(false);
   const [now, setNow] = useState(() => Date.now());
+  const [sound, toggleSound] = useCallSound();
+  const unlocked = useSoundUnlocked();
+  const seen = useRef<Set<string> | null>(null);
+
+  // One chime per poll that brings a call never shown before; silent on first load.
+  useEffect(() => {
+    if (!calls) return;
+    const result = newCalls(seen.current, calls.map((c) => c.id));
+    seen.current = result.seen;
+    if (result.chime && sound) playCallChime();
+  }, [calls, sound]);
 
   const load = useCallback(async () => {
     try {
@@ -98,10 +110,15 @@ function CallList({ token, onSignOut }: { token: string; onSignOut: () => void }
           <p role="status" className={`rounded-full px-4 py-2 text-sm font-black uppercase tracking-wide ${offline ? "bg-[#F5DFC1] text-[#70420F]" : "bg-[#DDE8D8] text-[#25451E]"}`}>
             {offline ? "○ Offline" : "● Live"}
           </p>
+          <button type="button" onClick={toggleSound} aria-pressed={sound} className="min-h-12 rounded-full border border-[var(--owner-border)] px-4 text-sm font-bold">
+            <span aria-hidden="true">{sound ? "🔔" : "🔕"}</span> {sound ? "Sound on" : "Sound off"}
+          </button>
           {toggle}
           <button type="button" onClick={onSignOut} className="min-h-12 rounded-full border border-[var(--owner-border)] px-4 text-sm font-bold">Sign out</button>
         </div>
       </header>
+      {/* Floats over the page so it can't move a button under a finger when it disappears. */}
+      {sound && !unlocked && <p role="status" className="pointer-events-none fixed inset-x-3 bottom-3 z-20 mx-auto max-w-md rounded-xl bg-[#F5DFC1] p-3 text-center font-bold text-[#70420F] shadow-xl">Tap anywhere to turn on the call sound</p>}
       {offline && <p role="alert" className="mt-4 rounded-xl bg-[#F5DFC1] p-3 font-bold text-[#70420F]">Connection lost, retrying. Calls may be out of date.</p>}
 
       <div className="mt-4 grid gap-4">
