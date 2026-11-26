@@ -1,4 +1,4 @@
-import { Barlow, Barlow_Condensed, Cormorant_Garamond, Manrope, Source_Serif_4 } from "next/font/google";
+import { Barlow, Barlow_Condensed, Cormorant_Garamond, Manrope, Montserrat, Poppins, Source_Serif_4 } from "next/font/google";
 import type { ReactNode } from "react";
 import "./globals.css";
 
@@ -9,11 +9,13 @@ const sourceSerif = Source_Serif_4({ subsets: ["latin"], variable: "--font-sourc
 const manrope = Manrope({ subsets: ["latin"], variable: "--font-manrope", preload: false });
 const barlowCondensed = Barlow_Condensed({ subsets: ["latin"], weight: ["700", "800"], variable: "--font-barlow-condensed", preload: false });
 const barlow = Barlow({ subsets: ["latin"], weight: ["400", "600"], variable: "--font-barlow", preload: false });
+const poppins = Poppins({ subsets: ["latin"], weight: ["600", "700", "800"], variable: "--font-poppins", preload: false });
+const montserrat = Montserrat({ subsets: ["latin"], variable: "--font-montserrat", preload: false });
 
 export const metadata = { title: "Restaurant SaaS" };
 export const viewport = { width: "device-width", initialScale: 1 };
 
-const fontVariables = [cormorant, sourceSerif, manrope, barlowCondensed, barlow].map((f) => f.variable).join(" ");
+const fontVariables = [cormorant, sourceSerif, manrope, barlowCondensed, barlow, poppins, montserrat].map((f) => f.variable).join(" ");
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (

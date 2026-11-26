@@ -10,6 +10,8 @@ import { SlideToPay } from "../order/SlideToPay.tsx";
 import { BillSplit } from "../order/BillSplit.tsx";
 import { demoReviewsFor, type DemoReview } from "./demo-reviews.ts";
 import { demoWaitMinutes } from "./demo-extras.ts";
+import { MenuBrowser } from "./MenuBrowser.tsx";
+import { DONNA_CHEFS_PICKS, DONNA_POPULAR_TONIGHT, isDonnas, requiredGroups, type ChoiceGroup } from "./donna-demo.ts";
 import { NO_WANT, SPICE, COOKING, ADD_ONS, DRINK_SIZE, DRINK_ICE, DRINK_EXTRAS, COFFEE_MILK, COOL_DRINK_BRAND, COOL_DRINK_TYPE, CHEESECAKE_SLICE, SMOOTHIE_FLAVOUR, WATER_TYPE, STEAK_SIZE, WINGS_SIZE, FRIES_SIZE, FRIES_ADDONS, canChooseDoneness, isDrink, isCoffee, isHotDrink, lineExtraCents } from "./customise-options.ts";
 
 const money = new Intl.NumberFormat("en-ZA", { style: "currency", currency: "ZAR" });
@@ -108,7 +110,7 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
       const next = { ...current };
       if (quantity <= 0) { delete next[id]; return next; }
       const sets = next[id] ? [...next[id]] : [];
-      while (sets.length < quantity) sets.push([]);
+      while (sets.length < quantity) sets.push([...(sets[sets.length - 1] ?? [])]);
       while (sets.length > quantity) sets.pop();
       next[id] = sets;
       return next;
@@ -160,9 +162,24 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
     setTimeout(() => { setAssistance("idle"); setAssistanceKind(null); }, 8000);
   }
 
+  // Big menus open on section blocks with search and filters instead of one long scroll.
+  const donna = isDonnas(menu.restaurant);
+  const browse = items.length >= 40;
+  const popular = donna ? DONNA_POPULAR_TONIGHT.flatMap((name) => {
+    const category = menu.categories.find((c) => c.items.some((i) => i.name === name && !i.soldOut));
+    const item = category?.items.find((i) => i.name === name);
+    return category && item ? [{ item, categoryId: category.id }] : [];
+  }) : [];
+  const card = (item: MenuItem, category: TableMenu["categories"][number], index: number) => (
+    <MenuCard key={item.id} item={item} showRatings={preview} categoryName={category.name} quantity={cart[item.id] ?? 0}
+      note={(notes[item.id] ?? [[]])[Math.max(0, (notes[item.id]?.length ?? 1) - 1)] ?? []} index={index} onChange={setQuantity}
+      onNote={(id, opts) => setNotes((c) => { const sets = c[id] ? [...c[id]] : [[]]; sets[sets.length - 1] = opts; return { ...c, [id]: sets }; })}
+      required={requiredGroups(menu.restaurant, item)} strict={donna} chefsPick={donna && DONNA_CHEFS_PICKS.has(item.name)} compact={browse} />
+  );
+
   return (
-    <div data-theme={theme} data-mode="light" className="menu-shell min-h-dvh bg-bg font-body text-ink antialiased">
-      <header className="menu-hero text-on-accent">
+    <div data-theme={donna ? "donna" : theme} data-mode="light" className="menu-shell min-h-dvh bg-bg font-body text-ink antialiased">
+      <header className="menu-hero">
         <div className="mx-auto max-w-(--t-max) px-pad pb-7 pt-[calc(var(--t-pad)*2.25)]">
           <div className="mb-8 flex items-center justify-between gap-3">
             <span className="restaurant-mark" aria-hidden="true">{menu.restaurant.slice(0, 1)}</span>
@@ -181,11 +198,11 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
         </div>
       </header>
 
-      <nav aria-label="Menu sections" className="sticky top-0 z-20 border-b border-line/60 bg-bg/95 backdrop-blur">
+      {!browse && <nav aria-label="Menu sections" className="sticky top-0 z-20 border-b border-line/60 bg-bg/95 backdrop-blur">
         <ul className="mx-auto flex max-w-(--t-max) gap-2 overflow-x-auto px-pad py-3">
           {menu.categories.map((category, index) => <li key={category.id}><a href={`#c-${category.id}`} className="category-chip focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-accent"><span aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>{category.name}</a></li>)}
         </ul>
-      </nav>
+      </nav>}
 
       <main id="menu-content" className="mx-auto max-w-(--t-max) px-pad pb-40">
         {preview && (() => {
@@ -221,7 +238,7 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
             </ul>
           </section>
         )}
-        {menu.categories.length === 0 ? <EmptyMenu /> : menu.categories.map((category, categoryIndex) => {
+        {browse ? <MenuBrowser categories={menu.categories} popular={popular} formatCents={formatCents} renderCard={card} /> : menu.categories.length === 0 ? <EmptyMenu /> : menu.categories.map((category, categoryIndex) => {
           const visible = category.items;
           if (visible.length === 0) return null;
           return (
@@ -230,7 +247,7 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
               <div><p className="mb-1 text-xs font-bold uppercase tracking-[0.18em] text-accent">Menu · {String(categoryIndex + 1).padStart(2, "0")}</p><h2 id={`h-${category.id}`} className="display text-3xl leading-none">{category.name}</h2></div>
               <span className="text-sm text-muted">{category.items.length} {category.items.length === 1 ? "dish" : "dishes"}</span>
             </div>
-            <ul className="menu-grid">{category.items.map((item, index) => <MenuCard key={item.id} item={item} showRatings={preview} categoryName={category.name} quantity={cart[item.id] ?? 0} note={(notes[item.id] ?? [[]])[Math.max(0, (notes[item.id]?.length ?? 1) - 1)] ?? []} index={index} onChange={setQuantity} onNote={(id, opts) => setNotes((c) => { const sets = c[id] ? [...c[id]] : [[]]; sets[sets.length - 1] = opts; return { ...c, [id]: sets }; })} />)}</ul>
+            <ul className="menu-grid">{category.items.map((item, index) => card(item, category, index))}</ul>
           </section>
         );
         })}
@@ -266,7 +283,11 @@ function EmptyMenu() {
 }
 
 
-function missingRequired(item: MenuItem, categoryName: string, note: string[]): string[] {
+const choiceLabel = (c: { label: string; priceCents: number }) => (c.priceCents ? `${c.label} (+${formatCents(c.priceCents)})` : c.label);
+
+function missingRequired(item: MenuItem, categoryName: string, note: string[], required: ChoiceGroup[] = [], strict = false): string[] {
+  // A restaurant's own required choices (from its menu) win; strict menus never get the built-in sample rules.
+  if (required.length || strict) return required.filter((g) => !g.choices.some((c) => note.includes(choiceLabel(c)))).map((g) => g.name);
   const missing: string[] = [];
   if (item.options?.length) return missing; // owner-set options replace the built-in required choices
   const name = item.name;
@@ -298,16 +319,33 @@ function missingRequired(item: MenuItem, categoryName: string, note: string[]): 
 }
 
 // Ratings and reviews are sample data, so they only show on the demo table; real restaurants have none yet.
-function MenuCard({ item, showRatings, categoryName, quantity, note, index, onChange, onNote }: { item: MenuItem; showRatings: boolean; categoryName: string; quantity: number; note: string[]; index: number; onChange: (id: string, q: number) => void; onNote: (id: string, opts: string[]) => void }) {
+function MenuCard({ item, showRatings, categoryName, quantity, note, index, onChange, onNote, required = [], strict = false, chefsPick = false, compact = false }: { item: MenuItem; showRatings: boolean; categoryName: string; quantity: number; note: string[]; index: number; onChange: (id: string, q: number) => void; onNote: (id: string, opts: string[]) => void; required?: ChoiceGroup[]; strict?: boolean; chefsPick?: boolean; compact?: boolean }) {
   const [showReviews, setShowReviews] = useState(false);
   const [optsOpen, setOptsOpen] = useState(false);
   const reviews = demoReviewsFor(item.name);
+  // Owner options that a required group already offers (e.g. the Secondi sides) are not listed twice.
+  const requiredLabels = new Set(required.flatMap((g) => g.choices.map((c) => c.label)));
+  const optional = (item.options ?? []).filter((o) => !requiredLabels.has(o.label));
+  const hasChoices = required.length > 0 || optional.length > 0;
+  const badge = chefsPick && <span className="chef-badge"><span aria-hidden="true">★</span> Chef&apos;s pick</span>;
+  const price = <p className="shrink-0 font-bold tabular-nums text-price">{formatCents(item.priceCents)}</p>;
   return (
-    <li className="menu-card overflow-hidden rounded-theme border border-line/40 bg-surface shadow-[0_12px_40px_color-mix(in_oklch,var(--t-ink)_7%,transparent)]">
-      {item.imageUrl ? <div className="relative h-52 overflow-hidden"><img src={item.imageUrl} alt={item.name} className="size-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; (e.target as HTMLImageElement).parentElement?.classList.add("dish-art", `dish-art-${index % 3}`); }} /><div className="absolute inset-x-0 bottom-0 h-20 bg-linear-to-t from-black/45 to-transparent" /></div> : <div className={`dish-art dish-art-${index % 3}`} aria-hidden="true"><span>{item.name.slice(0, 1)}</span></div>}
-      <div className="flex min-h-40 flex-col p-5">
+    <li id={`d-${item.id}`} className={`menu-card scroll-mt-32 overflow-hidden rounded-theme ${compact ? "glass" : "border border-line/40 bg-surface shadow-[0_12px_40px_color-mix(in_oklch,var(--t-ink)_7%,transparent)]"}`}>
+      {compact ? null : item.imageUrl ? <div className="relative h-52 overflow-hidden"><img src={item.imageUrl} alt={item.name} className="size-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; (e.target as HTMLImageElement).parentElement?.classList.add("dish-art", `dish-art-${index % 3}`); }} /><div className="absolute inset-x-0 bottom-0 h-20 bg-linear-to-t from-black/45 to-transparent" /></div> : <div className={`dish-art dish-art-${index % 3}`} aria-hidden="true"><span>{item.name.slice(0, 1)}</span></div>}
+      <div className={`flex flex-col ${compact ? "p-4" : "min-h-40 p-5"}`}>
+        {compact ? (
+          <div className="flex items-start gap-3">
+            <div className="min-w-0 flex-1">
+              {badge && <div className="mb-1.5">{badge}</div>}
+              <h3 className="display text-lg leading-tight">{item.name}</h3>
+              {item.description ? <p className="mt-1 line-clamp-3 text-sm leading-snug text-muted">{item.description}</p> : null}
+            </div>
+            {item.imageUrl && <img src={item.imageUrl} alt="" loading="lazy" className="size-24 shrink-0 rounded-[calc(var(--t-radius)-0.35rem)] object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />}
+          </div>
+        ) : <>
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
+            {badge && <div className="mb-2">{badge}</div>}
             <h3 className="display text-2xl leading-none">{item.name}</h3>
             {(item as MenuItem & { special?: string }).special && <span className="ml-2 rounded-full bg-accent px-2 py-0.5 text-[0.65rem] font-bold uppercase text-on-accent">{(item as MenuItem & { special?: string }).special}</span>}
             {showRatings && <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -319,10 +357,12 @@ function MenuCard({ item, showRatings, categoryName, quantity, note, index, onCh
               {reviews.badge && <span className="rounded-full bg-accent/15 px-2 py-0.5 text-[0.65rem] font-bold uppercase tracking-wide text-accent">{reviews.badge}</span>}
             </div>}
           </div>
-          <p className="shrink-0 font-bold tabular-nums text-accent">{formatCents(item.priceCents)}</p>
+          {price}
         </div>
         {item.description ? <p className="mt-3 text-sm leading-relaxed text-muted">{item.description}</p> : <p className="mt-3 text-sm italic text-muted">Made fresh to order</p>}
+        </>}
         {item.dietaryTags?.length ? <ul aria-label="Dietary information" className="mt-3 flex flex-wrap gap-2">{item.dietaryTags.map((tag) => <li key={tag} className="rounded-full border border-line/40 px-2 py-1 text-[0.7rem] font-bold uppercase tracking-wide text-muted">{tag}</li>)}</ul> : null}
+        {quantity > 0 && note.length > 0 && !optsOpen && <p className="mt-2 text-sm font-semibold text-ink">{note.join(" · ")}</p>}
         {(item as MenuItem & { prepTime?: string }).prepTime && <p className="mt-2 text-xs text-muted">Ready in {(item as MenuItem & { prepTime?: string }).prepTime}</p>}
         {(item as MenuItem & { allergens?: string[] }).allergens?.length ? <p className="mt-1 text-xs text-muted">Contains: {(item as MenuItem & { allergens?: string[] }).allergens!.join(", ")}</p> : null}
 
@@ -331,11 +371,24 @@ function MenuCard({ item, showRatings, categoryName, quantity, note, index, onCh
         </button>}
         {optsOpen && (
           <div className="mt-3 space-y-3">
-            {item.options?.length ? (
-              <div>
-                <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">Options</p>
+            {required.map((g) => (
+              <div key={g.name} role="group" aria-label={`${g.name}, required`}>
+                <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">{g.name} <span className="ml-1 text-accent">Required</span></p>
                 <div className="flex flex-wrap gap-2">
-                  {item.options.map((o) => {
+                  {g.choices.map((c) => {
+                    const label = choiceLabel(c);
+                    const selected = note.includes(label);
+                    const others = note.filter((x) => !g.choices.some((o) => choiceLabel(o) === x));
+                    return <button key={c.label} type="button" aria-pressed={selected} onClick={() => onNote(item.id, selected ? others : [...others, label])} className="choice-chip glass text-ink">{label}</button>;
+                  })}
+                </div>
+              </div>
+            ))}
+            {strict || item.options?.length ? (optional.length === 0 ? null :
+              <div>
+                <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">{required.length ? "Extras" : "Options"}</p>
+                <div className="flex flex-wrap gap-2">
+                  {optional.map((o) => {
                     const label = o.priceCents ? `${o.label} (+${formatCents(o.priceCents)})` : o.label;
                     const selected = note.includes(label);
                     return <button key={o.id} type="button" aria-pressed={selected} onClick={() => onNote(item.id, selected ? note.filter((x) => x !== label) : [...note, label])} className={`rounded-full border px-3 py-1 text-xs font-bold ${selected ? "border-accent bg-accent text-on-accent" : "border-line"}`}>{label}</button>;
@@ -559,9 +612,11 @@ function MenuCard({ item, showRatings, categoryName, quantity, note, index, onCh
           </ul>
         )}
 
-        <div className="mt-auto flex justify-end pt-5">
+        <div className={`mt-auto flex flex-wrap items-center gap-3 ${compact ? "justify-between pt-3" : "justify-end pt-5"}`}>
+          {compact && price}
+          {quantity > 0 && hasChoices && !item.soldOut && <button type="button" onClick={() => setOptsOpen((v) => !v)} className="mr-auto text-sm font-semibold text-accent underline-offset-2 hover:underline">{optsOpen ? "Done" : required.length ? "Change choices" : "Add extras"}</button>}
           {item.soldOut ? <span className="inline-flex min-h-12 items-center rounded-full bg-highlight px-4 text-sm font-bold text-on-highlight">Sold out</span> : (() => {
-            const missing = missingRequired(item, categoryName, note);
+            const missing = missingRequired(item, categoryName, note, required, strict);
             if (quantity === 0) return <button type="button" onClick={() => { if (missing.length > 0) { setOptsOpen(true); return; } onChange(item.id, 1); setOptsOpen(false); }} aria-label={`Add ${item.name}`} className="add-button focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ink">{missing.length > 0 ? (optsOpen ? `Choose ${missing[0]}` : <><span aria-hidden="true">＋</span> Add to order</>) : <><span aria-hidden="true">＋</span> Add to order</>}</button>;
             return <QuantityControl item={item} quantity={quantity} onChange={onChange} missing={missing} />;
           })()}
