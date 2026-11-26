@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { type StaffAuth, staffAuth } from "../kitchen/staff-auth.ts";
+import { readChoice, saveChoice } from "../kitchen/restaurant-choice.ts";
 import { SignIn } from "../kitchen/StaffSignIn.tsx";
 import { OwnerDashboard } from "./OwnerDashboard.tsx";
 import type { ManagedTable, OwnerDashboardSnapshot, SessionCommandResult, TableSessionAdapter } from "./session-contract.ts";
@@ -22,7 +23,11 @@ function OwnerSession({ auth }: { auth: StaffAuth }) {
   useEffect(() => {
     if (!token) return;
     fetch(`/api/owner${q}`, { headers: { authorization: `Bearer ${token}` } })
-      .then(async (res) => res.ok ? (await res.json()).snapshot : "forbidden").then(setSnapshot);
+      .then(async (res) => res.ok ? (await res.json()).snapshot : "forbidden").then((s) => {
+        // The kitchen and waiter screens on this device follow the branch shown here.
+        if (s && s !== "forbidden") saveChoice(s.restaurantId);
+        setSnapshot(s);
+      });
   }, [token, q]);
   if (token === undefined) return <OwnerScreen>Loading…</OwnerScreen>;
   if (!token) return <SignIn auth={auth} />;

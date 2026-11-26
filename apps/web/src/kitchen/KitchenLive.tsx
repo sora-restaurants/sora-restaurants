@@ -4,27 +4,10 @@ import { type FormEvent, useCallback, useEffect, useMemo, useState } from "react
 import type { KitchenOrder } from "../server/deps.ts";
 import { KitchenBoard, LEAVES_BOARD, type Target } from "./KitchenBoard.tsx";
 import { type StaffAuth, staffAuth } from "./staff-auth.ts";
+import { readChoice, saveChoice } from "./restaurant-choice.ts";
 import { useKitchenStream } from "./useKitchenStream.ts";
 
 type Restaurant = { id: string; name: string };
-
-const CHOICE_KEY = "sora-kitchen-restaurant";
-// Storage can be blocked (private mode); the picker then simply asks again.
-function readChoice() {
-  try {
-    return typeof localStorage === "undefined" ? null : localStorage.getItem(CHOICE_KEY);
-  } catch {
-    return null;
-  }
-}
-function saveChoice(id: string | null) {
-  try {
-    if (id) localStorage.setItem(CHOICE_KEY, id);
-    else localStorage.removeItem(CHOICE_KEY);
-  } catch {
-    // not remembered; harmless
-  }
-}
 
 /** Kitchen tablet: sign in, pick up the staff member's restaurant, show its live board. */
 export function KitchenLive() {

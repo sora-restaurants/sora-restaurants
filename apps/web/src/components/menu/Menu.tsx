@@ -46,6 +46,7 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
   const [status, setStatus] = useState<Status>({ kind: "idle" });
   // Keep the order tracker across a refresh (this tab only).
   const trackKey = `sora-order-${qrToken}`;
+  const builtIns = qrToken === "preview" || qrToken.startsWith("staging-demo");
   useEffect(() => {
     try { const saved = sessionStorage.getItem(trackKey); if (saved) setStatus(JSON.parse(saved)); } catch { /* storage blocked */ }
   }, [trackKey]);
@@ -133,6 +134,7 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
       setStatus({ kind: "placed", publicRef, itemCount: count, totalCents: estimate, payNow: paymentChoice === "pay_now", paid: false, stage: "received", wait });
       setTableOrders((prev) => [{ ref: publicRef, total: estimate, count }, ...prev].slice(0, 5));
       setCart({});
+      setNotes({});
       setBasketOpen(false);
       sending.current = false;
       return;
@@ -158,6 +160,7 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
         setStatus({ kind: "placed", publicRef: result.publicRef, statusToken: result.statusToken, itemCount: count, totalCents: estimate, payNow: paymentChoice === "pay_now", paid: false, stage: "received", wait });
         setTableOrders((prev) => [{ ref: result.publicRef, total: estimate, count }, ...prev].slice(0, 5));
         setCart({});
+        setNotes({});
         setBasketOpen(false);
         idempotencyKey.current = null;
       } else setStatus({ kind: "error", message: ERRORS[result.error] ?? "We couldn't send your order. Please try again." });
@@ -202,11 +205,6 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
           <div className="mb-8 flex items-center justify-between gap-3">
             <span className="restaurant-mark" aria-hidden="true">{menu.restaurant.slice(0, 1)}</span>
             <div className="flex items-center gap-2">
-              {status.kind !== "placed" && (
-                <button type="button" onClick={() => setAssistanceOpen(true)} disabled={assistance !== "idle"} className="table-pill disabled:opacity-70">
-                  {assistance === "sending" ? "Calling…" : assistance === "sent" ? "Staff notified" : "Need something?"}
-                </button>
-              )}
               <span className="table-pill">{menu.table}</span>
             </div>
           </div>
@@ -217,9 +215,15 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
       </header>
 
       <nav aria-label="Menu sections" className="sticky top-0 z-20 border-b border-line/60 bg-bg/95 backdrop-blur">
-        <ul className="mx-auto flex max-w-(--t-max) gap-2 overflow-x-auto px-pad py-3">
-          {menu.categories.map((category, index) => <li key={category.id}><a href={`#c-${category.id}`} className="category-chip focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-accent"><span aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>{category.name}</a></li>)}
-        </ul>
+        {/* Sticky, so a guest can call staff from anywhere on the menu, before or after ordering. */}
+        <div className="mx-auto flex max-w-(--t-max) items-center gap-2 px-pad py-3">
+          <ul className="flex min-w-0 flex-1 gap-2 overflow-x-auto">
+            {menu.categories.map((category, index) => <li key={category.id}><a href={`#c-${category.id}`} className="category-chip focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-accent"><span aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>{category.name}</a></li>)}
+          </ul>
+          <button type="button" onClick={() => setAssistanceOpen(true)} disabled={assistance !== "idle"} className="shrink-0 rounded-full bg-accent px-4 py-2 text-sm font-bold text-on-accent disabled:opacity-70 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-accent">
+            {assistance === "sending" ? "Calling…" : assistance === "sent" ? "Staff notified" : "Need something?"}
+          </button>
+        </div>
       </nav>
 
       <main id="menu-content" className="mx-auto max-w-(--t-max) px-pad pb-40">
@@ -265,7 +269,7 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
               <div><p className="mb-1 text-xs font-bold uppercase tracking-[0.18em] text-accent">Menu · {String(categoryIndex + 1).padStart(2, "0")}</p><h2 id={`h-${category.id}`} className="display text-3xl leading-none">{category.name}</h2></div>
               <span className="text-sm text-muted">{category.items.length} {category.items.length === 1 ? "dish" : "dishes"}</span>
             </div>
-            <ul className="menu-grid">{category.items.map((item, index) => <MenuCard key={item.id} item={item} showRatings={preview} categoryName={category.name} quantity={cart[item.id] ?? 0} note={(notes[item.id] ?? [[]])[Math.max(0, (notes[item.id]?.length ?? 1) - 1)] ?? []} index={index} onChange={setQuantity} onNote={(id, opts) => setNotes((c) => { const sets = c[id] ? [...c[id]] : [[]]; sets[sets.length - 1] = opts; return { ...c, [id]: sets }; })} />)}</ul>
+            <ul className="menu-grid">{category.items.map((item, index) => <MenuCard key={item.id} item={item} builtIns={builtIns} showRatings={preview} categoryName={category.name} quantity={cart[item.id] ?? 0} note={(notes[item.id] ?? [[]])[Math.max(0, (notes[item.id]?.length ?? 1) - 1)] ?? []} index={index} onChange={setQuantity} onNote={(id, opts) => setNotes((c) => { const sets = c[id] ? [...c[id]] : [[]]; sets[sets.length - 1] = opts; return { ...c, [id]: sets }; })} />)}</ul>
           </section>
         );
         })}
@@ -304,9 +308,10 @@ function EmptyMenu() {
 }
 
 
-function missingRequired(item: MenuItem, categoryName: string, note: string[]): string[] {
+function missingRequired(item: MenuItem, categoryName: string, note: string[], builtIns: boolean): string[] {
   const missing: string[] = [];
-  if (item.options?.length) return missing; // owner-set options replace the built-in required choices
+  // Built-in choices suit only the generic demo menu; a real restaurant's own options (or none) are the truth.
+  if (!builtIns || item.options?.length) return missing;
   const name = item.name;
   if (/steak|ribeye/i.test(name)) {
     if (!STEAK_SIZE.some(s => note.includes(s.label))) missing.push("Size");
@@ -336,7 +341,7 @@ function missingRequired(item: MenuItem, categoryName: string, note: string[]): 
 }
 
 // Ratings and reviews are sample data, so they only show on the demo table; real restaurants have none yet.
-function MenuCard({ item, showRatings, categoryName, quantity, note, index, onChange, onNote }: { item: MenuItem; showRatings: boolean; categoryName: string; quantity: number; note: string[]; index: number; onChange: (id: string, q: number) => void; onNote: (id: string, opts: string[]) => void }) {
+function MenuCard({ item, builtIns, showRatings, categoryName, quantity, note, index, onChange, onNote }: { item: MenuItem; builtIns: boolean; showRatings: boolean; categoryName: string; quantity: number; note: string[]; index: number; onChange: (id: string, q: number) => void; onNote: (id: string, opts: string[]) => void }) {
   const [showReviews, setShowReviews] = useState(false);
   const [optsOpen, setOptsOpen] = useState(false);
   const reviews = demoReviewsFor(item.name);
@@ -599,7 +604,7 @@ function MenuCard({ item, showRatings, categoryName, quantity, note, index, onCh
 
         <div className="mt-auto flex justify-end pt-5">
           {item.soldOut ? <span className="inline-flex min-h-12 items-center rounded-full bg-highlight px-4 text-sm font-bold text-on-highlight">Sold out</span> : (() => {
-            const missing = missingRequired(item, categoryName, note);
+            const missing = missingRequired(item, categoryName, note, builtIns);
             if (quantity === 0) return <button type="button" onClick={() => { if (missing.length > 0) { setOptsOpen(true); return; } onChange(item.id, 1); setOptsOpen(Boolean(item.options?.length)); }} aria-label={`Add ${item.name}`} className="add-button focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ink">{missing.length > 0 ? (optsOpen ? `Choose ${missing[0]}` : <><span aria-hidden="true">＋</span> Add to order</>) : <><span aria-hidden="true">＋</span> Add to order</>}</button>;
             return <QuantityControl item={item} quantity={quantity} onChange={onChange} missing={missing} />;
           })()}

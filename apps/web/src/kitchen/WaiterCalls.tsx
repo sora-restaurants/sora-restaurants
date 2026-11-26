@@ -2,13 +2,14 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { formatRand } from "../lib/money.ts";
+import { readChoice, saveChoice } from "./restaurant-choice.ts";
 import { Screen, SignIn } from "./StaffSignIn.tsx";
 import { type StaffAuth, staffAuth } from "./staff-auth.ts";
 
-type Call = { id: string; table: string; createdAt: string };
-type Unpaid = { id: string; publicRef: string; table: string; status: string; totalCents: number };
-type Share = { id: string; table: string; shareNo: number; ways: number; amountCents: number; items: { name: string; quantity: number }[] };
-type FloorTable = { id: string; label: string; openedAt: string | null; orders: number; inKitchen: number; unpaidCents: number; calling: boolean };
+type Call = { id: string; table: string; createdAt: string; restaurantId: string };
+type Unpaid = { id: string; publicRef: string; table: string; status: string; totalCents: number; restaurantId: string };
+type Share = { id: string; table: string; restaurantId: string; shareNo: number; ways: number; amountCents: number; items: { name: string; quantity: number }[] };
+type FloorTable = { id: string; label: string; restaurantId: string; restaurantName: string; openedAt: string | null; orders: number; inKitchen: number; unpaidCents: number; calling: boolean };
 const POLL_MS = 3_000;
 
 /** Floor staff screen: tables asking for a waiter, oldest first, one big tap to answer. */
@@ -32,10 +33,19 @@ function WaiterSession({ auth }: { auth: StaffAuth }) {
 }
 
 function CallList({ token, onSignOut }: { token: string; onSignOut: () => void }) {
-  const [calls, setCalls] = useState<Call[] | null>(null);
-  const [unpaid, setUnpaid] = useState<Unpaid[]>([]);
-  const [shares, setShares] = useState<Share[]>([]);
-  const [floor, setFloor] = useState<FloorTable[]>([]);
+  const [allCalls, setCalls] = useState<Call[] | null>(null);
+  const [allUnpaid, setUnpaid] = useState<Unpaid[]>([]);
+  const [allShares, setShares] = useState<Share[]>([]);
+  const [allFloor, setFloor] = useState<FloorTable[]>([]);
+  const [chosen, setChosen] = useState<string | null>(() => readChoice());
+  // Staff at several restaurants see one at a time: the one this device works for (shared with kitchen and owner).
+  const restaurants = [...new Map(allFloor.map((t) => [t.restaurantId, t.restaurantName])).entries()];
+  const active = restaurants.find(([id]) => id === chosen)?.[0] ?? restaurants[0]?.[0];
+  const mine = <T extends { restaurantId: string }>(rows: T[]) => (active ? rows.filter((r) => r.restaurantId === active) : rows);
+  const calls = allCalls && mine(allCalls);
+  const unpaid = mine(allUnpaid);
+  const shares = mine(allShares);
+  const floor = mine(allFloor);
   const [offline, setOffline] = useState(false);
   const [now, setNow] = useState(() => Date.now());
 
@@ -92,6 +102,12 @@ function CallList({ token, onSignOut }: { token: string; onSignOut: () => void }
         <p role="status" className={`px-3 py-1 text-xl uppercase ${offline ? "bg-[oklch(55%_0.22_28)]" : "bg-[oklch(80%_0.21_145)] text-black"}`}>
           {offline ? "Offline" : "● Live"}
         </p>
+        {restaurants.length > 1 && (
+          <select aria-label="Restaurant" value={active} onChange={(e) => { saveChoice(e.target.value); setChosen(e.target.value); }}
+            className="min-h-12 border-2 border-white bg-black px-2 text-sm uppercase">
+            {restaurants.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
+          </select>
+        )}
         <a href="/staff" className="grid min-h-12 place-items-center border-2 border-white px-3 text-sm uppercase">Portals</a>
         <button type="button" onClick={onSignOut} className="min-h-12 border-2 border-white px-3 text-sm uppercase">Sign out</button>
       </header>

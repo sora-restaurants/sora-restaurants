@@ -144,7 +144,8 @@ describe("waiter floor", () => {
     const res = await listTables(new Request("http://x/api/staff/tables", { headers: { authorization: "Bearer token-waiter" } }), deps);
     const { tables } = await res.json();
     const t4 = tables.find((t: { label: string }) => t.label === "Table 4");
-    expect(t4).toMatchObject({ orders: 1, inKitchen: 1, calling: false });
+    // The waiter screen shows one restaurant at a time, so each table says whose it is.
+    expect(t4).toMatchObject({ orders: 1, inKitchen: 1, calling: false, restaurantId: DEMO, restaurantName: "Demo Bistro" });
     expect(t4.unpaidCents).toBeGreaterThan(0);
     const kitchen = await (await listTables(new Request("http://x", { headers: { authorization: "Bearer token-A" } }), deps)).json();
     expect(kitchen.tables).toEqual([]);
