@@ -92,10 +92,6 @@ function CallList({ token, onSignOut }: { token: string; onSignOut: () => void }
     await fetch(`/api/staff/shares/${share.id}/paid`, { method: "POST", headers: { authorization: `Bearer ${token}` } }).catch(() => {});
   }
 
-  async function split(tableId: string, ways: number) {
-    await fetch(`/api/staff/tables/${tableId}/split`, { method: "POST", headers: { authorization: `Bearer ${token}` }, body: JSON.stringify({ ways }) }).catch(() => {});
-    void load();
-  }
 
   const owed = unpaid.length + shares.length;
   return (
@@ -175,13 +171,6 @@ function CallList({ token, onSignOut }: { token: string; onSignOut: () => void }
                     {t.unpaidCents > 0 && <span className="block font-bold tabular-nums text-[var(--owner-text)]">Owes {formatRand(t.unpaidCents)}</span>}
                   </p>
                 ) : <p className="text-sm text-[var(--owner-muted)]">Closed</p>}
-                {t.unpaidCents > 0 && (
-                  <div className="mt-auto grid grid-cols-3 gap-1" role="group" aria-label={`Split ${t.label}`}>
-                    {[2, 3, 4].map((n) => (
-                      <button key={n} type="button" onClick={() => split(t.id, n)} aria-label={`Split ${t.label} ${n} ways`} className="min-h-12 rounded-xl border border-[var(--owner-border)] bg-[var(--owner-surface)] font-bold active:scale-[0.97]">÷{n}</button>
-                    ))}
-                  </div>
-                )}
               </li>
             ))}
           </ul>

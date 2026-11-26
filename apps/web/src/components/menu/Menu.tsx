@@ -7,7 +7,6 @@ import { saveCheckoutAction } from "../../app/actions/save-checkout.ts";
 import type { ThemeId } from "../../themes/themes.ts";
 import type { MenuItem, TableMenu } from "./types.ts";
 import { SlideToPay } from "../order/SlideToPay.tsx";
-import { BillSplit } from "../order/BillSplit.tsx";
 import { demoReviewsFor, type DemoReview } from "./demo-reviews.ts";
 import { demoWaitMinutes } from "./demo-extras.ts";
 import { NO_WANT, SPICE, COOKING, ADD_ONS, DRINK_SIZE, DRINK_ICE, DRINK_EXTRAS, COFFEE_MILK, COOL_DRINK_BRAND, COOL_DRINK_TYPE, CHEESECAKE_SLICE, SMOOTHIE_FLAVOUR, WATER_TYPE, STEAK_SIZE, WINGS_SIZE, FRIES_SIZE, FRIES_ADDONS, canChooseDoneness, isDrink, isCoffee, isHotDrink, lineExtraCents } from "./customise-options.ts";
@@ -599,7 +598,6 @@ function OrderDock({ triggerRef, count, estimate, status, onOpen, onDismiss, onP
             <span className="mt-1 block text-sm opacity-75">Ref <strong className="tracking-wide text-bg">{status.publicRef}</strong>{status.paid ? " · Demo payment, not charged" : ""}{status.stage === "received" || status.stage === "preparing" ? ` · usually ready in ${status.wait} min` : ""}</span>
           </p>
           <span className="flex shrink-0 flex-wrap justify-end gap-2">
-            {status.statusToken && !status.payNow && <BillSplit token={status.statusToken} />}
             <button type="button" onClick={onDismiss} className="min-h-tap shrink-0 rounded-full border border-bg/30 px-4 font-semibold">Order more</button>
           </span>
         </div>
@@ -657,10 +655,7 @@ function BasketSheet({ returnFocusRef, lines, cart, notes, estimate, status, pay
       )}
       {step === 2 && (
         <>
-          {showPayNow && <div className="mb-4 grid grid-cols-2 gap-2">
-            <button type="button" onClick={() => onPaymentChoice("pay_later")} className={`min-h-12 rounded-theme border-2 px-3 text-sm font-bold ${paymentChoice === "pay_later" ? "border-accent bg-accent text-on-accent" : "border-line"}`}>Pay after my meal</button>
-            <button type="button" onClick={() => onPaymentChoice("pay_now")} className={`min-h-12 rounded-theme border-2 px-3 text-sm font-bold ${paymentChoice === "pay_now" ? "border-accent bg-accent text-on-accent" : "border-line"}`}>Pay now</button>
-          </div>}
+          <p className="mb-4 rounded-theme border-2 border-line px-3 py-3 text-sm font-bold">Your waiter will bring the bill when you are ready.</p>
           <div className="mb-4">
             <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">Add a tip</p>
             <div className="flex gap-2">
@@ -669,15 +664,6 @@ function BasketSheet({ returnFocusRef, lines, cart, notes, estimate, status, pay
               ))}
             </div>
             {tipPercent > 0 && <p className="mt-2 text-sm text-muted">Tip {formatCents(Math.round(estimate * tipPercent / 100))} · total {formatCents(estimate + Math.round(estimate * tipPercent / 100))}</p>}
-          </div>
-          <div className="mb-4">
-            <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">Split the bill</p>
-            <div className="flex gap-2">
-              {([1, 2, 3, 4] as const).map((n) => (
-                <button key={n} type="button" onClick={() => onSplit(n)} className={`min-h-10 flex-1 rounded-theme border-2 text-sm font-bold ${splitWays === n ? "border-accent bg-accent text-on-accent" : "border-line"}`}>{n === 1 ? "No split" : `${n} ways`}</button>
-              ))}
-            </div>
-            {splitWays > 1 && <p className="mt-2 text-sm text-muted">About {formatCents(Math.round(estimate / splitWays))} each</p>}
           </div>
           {totalLine}
           <div className="flex gap-2">
