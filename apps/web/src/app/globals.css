@@ -21,6 +21,42 @@
   --spacing-theme: var(--t-gap);
   --spacing-pad: var(--t-pad);
   --spacing-tap: 3rem; /* 48px: minimum touch target on every control */
+  --color-cta: var(--t-cta, var(--t-accent));
+  --color-on-cta: var(--t-on-cta, var(--t-on-accent));
+  --color-price: var(--t-price, var(--t-accent));
+}
+
+/* Donna's (demo): their coral, charcoal and bronze, Poppins headings and Montserrat body. Swap values here only. */
+[data-theme="donna"] {
+  --t-bg: #fff8f3;
+  --t-wash: #ffe9e2;
+  --t-surface: #ffffff;
+  --t-ink: #1d1d1b;
+  --t-muted: #5e6670;
+  --t-line: #e8d9d2;
+  --t-accent: #c8402f; /* deeper coral: text, prices, active states (4.7:1 on the background) */
+  --t-on-accent: #ffffff;
+  --t-cta: #ff7061; /* Donna's coral: buttons and the header bar, always with charcoal text */
+  --t-on-cta: #1d1d1b;
+  --t-hero: #ff7061;
+  --t-on-hero: #1d1d1b;
+  --t-price: #c8402f;
+  --t-badge: #8e753c; /* bronze: Chef's pick */
+  --t-on-badge: #ffffff;
+  --t-glass: rgb(255 255 255 / 0.72);
+  --t-glass-border: rgb(255 112 97 / 0.25);
+  --t-highlight: #f8d35c;
+  --t-on-highlight: #1d1d1b;
+  --t-font-display: var(--font-poppins), system-ui, sans-serif;
+  --t-font-body: var(--font-montserrat), system-ui, sans-serif;
+  --t-radius: 1.25rem;
+  --t-gap: 0.875rem;
+  --t-max: 44rem;
+  --t-pad: 1rem;
+  --t-display-weight: 700;
+  --t-display-case: none;
+  --t-display-tracking: -0.01em;
+  --t-border: 1px;
 }
 
 /* Stellenbosch winery: serif, generous air, muted earth. */
@@ -149,8 +185,45 @@
     border-color: var(--t-line);
   }
   .menu-hero {
-    background: #000000;
+    background: var(--t-hero, #000000);
+    color: var(--t-on-hero, var(--t-on-accent));
   }
+  [data-theme="donna"].menu-shell { background: linear-gradient(180deg, var(--t-wash) 0, var(--t-bg) 32rem) fixed; }
+  [data-theme="donna"] .restaurant-mark, [data-theme="donna"] .table-pill { border-color: color-mix(in srgb, var(--t-on-hero) 30%, transparent); }
+
+  /* Large-menu browser: frosted-glass section blocks, pinned search, quick filters. */
+  .glass {
+    background: var(--t-glass, color-mix(in oklch, var(--t-surface) 72%, transparent));
+    border: 1px solid var(--t-glass-border, color-mix(in oklch, var(--t-line) 40%, transparent));
+    -webkit-backdrop-filter: blur(16px) saturate(1.4);
+    backdrop-filter: blur(16px) saturate(1.4);
+    box-shadow: 0 10px 30px color-mix(in oklch, var(--t-ink) 8%, transparent);
+  }
+  .section-block {
+    position: relative;
+    display: block;
+    width: 100%;
+    aspect-ratio: 1 / 1.05;
+    overflow: hidden;
+    border-radius: var(--t-radius);
+    text-align: left;
+    isolation: isolate;
+    background: linear-gradient(140deg, var(--t-wash, var(--t-highlight)), color-mix(in oklch, var(--t-cta, var(--t-accent)) 35%, var(--t-bg)));
+    transition: transform 160ms ease;
+  }
+  .section-block:active { transform: scale(0.97); }
+  .section-block img { position: absolute; inset: 0; z-index: -1; width: 100%; height: 100%; object-fit: cover; }
+  .section-block .glass { position: absolute; inset: auto 0.5rem 0.5rem 0.5rem; border-radius: calc(var(--t-radius) - 0.4rem); padding: 0.6rem 0.75rem; }
+  .filter-chip {
+    display: inline-flex; min-height: 2.5rem; align-items: center; gap: 0.35rem; white-space: nowrap;
+    border-radius: 999px; padding: 0 0.95rem; font-size: 0.8rem; font-weight: 700;
+  }
+  .filter-chip[aria-pressed="true"] { background: var(--t-cta, var(--t-accent)); color: var(--t-on-cta, var(--t-on-accent)); border-color: transparent; }
+  .search-box { min-height: 3rem; width: 100%; border-radius: 999px; padding: 0 1rem 0 2.75rem; font-size: 1rem; outline: none; }
+  .search-box:focus-visible { box-shadow: 0 0 0 3px color-mix(in srgb, var(--t-cta, var(--t-accent)) 55%, transparent); }
+  .chef-badge { display: inline-flex; align-items: center; gap: 0.25rem; border-radius: 999px; background: var(--t-badge, var(--t-accent)); color: var(--t-on-badge, var(--t-on-accent)); padding: 0.15rem 0.55rem; font-size: 0.65rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; }
+  .choice-chip { min-height: 2.5rem; border-radius: 999px; padding: 0 0.9rem; font-size: 0.8rem; font-weight: 700; }
+  .choice-chip[aria-pressed="true"] { background: var(--t-cta, var(--t-accent)); color: var(--t-on-cta, var(--t-on-accent)); border-color: transparent; }
   .restaurant-mark {
     display: grid;
     width: 2.75rem;
@@ -196,7 +269,7 @@
   .dish-art-1 { background: linear-gradient(145deg, color-mix(in oklch, var(--t-ink) 92%, var(--t-accent)), color-mix(in oklch, var(--t-accent) 75%, var(--t-highlight))); }
   .dish-art-2 { background: linear-gradient(145deg, color-mix(in oklch, var(--t-highlight) 60%, var(--t-accent)), var(--t-accent)); }
   .dish-art span { position: absolute; left: 1rem; bottom: 0.75rem; z-index: 1; color: var(--t-on-accent); font-size: 0.7rem; font-weight: 800; letter-spacing: 0.16em; }
-  .add-button { display: inline-flex; min-height: 2.75rem; align-items: center; gap: 0.4rem; border-radius: 999px; background: var(--t-accent); padding: 0 1rem; color: var(--t-on-accent); font-size: 0.85rem; font-weight: 700; }
+  .add-button { display: inline-flex; min-height: 2.75rem; align-items: center; gap: 0.4rem; border-radius: 999px; background: var(--t-cta, var(--t-accent)); padding: 0 1rem; color: var(--t-on-cta, var(--t-on-accent)); font-size: 0.85rem; font-weight: 700; }
   .quantity-control { display: flex; align-items: center; border-radius: 999px; background: color-mix(in oklch, var(--t-line) 10%, transparent); padding: 0.2rem; }
   .spinner { width: 1.25rem; height: 1.25rem; border: 2px solid color-mix(in oklch, var(--t-on-accent) 35%, transparent); border-top-color: var(--t-on-accent); border-radius: 999px; animation: spin 0.8s linear infinite; }
 }
