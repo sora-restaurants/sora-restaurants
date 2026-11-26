@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import type { PGlite } from "@electric-sql/pglite";
 import { freshDb } from "../../../../supabase/tests/db.ts";
-import { BUNNY_CHOW, DEMO, OTHER } from "../../../../supabase/tests/fixtures.ts";
+import { PRIMAVERA, DEMO, OTHER } from "../../../../supabase/tests/fixtures.ts";
 import { forStation } from "../kitchen/board-state.ts";
 import { lineExtraCents } from "../components/menu/customise-options.ts";
 import type { Deps, KitchenOrder } from "./deps.ts";
@@ -20,13 +20,13 @@ const owner = (path = "", body?: object, token = "token-owner") => new Request(`
   body ? { method: "POST", body: JSON.stringify(body), headers: { authorization: `Bearer ${token}` } } : { headers: { authorization: `Bearer ${token}` } });
 const command = async (body: object, token?: string) => ownerCommand(owner("", body, token), deps);
 const order = (notes?: string, key = "k-opt-0001") => submitOrder({ qrToken: "demo-table-4-token", idempotencyKey: key,
-  items: [{ menuItemId: BUNNY_CHOW, quantity: 2, ...(notes ? { notes } : {}) }] }, deps);
+  items: [{ menuItemId: PRIMAVERA, quantity: 2, ...(notes ? { notes } : {}) }] }, deps);
 const one = async <T,>(sql: string) => (await db.query<T>(sql)).rows[0];
 
 describe("owner-set options", () => {
   it("are priced by the server from the dish's own list, and the built-in list no longer applies", async () => {
-    expect((await command({ action: "addOption", itemId: BUNNY_CHOW, label: "Extra cheese", priceCents: 1500 })).status).toBe(200);
-    const base = (await one<{ price_cents: number }>(`select price_cents from menu_items where id = '${BUNNY_CHOW}'`)).price_cents;
+    expect((await command({ action: "addOption", itemId: PRIMAVERA, label: "Extra cheese", priceCents: 1500 })).status).toBe(200);
+    const base = (await one<{ price_cents: number }>(`select price_cents from menu_items where id = '${PRIMAVERA}'`)).price_cents;
     // "Bacon" is a built-in R20 add-on; on a dish with its own options it costs nothing.
     expect((await order("Extra cheese (+R 15,00), Bacon (+R 20,00)")).ok).toBe(true);
     expect(await one("select unit_price_cents, quantity from order_items")).toEqual({ unit_price_cents: base + 1500, quantity: 2 });
@@ -34,17 +34,17 @@ describe("owner-set options", () => {
   });
 
   it("refuse commas, and only the owner's own restaurant can be changed", async () => {
-    expect((await command({ action: "addOption", itemId: BUNNY_CHOW, label: "Salt, pepper", priceCents: 0 })).status).toBe(400);
-    expect((await command({ action: "addOption", itemId: BUNNY_CHOW, label: "Hack", priceCents: 0 }, "token-B")).status).toBe(404);
+    expect((await command({ action: "addOption", itemId: PRIMAVERA, label: "Salt, pepper", priceCents: 0 })).status).toBe(400);
+    expect((await command({ action: "addOption", itemId: PRIMAVERA, label: "Hack", priceCents: 0 }, "token-B")).status).toBe(404);
   });
 
   it("show on the guest menu with allergens", async () => {
-    await command({ action: "addOption", itemId: BUNNY_CHOW, label: "Large", priceCents: 2000 });
-    const { name } = await one<{ name: string }>(`select name from menu_items where id = '${BUNNY_CHOW}'`);
-    expect((await command({ action: "updateItem", itemId: BUNNY_CHOW, name, description: "", priceCents: 9000, imageUrl: null,
+    await command({ action: "addOption", itemId: PRIMAVERA, label: "Large", priceCents: 2000 });
+    const { name } = await one<{ name: string }>(`select name from menu_items where id = '${PRIMAVERA}'`);
+    expect((await command({ action: "updateItem", itemId: PRIMAVERA, name, description: "", priceCents: 9000, imageUrl: null,
       dietaryTags: [], available: true, soldOut: false, allergens: ["Gluten", "Milk"] })).status).toBe(200);
     const menu = (await one<{ m: { categories: { items: { id: string; allergens: string[]; options: { label: string }[] }[] }[] } }>("select get_table_menu('demo-table-4-token') m")).m;
-    const item = menu.categories.flatMap((c) => c.items).find((i) => i.id === BUNNY_CHOW)!;
+    const item = menu.categories.flatMap((c) => c.items).find((i) => i.id === PRIMAVERA)!;
     expect(item.allergens).toEqual(["Gluten", "Milk"]);
     expect(item.options.map((o) => o.label)).toEqual(["Large"]);
   });
@@ -52,7 +52,7 @@ describe("owner-set options", () => {
 
 describe("kitchen and bar", () => {
   it("each ticket line carries its category's station, and a bar screen sees only drinks", async () => {
-    const { menu_id } = await one<{ menu_id: string }>(`select menu_id from menu_items where id = '${BUNNY_CHOW}'`);
+    const { menu_id } = await one<{ menu_id: string }>(`select menu_id from menu_items where id = '${PRIMAVERA}'`);
     expect((await command({ action: "setStation", menuId: menu_id, station: "bar" })).status).toBe(200);
     await order();
     const ac = new AbortController();

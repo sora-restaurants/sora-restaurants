@@ -1,6 +1,6 @@
 import { afterAll, describe, expect, it, vi } from "vitest";
 import { freshDb } from "../../../../supabase/tests/db";
-import { BUNNY_CHOW, DEMO, DEMO_USER, ROOIBOS } from "../../../../supabase/tests/fixtures";
+import { PRIMAVERA, DEMO, DEMO_USER, COKE } from "../../../../supabase/tests/fixtures";
 import { submitOrder } from "./submit-order.ts";
 
 // The production database code (postgres.js, SET ROLE service_role/authenticated) against a real server.
@@ -22,7 +22,7 @@ describe.runIf(process.env.DB_ENGINE === "postgres")("prodDeps on a real Postgre
       {
         qrToken: "demo-table-4-token",
         idempotencyKey: "key-prod-0001",
-        items: [{ menuItemId: BUNNY_CHOW, quantity: 2 }, { menuItemId: ROOIBOS, quantity: 1, notes: "no ice" }],
+        items: [{ menuItemId: PRIMAVERA, quantity: 2 }, { menuItemId: COKE, quantity: 1, notes: "no ice" }],
       },
       deps,
     );

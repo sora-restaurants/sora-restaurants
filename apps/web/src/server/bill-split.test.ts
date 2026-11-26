@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import type { PGlite } from "@electric-sql/pglite";
 import { freshDb } from "../../../../supabase/tests/db.ts";
-import { BUNNY_CHOW, ROOIBOS } from "../../../../supabase/tests/fixtures.ts";
+import { PRIMAVERA, COKE } from "../../../../supabase/tests/fixtures.ts";
 import { guestBill, guestSplit, markSharePaid, staffSplit } from "./bill-split.ts";
 import type { Deps } from "./deps.ts";
 import { submitOrder } from "./submit-order.ts";
@@ -18,10 +18,10 @@ beforeEach(async () => {
 type Share = { id: string; table: string; shareNo: number; amountCents: number };
 type Bill = { shares: { shareNo: number; amountCents: number; paid: boolean; items: { name: string }[] }[]; openCents: number; items: { id: string; name: string; cents: number }[] };
 
-// Bunny chow R125 + rooibos R35 = R160 at Table 4.
+// Primavera Salad R125 + Coca-Cola R35 = R160 at Table 4.
 async function seatedTable() {
   const r = await submitOrder({ qrToken: "demo-table-4-token", idempotencyKey: "split-key-0001",
-    items: [{ menuItemId: BUNNY_CHOW, quantity: 1 }, { menuItemId: ROOIBOS, quantity: 1 }] }, deps);
+    items: [{ menuItemId: PRIMAVERA, quantity: 1 }, { menuItemId: COKE, quantity: 1 }] }, deps);
   if (!r.ok) throw new Error(r.error);
   const [{ id: tableId }] = (await db.query<{ id: string }>("select id from tables where qr_token = 'demo-table-4-token'")).rows;
   return { token: r.statusToken, tableId };
@@ -45,13 +45,13 @@ describe("bill splitting", () => {
 
   it("splits by item: each pays their own dishes plus an even part of the rest", async () => {
     const { token } = await seatedTable();
-    const bunny = (await bill(token)).items.find((i) => i.name === "Bunny chow")!;
-    expect((await guestSplit(guest({ ways: 3, assign: { [bunny.id]: 1 } }), token, deps)).status).toBe(204);
+    const salad = (await bill(token)).items.find((i) => i.name === "Primavera Salad")!;
+    expect((await guestSplit(guest({ ways: 3, assign: { [salad.id]: 1 } }), token, deps)).status).toBe(204);
     const { shares, openCents, items } = await bill(token);
-    // R35 rooibos shared 3 ways: 1167 + 1167 + 1166.
+    // R35 Coca-Cola shared 3 ways: 1167 + 1167 + 1166.
     expect(shares.map((s) => s.amountCents)).toEqual([12500 + 1167, 1167, 1166]);
     expect(shares.reduce((sum, s) => sum + s.amountCents, 0)).toBe(16000);
-    expect(shares[0].items.map((i) => i.name)).toEqual(["Bunny chow"]);
+    expect(shares[0].items.map((i) => i.name)).toEqual(["Primavera Salad"]);
     expect(openCents).toBe(0);
     expect(items).toHaveLength(2); // still re-assignable: nobody has paid yet
   });

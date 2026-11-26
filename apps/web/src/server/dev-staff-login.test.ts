@@ -75,7 +75,7 @@ describe("dev login keeps every real check", () => {
 
   it("each kitchen user only finds their own restaurant", async () => {
     expect(await me(await tokenFor("kitchen@demo.test", "demo-kitchen-pass"))).toEqual({
-      restaurants: [{ id: DEMO, name: "Demo Bistro" }],
+      restaurants: [{ id: DEMO, name: "Donna's" }],
     });
     expect(await me(await tokenFor("kitchen@other.test", "other-kitchen-pass"))).toEqual({
       restaurants: [{ id: OTHER, name: "Other Grill" }],
@@ -88,7 +88,7 @@ describe("dev login keeps every real check", () => {
     expect((await board(DEMO, waiter)).status).toBe(403);
   });
 
-  it("Other Grill's kitchen is refused Demo Bistro's board", async () => {
+  it("Other Grill's kitchen is refused Donna's's board", async () => {
     expect((await board(DEMO, await tokenFor("kitchen@other.test", "other-kitchen-pass"))).status).toBe(403);
   });
 

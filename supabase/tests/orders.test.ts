@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import type { PGlite } from "@electric-sql/pglite";
 import { freshDb } from "./db";
-import { BUNNY_CHOW, RUMP, submitOrder } from "./fixtures";
+import { PRIMAVERA, RUMP, submitOrder } from "./fixtures";
 
 let db: PGlite;
 beforeEach(async () => { db = await freshDb(); });
@@ -10,7 +10,7 @@ const orderCount = async () => (await db.query<{ n: number }>("select count(*)::
 
 describe("submit_order", () => {
   it("VAT-inclusive total at 15%", async () => {
-    await submitOrder(db, "demo-table-1-token", "key-vat-0001", [{ menuItemId: BUNNY_CHOW, quantity: 1 }]);
+    await submitOrder(db, "demo-table-1-token", "key-vat-0001", [{ menuItemId: PRIMAVERA, quantity: 1 }]);
     const { rows } = await db.query("select total_cents, vat_cents from orders");
     expect(rows).toEqual([{ total_cents: 12500, vat_cents: 1630 }]);
   });
@@ -29,7 +29,7 @@ describe("submit_order", () => {
   });
 
   it("same key replays", async () => {
-    const cart = [{ menuItemId: BUNNY_CHOW, quantity: 2 }];
+    const cart = [{ menuItemId: PRIMAVERA, quantity: 2 }];
     const first = await submitOrder(db, "demo-table-1-token", "key-replay01", cart);
     const second = await submitOrder(db, "demo-table-1-token", "key-replay01", cart);
     expect(await orderCount()).toBe(1);
@@ -37,9 +37,9 @@ describe("submit_order", () => {
   });
 
   it("same key different cart conflicts", async () => {
-    await submitOrder(db, "demo-table-1-token", "key-conflict", [{ menuItemId: BUNNY_CHOW, quantity: 1 }]);
+    await submitOrder(db, "demo-table-1-token", "key-conflict", [{ menuItemId: PRIMAVERA, quantity: 1 }]);
     await expect(
-      submitOrder(db, "demo-table-1-token", "key-conflict", [{ menuItemId: BUNNY_CHOW, quantity: 3 }]),
+      submitOrder(db, "demo-table-1-token", "key-conflict", [{ menuItemId: PRIMAVERA, quantity: 3 }]),
     ).rejects.toThrow(/idempotency_conflict/);
     expect(await orderCount()).toBe(1);
   });

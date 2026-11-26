@@ -13,7 +13,7 @@ describe("owner operations", () => {
     const response = await ownerSnapshot(request(), testDeps(db));
     expect(response.status).toBe(200);
     const body = await response.json();
-    expect(body.snapshot.restaurantName).toBe("Demo Bistro");
+    expect(body.snapshot.restaurantName).toBe("Donna's");
     expect(body.snapshot.tables).toHaveLength(3);
     expect(body.snapshot.tables[0].qrUrl).toMatch(/^http:\/\/sora\.test\/t\//);
     expect(body.snapshot.tables[0].qrImageSrc).toMatch(/^data:image\/png;base64,/);
@@ -34,8 +34,8 @@ describe("owner operations", () => {
   it("updates a dish through an owner-only database function", async () => {
     const itemId = "a2000000-0000-0000-0000-000000000012";
     const response = await ownerCommand(request("", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({
-      action: "updateItem", itemId, name: "Charred Cauliflower", description: "New seasonal description", priceCents: 13200,
-      imageUrl: "/menu/charred-cauliflower.jpg", dietaryTags: ["vegetarian"], available: true, soldOut: true,
+      action: "updateItem", itemId, name: "Mushroom Risotto", description: "New seasonal description", priceCents: 13200,
+      imageUrl: null, dietaryTags: ["vegetarian"], available: true, soldOut: true,
     }) }), testDeps(db));
     expect(response.status).toBe(200);
     expect((await db.query("select price_cents, sold_out from menu_items where id = $1", [itemId])).rows)
