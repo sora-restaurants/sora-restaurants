@@ -14,7 +14,7 @@ export async function sendReceiptAction(input: {
   weeklySpecials: boolean;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
   const to = String(input.to ?? "").trim();
-  if (to.length > 200 || !/^[^s@<>]+@[^s@<>]+.[^s@<>]+$/.test(to)) return { ok: false, error: "invalid" };
+  if (to.length > 200 || !/^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(to)) return { ok: false, error: "invalid" };
   if (!/^[0-9a-f]{32}$/.test(String(input.statusToken))) return { ok: false, error: "not_found" };
   const tipPercent = [0, 10, 15, 20].includes(input.tipPercent) ? input.tipPercent : 0;
   const splitWays = [1, 2, 3, 4].includes(input.splitWays) ? input.splitWays : 1;
