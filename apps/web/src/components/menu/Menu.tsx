@@ -13,7 +13,8 @@ import { BillSplit } from "../order/BillSplit.tsx";
 import { demoReviewsFor, type DemoReview } from "./demo-reviews.ts";
 import { demoWaitMinutes } from "./demo-extras.ts";
 import { MenuBrowser } from "./MenuBrowser.tsx";
-import { DONNA_CHEFS_PICKS, DONNA_POPULAR_TONIGHT, isDonnas, requiredGroups, type ChoiceGroup } from "./donna-demo.ts";
+import { sectionLayout } from "./menu-layout.ts";
+import { DONNA_CHEFS_PICKS, DONNA_POPULAR_TONIGHT, DONNA_TIMEZONE, donnaLayout, isDonnas, requiredGroups, type ChoiceGroup } from "./donna-demo.ts";
 import { NO_WANT, SPICE, COOKING, ADD_ONS, DRINK_SIZE, DRINK_ICE, DRINK_EXTRAS, COFFEE_MILK, COOL_DRINK_BRAND, COOL_DRINK_TYPE, CHEESECAKE_SLICE, SMOOTHIE_FLAVOUR, WATER_TYPE, STEAK_SIZE, WINGS_SIZE, FRIES_SIZE, FRIES_ADDONS, canChooseDoneness, isDrink, isCoffee, isHotDrink, lineExtraCents } from "./customise-options.ts";
 
 const formatCents = formatRand; // by hand, not Intl: phone and server locale data differ and break hydration
@@ -200,11 +201,8 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
   // Big menus open on section blocks with search and filters instead of one long scroll.
   const donna = isDonnas(menu.restaurant);
   const browse = items.length >= 40;
-  const popular = donna ? DONNA_POPULAR_TONIGHT.flatMap((name) => {
-    const category = menu.categories.find((c) => c.items.some((i) => i.name === name && !i.soldOut));
-    const item = category?.items.find((i) => i.name === name);
-    return category && item ? [{ item, categoryId: category.id }] : [];
-  }) : [];
+  const popular = donna ? DONNA_POPULAR_TONIGHT.flatMap((name) => items.filter((i) => i.name === name && !i.soldOut).slice(0, 1)) : [];
+  const layout = donna ? donnaLayout(menu.categories) : sectionLayout(menu.categories);
   const card = (item: MenuItem, category: TableMenu["categories"][number], index: number) => (
     <MenuCard key={item.id} item={item} showRatings={preview} categoryName={category.name} quantity={cart[item.id] ?? 0}
       note={(notes[item.id] ?? [[]])[Math.max(0, (notes[item.id]?.length ?? 1) - 1)] ?? []} index={index} onChange={setQuantity}
@@ -273,7 +271,7 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
             </ul>
           </section>
         )}
-        {browse ? <MenuBrowser categories={menu.categories} popular={popular} formatCents={formatCents} renderCard={card} /> : menu.categories.length === 0 ? <EmptyMenu /> : menu.categories.map((category, categoryIndex) => {
+        {browse ? <MenuBrowser layout={layout} timeZone={DONNA_TIMEZONE} popular={popular} formatCents={formatCents} renderCard={card} /> : menu.categories.length === 0 ? <EmptyMenu /> : menu.categories.map((category, categoryIndex) => {
           const visible = category.items;
           if (visible.length === 0) return null;
           return (

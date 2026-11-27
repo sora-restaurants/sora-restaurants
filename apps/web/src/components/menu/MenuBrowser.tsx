@@ -1,31 +1,51 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import type { MenuItem, TableMenu } from "./types.ts";
-import { QUICK_FILTERS, isDrinkSection, matchesFilter, matchesQuery, type QuickFilter } from "./donna-demo.ts";
+import type { MenuItem } from "./types.ts";
+import { QUICK_FILTERS, matchesFilter, matchesQuery, type QuickFilter } from "./donna-demo.ts";
+import { entriesOf, minutesNow, servedNow, walk, type Category, type Entry, type MenuLayout, type MenuNode } from "./menu-layout.ts";
 
-type Category = TableMenu["categories"][number];
 type Props = {
-  categories: Category[];
-  popular: { item: MenuItem; categoryId: string }[];
+  /** The whole layout; blocks past their serving time are hidden here, using the restaurant's clock. */
+  layout: MenuLayout;
+  timeZone: string;
+  popular: MenuItem[];
   formatCents: (cents: number) => string;
   renderCard: (item: MenuItem, category: Category, index: number) => ReactNode;
 };
 
+const count = (n: MenuNode) => { const k = entriesOf(n).length; return `${k} ${n.kind === "drink" ? (k === 1 ? "drink" : "drinks") : (k === 1 ? "dish" : "dishes")}`; };
+
+/** "?at=09:30" shows the menu as it looks at that time, for demos and previews. */
+function clockOverride(): number | null {
+  if (typeof window === "undefined") return null;
+  const m = /^(\d{1,2}):(\d{2})$/.exec(new URLSearchParams(window.location.search).get("at") ?? "");
+  return m ? Number(m[1]) * 60 + Number(m[2]) : null;
+}
+
 /**
- * Large menus (Donna's has ~350 dishes in 22 sections) open on a screen of glass section blocks instead of one
- * long scroll. A pinned search and quick filters search the whole menu; tapping a block shows only that section.
+ * Large menus (Donna's has ~350 dishes) open on a screen of glass blocks instead of one long scroll. A block holds
+ * smaller blocks (Mains > Pizza) or a list of dishes. A pinned search and quick filters search the whole menu.
  */
-export function MenuBrowser({ categories, popular, formatCents, renderCard }: Props) {
-  const [openId, setOpenId] = useState<string | null>(null);
+export function MenuBrowser({ layout: full, timeZone, popular, formatCents, renderCard }: Props) {
+  const [path, setPath] = useState<string[]>([]);
   const [query, setQuery] = useState("");
   const [quick, setQuick] = useState<QuickFilter | null>(null);
+  const [minutes, setMinutes] = useState(() => minutesNow(timeZone));
   const top = useRef<HTMLDivElement | null>(null);
   const pendingScroll = useRef<string | null>(null);
 
-  // The phone's Back button returns to the section blocks instead of leaving the menu.
+  // Breakfast and other timed blocks disappear on their own once their serving time passes.
   useEffect(() => {
-    const onPop = (e: PopStateEvent) => setOpenId((e.state as { section?: string } | null)?.section ?? null);
+    const tick = () => setMinutes(clockOverride() ?? minutesNow(timeZone));
+    tick();
+    const timer = setInterval(tick, 60_000);
+    return () => clearInterval(timer);
+  }, [timeZone]);
+
+  // The phone's Back button goes up one block instead of leaving the menu.
+  useEffect(() => {
+    const onPop = (e: PopStateEvent) => setPath((e.state as { menuPath?: string[] } | null)?.menuPath ?? []);
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
   }, []);
@@ -34,25 +54,58 @@ export function MenuBrowser({ categories, popular, formatCents, renderCard }: Pr
     pendingScroll.current = null;
     if (target) document.getElementById(target)?.scrollIntoView({ block: "center" });
     else if (top.current && window.scrollY > top.current.offsetTop) window.scrollTo({ top: top.current.offsetTop });
-  }, [openId, quick]);
+  }, [path, quick]);
 
-  const open = (id: string | null, scrollTo?: string) => {
+  const layout = servedNow(full, minutes);
+  const all = walk(layout);
+  const byId = new Map(all.map((x) => [x.node.id, x]));
+  const opened = path.length > 0 ? byId.get(path[path.length - 1]) ?? null : null;
+
+  const go = (next: string[], scrollTo?: string) => {
     pendingScroll.current = scrollTo ?? null;
     setQuery("");
     setQuick(null);
-    if (id) history.pushState({ section: id }, "");
-    else if ((history.state as { section?: string } | null)?.section) { history.back(); return; }
-    setOpenId(id);
+    const current = (history.state as { menuPath?: string[] } | null)?.menuPath ?? [];
+    // Going up: step back through history so the phone's Back button stays in step.
+    if (next.length < current.length && current.slice(0, next.length).join("/") === next.join("/")) { history.go(next.length - current.length); return; }
+    history.pushState({ ...(history.state ?? {}), menuPath: next }, "");
+    setPath(next);
   };
+  const openNode = (id: string, scrollTo?: string) => { const x = byId.get(id); if (x) go([...x.trail.map((t) => t.id), id], scrollTo); };
 
   const searching = query.trim().length > 0 || quick !== null;
-  const opened = categories.find((c) => c.id === openId) ?? null;
+  const leaves = all.filter((x) => !x.node.children);
   const results = searching
-    ? categories.map((c) => ({ category: c, items: c.items.filter((i) => (!quick || matchesFilter(quick, i, c.name)) && (!query.trim() || matchesQuery(query, i, c.name))) })).filter((g) => g.items.length > 0)
+    ? leaves.map(({ node, trail }) => ({ node, trail, entries: (node.entries ?? []).filter(({ item, category }) => {
+        const where = `${trail.map((t) => t.name).join(" ")} ${node.name} ${category.name}`;
+        return (!quick || matchesFilter(quick, item, category.name)) && (!query.trim() || matchesQuery(query, item, where));
+      }) })).filter((g) => g.entries.length > 0)
     : [];
-  const resultCount = results.reduce((n, g) => n + g.items.length, 0);
-  const food = categories.filter((c) => !isDrinkSection(c.name));
-  const drinks = categories.filter((c) => isDrinkSection(c.name));
+  const resultCount = results.reduce((n, g) => n + g.entries.length, 0);
+  const where = new Map(leaves.flatMap(({ node }) => (node.entries ?? []).map((e) => [e.item.id, node.id] as const)));
+  const shownPopular = popular.filter((i) => where.has(i.id));
+  const food = layout.groups.some((g) => g.label === "Eat");
+  const drink = layout.groups.some((g) => g.label === "Drink");
+
+  const blocks = (nodes: MenuNode[]) => (
+    <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+      {nodes.map((n) => {
+        const photo = entriesOf(n).find((e) => e.item.imageUrl)?.item.imageUrl;
+        return (
+          <li key={n.id}>
+            <button type="button" onClick={() => openNode(n.id)} className="section-block focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-accent">
+              {photo && <img src={photo} alt="" loading="lazy" />}
+              <span className="glass">
+                <span className="display block text-base leading-tight text-ink">{n.name}</span>
+                <span className="text-xs font-semibold text-muted">{n.children && n.showAs === "blocks" ? `${n.children.length} sections · ` : ""}{count(n)}</span>
+              </span>
+            </button>
+          </li>
+        );
+      })}
+    </ul>
+  );
+  const dishes = (entries: Entry[]) => <ul className="menu-grid">{entries.map(({ item, category }, i) => renderCard(item, category, i))}</ul>;
 
   return (
     <div ref={top}>
@@ -63,7 +116,7 @@ export function MenuBrowser({ categories, popular, formatCents, renderCard }: Pr
           <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search dishes, drinks, ingredients" className="search-box glass text-ink placeholder:text-muted" enterKeyHint="search" />
         </label>
         <div className="-mx-pad mt-2 flex gap-2 overflow-x-auto px-pad pb-1" role="group" aria-label="Quick filters">
-          {opened && !searching && <button type="button" onClick={() => open(null)} className="filter-chip glass text-ink"><span aria-hidden="true">‹</span> All sections</button>}
+          {opened && !searching && <button type="button" onClick={() => go(path.slice(0, -1))} className="filter-chip glass text-ink"><span aria-hidden="true">‹</span> {opened.trail[opened.trail.length - 1]?.name ?? "All sections"}</button>}
           {QUICK_FILTERS.map((f) => <button key={f.id} type="button" aria-pressed={quick === f.id} onClick={() => setQuick(quick === f.id ? null : f.id)} className="filter-chip glass text-ink">{f.label}</button>)}
         </div>
       </div>
@@ -75,39 +128,55 @@ export function MenuBrowser({ categories, popular, formatCents, renderCard }: Pr
             <button type="button" onClick={() => { setQuery(""); setQuick(null); }} className="text-sm font-bold text-accent">Clear</button>
           </div>
           {resultCount === 0 && <p className="text-sm text-muted">Try another word, or clear the filter to see every section.</p>}
-          {results.map(({ category, items }) => (
-            <div key={category.id} className="mb-6">
-              <p className="mb-2 text-xs font-bold uppercase tracking-[0.16em] text-muted">{category.name}</p>
-              <ul className="menu-grid">{items.map((item, i) => renderCard(item, category, i))}</ul>
+          {results.map(({ node, trail, entries }) => (
+            <div key={node.id} className="mb-6">
+              <p className="mb-2 text-xs font-bold uppercase tracking-[0.16em] text-muted">{[...trail.map((t) => t.name), node.name].join(" · ")}</p>
+              {dishes(entries)}
             </div>
           ))}
         </section>
       ) : opened ? (
         <section aria-labelledby="open-section" className="pt-5">
+          {opened.trail.length > 0 && <p className="mb-1 text-xs font-bold uppercase tracking-[0.16em] text-accent">{opened.trail.map((t) => t.name).join(" · ")}</p>}
           <div className="mb-4 flex items-end justify-between gap-3">
-            <h2 id="open-section" className="display text-3xl leading-none">{opened.name}</h2>
-            <span className="text-sm text-muted">{opened.items.length} {isDrinkSection(opened.name) ? "drinks" : "dishes"}</span>
+            <h2 id="open-section" className="display text-3xl leading-none">{opened.node.name}</h2>
+            <span className="text-sm text-muted">{count(opened.node)}</span>
           </div>
-          <ul className="menu-grid">{opened.items.map((item, i) => renderCard(item, opened, i))}</ul>
+          {opened.node.children && opened.node.showAs === "blocks" ? blocks(opened.node.children)
+            : opened.node.children ? (
+              <>
+                <div className="-mx-pad mb-4 flex gap-2 overflow-x-auto px-pad pb-1" role="group" aria-label={`Jump to part of ${opened.node.name}`}>
+                  {opened.node.children.map((c) => <a key={c.id} href={`#g-${c.id}`} className="filter-chip glass text-ink">{c.name}</a>)}
+                </div>
+                {opened.node.children.map((c) => (
+                  <div key={c.id} id={`g-${c.id}`} className="mb-7 scroll-mt-32">
+                    <h3 className="mb-3 text-xs font-bold uppercase tracking-[0.16em] text-muted">{c.name}</h3>
+                    {dishes(entriesOf(c))}
+                  </div>
+                ))}
+              </>
+            ) : dishes(opened.node.entries ?? [])}
           {(() => {
-            const next = categories[categories.indexOf(opened) + 1];
+            const siblings = opened.trail.length > 0 ? opened.trail[opened.trail.length - 1].children ?? [] : layout.groups.flatMap((g) => g.nodes);
+            const next = siblings[siblings.findIndex((s) => s.id === opened.node.id) + 1];
+            const up = opened.trail[opened.trail.length - 1];
             return (
               <div className="mt-8 grid gap-3 sm:grid-cols-2">
-                <button type="button" onClick={() => open(null)} className="glass min-h-14 rounded-theme px-4 text-left font-bold">‹ All sections</button>
-                {next && <button type="button" onClick={() => open(next.id)} className="glass min-h-14 rounded-theme px-4 text-right font-bold">Next: {next.name} ›</button>}
+                <button type="button" onClick={() => go(path.slice(0, -1))} className="glass min-h-14 rounded-theme px-4 text-left font-bold">‹ {up ? up.name : "All sections"}</button>
+                {next && <button type="button" onClick={() => go([...path.slice(0, -1), next.id])} className="glass min-h-14 rounded-theme px-4 text-right font-bold">Next: {next.name} ›</button>}
               </div>
             );
           })()}
         </section>
       ) : (
         <>
-          {popular.length > 0 && (
+          {shownPopular.length > 0 && (
             <section aria-labelledby="popular-tonight" className="pt-5">
               <h2 id="popular-tonight" className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-accent"><span className="inline-block size-2 animate-pulse rounded-full bg-cta" aria-hidden="true" />Popular tonight</h2>
               <ul className="-mx-pad flex snap-x gap-3 overflow-x-auto px-pad pb-2">
-                {popular.map(({ item, categoryId }) => (
+                {shownPopular.map((item) => (
                   <li key={item.id} className="snap-start">
-                    <button type="button" onClick={() => open(categoryId, `d-${item.id}`)} className="glass flex w-40 flex-col overflow-hidden rounded-theme text-left">
+                    <button type="button" onClick={() => openNode(where.get(item.id)!, `d-${item.id}`)} className="glass flex w-40 flex-col overflow-hidden rounded-theme text-left">
                       {item.imageUrl ? <img src={item.imageUrl} alt="" className="h-24 w-full object-cover" /> : <span className="h-24 w-full bg-cta/30" />}
                       <span className="px-3 pb-3 pt-2"><span className="line-clamp-1 block text-sm font-bold">{item.name}</span><span className="text-sm font-bold text-price">{formatCents(item.priceCents)}</span></span>
                     </button>
@@ -116,25 +185,10 @@ export function MenuBrowser({ categories, popular, formatCents, renderCard }: Pr
               </ul>
             </section>
           )}
-          {[{ label: "Eat", list: food }, { label: "Drink", list: drinks }].filter((g) => g.list.length > 0).map((group) => (
+          {layout.groups.map((group) => (
             <section key={group.label} aria-label={group.label} className="pt-6">
-              {food.length > 0 && drinks.length > 0 && <h2 className="display mb-3 text-2xl">{group.label}</h2>}
-              <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                {group.list.map((c) => {
-                  const photo = c.items.find((i) => i.imageUrl)?.imageUrl;
-                  return (
-                    <li key={c.id}>
-                      <button type="button" onClick={() => open(c.id)} className="section-block focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-accent">
-                        {photo && <img src={photo} alt="" loading="lazy" />}
-                        <span className="glass">
-                          <span className="display block text-base leading-tight text-ink">{c.name}</span>
-                          <span className="text-xs font-semibold text-muted">{c.items.length} {isDrinkSection(c.name) ? "drinks" : "dishes"}</span>
-                        </span>
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
+              {food && drink && <h2 className="display mb-3 text-2xl">{group.label}</h2>}
+              {blocks(group.nodes)}
             </section>
           ))}
         </>
