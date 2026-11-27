@@ -147,6 +147,10 @@ describe("waiter floor", () => {
     // The waiter screen shows one restaurant at a time, so each table says whose it is.
     expect(t4).toMatchObject({ orders: 1, inKitchen: 1, calling: false, restaurantId: DEMO, restaurantName: "Demo Bistro" });
     expect(t4.unpaidCents).toBeGreaterThan(0);
+    // The waiter sees exactly what the table ordered and where it is.
+    expect(t4.ready).toBe(0);
+    expect(t4.items.length).toBeGreaterThan(0);
+    expect(t4.items[0]).toMatchObject({ status: "submitted", quantity: expect.any(Number), name: expect.any(String) });
     const kitchen = await (await listTables(new Request("http://x", { headers: { authorization: "Bearer token-A" } }), deps)).json();
     expect(kitchen.tables).toEqual([]);
   });

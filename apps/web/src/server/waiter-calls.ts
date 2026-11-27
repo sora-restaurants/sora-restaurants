@@ -29,7 +29,7 @@ export async function listCalls(req: Request, deps: Deps): Promise<Response> {
   if (!userId) return Response.json({ error: "unauthorized" }, { status: 401 });
   const calls = await deps.db.asUser(
     userId,
-    `select c.id, t.label as "table", c.created_at as "createdAt", c.restaurant_id as "restaurantId"
+    `select c.id, c.table_id as "tableId", t.label as "table", c.created_at as "createdAt", c.restaurant_id as "restaurantId"
      from waiter_calls c join tables t on t.restaurant_id = c.restaurant_id and t.id = c.table_id
      where c.status = 'open' order by c.created_at`,
   );
