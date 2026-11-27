@@ -7,6 +7,8 @@ import { saveCheckoutAction } from "../../app/actions/save-checkout.ts";
 import type { ThemeId } from "../../themes/themes.ts";
 import type { MenuItem, TableMenu } from "./types.ts";
 import { SlideToPay } from "../order/SlideToPay.tsx";
+import { Receipt } from "../order/Receipt.tsx";
+import type { Receipt as ReceiptData } from "../../server/order-status.ts";
 import { newIdempotencyKey } from "../../lib/idempotency-key.ts";
 import { formatRand } from "../../lib/money.ts";
 import { BillSplit } from "../order/BillSplit.tsx";
@@ -69,6 +71,16 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
     const id = setInterval(poll, 4000);
     return () => clearInterval(id);
   }, [statusToken, finished]);
+  // Once paid (by staff or on this phone), read the receipt from the server: its lines and prices, never the cart.
+  const [receipt, setReceipt] = useState<ReceiptData | null>(null);
+  const paid = status.kind === "placed" && status.paid;
+  useEffect(() => {
+    if (!paid || !statusToken) return;
+    fetch(`/api/orders/status/${statusToken}`, { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { receipt?: ReceiptData } | null) => { if (d?.receipt) setReceipt(d.receipt); })
+      .catch(() => {});
+  }, [paid, statusToken]);
   const [basketOpen, setBasketOpen] = useState(false);
   const [paymentChoice, setPaymentChoice] = useState<"pay_later" | "pay_now">("pay_later");
   const [splitWays, setSplitWays] = useState<1 | 2 | 3 | 4>(1);
@@ -193,6 +205,7 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
           <p className="text-xs font-bold uppercase tracking-[0.2em] opacity-80">{menu.restaurant} · {menu.table}</p>
           <h1 className="display mt-5 text-4xl">Paid — thank you</h1>
           <p className="mt-3 leading-relaxed opacity-80">Your bill is settled. Thanks for dining with us. To order again, scan the table QR code.</p>
+          {receipt ? <Receipt receipt={receipt} restaurant={menu.restaurant} table={menu.table} /> : null}
         </section>
       </main>
     );

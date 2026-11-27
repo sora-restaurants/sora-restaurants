@@ -11,9 +11,14 @@ describe("orderStatus", () => {
     const deps = testDeps(db);
     const result = await submitOrder({ qrToken: "demo-table-4-token", idempotencyKey: "key-status-01", items: [{ menuItemId: BUNNY_CHOW, quantity: 1 }] }, deps);
     if (!result.ok) throw new Error(result.error);
-    expect(await (await orderStatus(result.statusToken, deps)).json()).toEqual({ status: "submitted", paid: false });
-    await db.query("update orders set status = 'served'");
-    expect(await (await orderStatus(result.statusToken, deps)).json()).toEqual({ status: "served", paid: false });
+    expect(await (await orderStatus(result.statusToken, deps)).json()).toMatchObject({ status: "submitted", paid: false });
+    await db.query("update orders set status = 'served', payment_status = 'paid', paid_at = now(), tip_cents = 500");
+    const body = await (await orderStatus(result.statusToken, deps)).json();
+    expect(body).toMatchObject({ status: "served", paid: true, receipt: { publicRef: result.publicRef, tipCents: 500 } });
+    const { rows } = await db.query<{ unit: number; total: number }>("select oi.unit_price_cents unit, o.total_cents total from orders o join order_items oi on oi.order_id = o.id");
+    expect(body.receipt.items).toEqual([{ name: expect.any(String), quantity: 1, unitPriceCents: rows[0].unit, notes: "" }]);
+    expect(body.receipt.subtotalCents).toBe(rows[0].total);
+    expect(body.receipt.paidAt).toEqual(expect.any(String));
     expect((await orderStatus("0".repeat(32), deps)).status).toBe(404);
     expect((await orderStatus("x'; drop", deps)).status).toBe(404);
   });
