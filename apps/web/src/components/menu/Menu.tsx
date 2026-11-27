@@ -66,7 +66,6 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
   }, [statusToken, finished]);
   const [basketOpen, setBasketOpen] = useState(false);
   const [paymentChoice, setPaymentChoice] = useState<"pay_later" | "pay_now">("pay_later");
-  const [splitWays, setSplitWays] = useState<1 | 2 | 3 | 4>(1);
   const [emailReceipt, setEmailReceipt] = useState("");
   const [weeklySpecials, setWeeklySpecials] = useState(false);
   const [tipPercent, setTipPercent] = useState<0 | 10 | 15 | 20>(0);
@@ -133,8 +132,8 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
         items: orderLines.map((l) => ({ menuItemId: l.item.id, quantity: l.quantity, ...(l.notes ? { notes: l.notes } : {}) })),
       });
       if (result.ok) {
-        void saveCheckoutAction({ statusToken: result.statusToken, paymentChoice, tipPercent, splitWays });
-        if (emailReceipt.trim()) void sendReceiptAction({ to: emailReceipt, statusToken: result.statusToken, tipPercent, splitWays, weeklySpecials });
+        void saveCheckoutAction({ statusToken: result.statusToken, paymentChoice, tipPercent, splitWays: 1 });
+        if (emailReceipt.trim()) void sendReceiptAction({ to: emailReceipt, statusToken: result.statusToken, tipPercent, splitWays: 1, weeklySpecials });
         const wait = demoWaitMinutes(count);
         setStatus({ kind: "placed", publicRef: result.publicRef, statusToken: result.statusToken, itemCount: count, totalCents: estimate, payNow: paymentChoice === "pay_now", paid: false, stage: "received", wait });
         setTableOrders((prev) => [{ ref: result.publicRef, total: estimate, count }, ...prev].slice(0, 5));
@@ -255,7 +254,7 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
         </div>
       )}
       <OrderDock triggerRef={basketTrigger} count={count} estimate={estimate} status={status} onOpen={() => setBasketOpen(true)} onDismiss={() => { if (status.kind === "placed" && (status.stage === "served" || status.stage === "cancelled")) { try { sessionStorage.removeItem(trackKey); } catch { /* storage blocked */ } } setStatus({ kind: "idle" }); }} onPaid={() => setStatus((s) => s.kind === "placed" ? { ...s, paid: true } : s)} />
-      {basketOpen && <BasketSheet returnFocusRef={basketTrigger} lines={lines} cart={cart} notes={notes} estimate={estimate} status={status} paymentChoice={paymentChoice} splitWays={splitWays} emailReceipt={emailReceipt} weeklySpecials={weeklySpecials} tipPercent={tipPercent} onPaymentChoice={setPaymentChoice} onSplit={setSplitWays} onEmail={setEmailReceipt} onWeekly={setWeeklySpecials} onTip={setTipPercent} onChange={setQuantity} onClose={closeBasket} onPlace={placeOrder} showPayNow={DEMO_PAYMENTS || qrToken === "preview"} />}
+      {basketOpen && <BasketSheet returnFocusRef={basketTrigger} lines={lines} cart={cart} notes={notes} estimate={estimate} status={status} paymentChoice={paymentChoice} emailReceipt={emailReceipt} weeklySpecials={weeklySpecials} tipPercent={tipPercent} onPaymentChoice={setPaymentChoice} onEmail={setEmailReceipt} onWeekly={setWeeklySpecials} onTip={setTipPercent} onChange={setQuantity} onClose={closeBasket} onPlace={placeOrder} showPayNow={DEMO_PAYMENTS || qrToken === "preview"} />}
     </div>
   );
 }
@@ -614,7 +613,7 @@ function OrderDock({ triggerRef, count, estimate, status, onOpen, onDismiss, onP
   return <div className="fixed inset-x-0 bottom-0 z-30 bg-linear-to-t from-bg via-bg to-transparent px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-8"><button ref={triggerRef} type="button" onClick={onOpen} aria-haspopup="dialog" className="mx-auto flex min-h-16 w-full max-w-(--t-max) items-center justify-between gap-4 rounded-theme bg-accent px-5 font-bold text-on-accent shadow-2xl active:scale-[0.99] focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ink"><span className="flex items-center gap-3"><span className="grid size-8 place-items-center rounded-full bg-on-accent text-sm text-accent">{count}</span>View your order</span><span className="tabular-nums">{formatCents(estimate)} <span aria-hidden="true">→</span></span></button></div>;
 }
 
-function BasketSheet({ returnFocusRef, lines, cart, notes, estimate, status, paymentChoice, splitWays, emailReceipt, weeklySpecials, tipPercent, onPaymentChoice, onSplit, onEmail, onWeekly, onTip, onChange, onClose, onPlace, showPayNow }: { showPayNow: boolean; returnFocusRef: React.RefObject<HTMLButtonElement | null>; lines: MenuItem[]; cart: Record<string, number>; notes: Record<string, string[][]>; estimate: number; status: Status; paymentChoice: "pay_later" | "pay_now"; splitWays: 1|2|3|4; emailReceipt: string; weeklySpecials: boolean; tipPercent: 0|10|15|20; onPaymentChoice: (c: "pay_later" | "pay_now") => void; onSplit: (n: 1|2|3|4) => void; onEmail: (v: string) => void; onWeekly: (v: boolean) => void; onTip: (p: 0|10|15|20) => void; onChange: (id: string, q: number) => void; onClose: () => void; onPlace: () => void }) {
+function BasketSheet({ returnFocusRef, lines, cart, notes, estimate, status, paymentChoice, emailReceipt, weeklySpecials, tipPercent, onPaymentChoice, onEmail, onWeekly, onTip, onChange, onClose, onPlace, showPayNow }: { showPayNow: boolean; returnFocusRef: React.RefObject<HTMLButtonElement | null>; lines: MenuItem[]; cart: Record<string, number>; notes: Record<string, string[][]>; estimate: number; status: Status; paymentChoice: "pay_later" | "pay_now"; emailReceipt: string; weeklySpecials: boolean; tipPercent: 0|10|15|20; onPaymentChoice: (c: "pay_later" | "pay_now") => void; onEmail: (v: string) => void; onWeekly: (v: boolean) => void; onTip: (p: 0|10|15|20) => void; onChange: (id: string, q: number) => void; onClose: () => void; onPlace: () => void }) {
   const dialogRef = useRef<HTMLElement | null>(null);
   const closeRef = useRef<HTMLButtonElement | null>(null);
   const descriptionId = useId();
