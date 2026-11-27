@@ -1,6 +1,7 @@
 -- HOSTED DEMO ONLY: sends Donna's drinks to the Bar screen and food to the Kitchen screen.
--- Run once in the Supabase SQL Editor AFTER migration 20261126000000_bar_station.sql. Touches only Donna's.
+-- Run in the Supabase SQL Editor after migration 20261126000000_bar_station.sql; safe to run again. Touches only Donna's.
 -- Undo: set every Donna's section back to 'kitchen' (the last statement shows how).
+
 begin;
 
 -- Drink sections: always the bar.
@@ -22,15 +23,18 @@ update menu_items set menu_id = 'e1000000-0000-0000-0000-000000000017'
 update menus set station = null
   where restaurant_id = 'e0000000-0000-0000-0000-000000000001' and name = 'Breakfast & brunch';
 
--- Everything else (Antipasti, Primi, Pizze, Secondi, Kids, Dolci...) stays on the kitchen.
+-- Food sections: the kitchen. Named one by one so running this file again gives the same result.
 update menus set station = 'kitchen'
   where restaurant_id = 'e0000000-0000-0000-0000-000000000001'
-    and station is distinct from 'bar' and name <> 'Breakfast & brunch';
+    and name in ('Toasties & wraps', 'Antipasti', 'Insalate', 'Primi', 'Pizze', 'Secondi', 'Sides', 'Kids', 'Dolci',
+                 'Waffles, shakes & gelato');
+update menus set station = 'bar' where id = 'e1000000-0000-0000-0000-000000000017';
 
 -- Open orders take the new routing too.
 update order_items oi set station = coalesce(m.station, guess_station(i.name, m.name))
   from menu_items i join menus m on m.id = i.menu_id
   where i.id = oi.menu_item_id and oi.restaurant_id = 'e0000000-0000-0000-0000-000000000001';
+
 
 commit;
 
