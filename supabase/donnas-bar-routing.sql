@@ -1,5 +1,5 @@
 -- HOSTED DEMO ONLY: sends Donna's drinks to the Bar screen and food to the Kitchen screen.
--- Run in the Supabase SQL Editor after migration 20261126000000_bar_station.sql; safe to run again. Touches only Donna's.
+-- Run in the Supabase SQL Editor after migration 20261127000000_bar_station.sql; safe to run again. Touches only Donna's.
 -- Undo: set every Donna's section back to 'kitchen' (the last statement shows how).
 
 begin;

@@ -13,7 +13,7 @@ export async function listUnpaid(req: Request, deps: Deps): Promise<Response> {
   if (!userId) return Response.json({ error: "unauthorized" }, { status: 401 });
   const orders = await deps.db.asUser(
     userId,
-    `select u.id, u.public_ref as "publicRef", t.label as "table", u.status, u.total_cents as "totalCents",
+    `select u.id, u.public_ref as "publicRef", t.label as "table", u.status, u.total_cents as "totalCents", u.restaurant_id as "restaurantId",
             u.created_at as "createdAt"
      from unpaid_orders u join tables t on t.restaurant_id = u.restaurant_id and t.id = u.table_id
        join orders o on o.id = u.id
@@ -22,7 +22,7 @@ export async function listUnpaid(req: Request, deps: Deps): Promise<Response> {
   );
   const shares = await deps.db.asUser(
     userId,
-    `select b.id, t.label as "table", b.share_no as "shareNo", b.ways, b.amount_cents as "amountCents", b.items
+    `select b.id, t.label as "table", t.restaurant_id as "restaurantId", b.share_no as "shareNo", b.ways, b.amount_cents as "amountCents", b.items
      from bill_shares b join table_sessions s on s.id = b.table_session_id join tables t on t.id = s.table_id
      where b.paid_at is null
      order by b.created_at, b.share_no`,
@@ -51,13 +51,20 @@ export async function listTables(req: Request, deps: Deps): Promise<Response> {
   if (!userId) return Response.json({ error: "unauthorized" }, { status: 401 });
   const tables = await deps.db.asUser(
     userId,
-    `select t.id, t.label, s.opened_at as "openedAt",
+    `select t.id, t.label, t.restaurant_id as "restaurantId", r.name as "restaurantName", s.opened_at as "openedAt",
        (select count(*)::int from orders o where o.table_session_id = s.id) as "orders",
        (select count(*)::int from orders o where o.table_session_id = s.id and o.status in ('submitted','accepted','preparing','ready')) as "inKitchen",
        (select coalesce(sum(u.total_cents), 0)::int from unpaid_orders u join orders o on o.id = u.id where o.table_session_id = s.id and o.bill_split_id is null)
          + (select coalesce(sum(b.amount_cents), 0)::int from bill_shares b where b.table_session_id = s.id and b.paid_at is null) as "unpaidCents",
-       exists (select 1 from waiter_calls c where c.table_id = t.id and c.status = 'open') as "calling"
-     from tables t left join table_sessions s on s.table_id = t.id and s.status = 'open'
+       exists (select 1 from waiter_calls c where c.table_id = t.id and c.status = 'open') as "calling",
+       (select count(*)::int from orders o where o.table_session_id = s.id and o.status = 'ready') as "ready",
+       -- Everything the table has ordered this visit, so the waiter knows what to bring and what is still cooking.
+       coalesce((select json_agg(json_build_object('ref', o.public_ref, 'status', o.status, 'name', i.name_snapshot,
+                   'quantity', i.quantity, 'notes', i.notes, 'priceCents', i.unit_price_cents * i.quantity) order by o.created_at, i.id)
+                 from orders o join order_items i on i.restaurant_id = o.restaurant_id and i.order_id = o.id
+                 where o.table_session_id = s.id and o.status not in ('rejected', 'cancelled')), '[]'::json) as "items"
+     from tables t join restaurants r on r.id = t.restaurant_id
+       left join table_sessions s on s.table_id = t.id and s.status = 'open'
      where t.active and is_member(t.restaurant_id, array['owner','manager','waiter'])
      order by s.opened_at is null, t.label`,
   );

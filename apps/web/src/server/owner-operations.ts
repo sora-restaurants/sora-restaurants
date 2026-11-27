@@ -29,6 +29,15 @@ async function user(req: Request, deps: Deps) {
 
 type Restaurant = { id: string; name: string; timezone: string; role: string };
 
+/**
+ * Where printed QR codes send guests: the live site's own address, never the address the owner happens to have
+ * the portal open on (an old deployment link would freeze guests on an old menu). Local dev uses its own origin.
+ */
+export function qrOrigin(requestUrl: string, env: Record<string, string | undefined> = process.env): string {
+  const live = env.QR_BASE_URL?.trim() || (env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${env.VERCEL_PROJECT_PRODUCTION_URL}` : "");
+  return (live || new URL(requestUrl).origin).replace(/\/$/, "");
+}
+
 /** Every restaurant the user owns or manages; the one asked for (?restaurant=) or the first. */
 async function ownedRestaurants(req: Request, userId: string, deps: Deps) {
   const restaurants = await deps.db.asUser<Restaurant>(userId, `
@@ -61,7 +70,7 @@ export async function ownerSnapshot(req: Request, deps: Deps): Promise<Response>
          from menu_item_options o where o.menu_item_id = i.id) options
     from menus m left join menu_items i on i.menu_id = m.id and i.restaurant_id = m.restaurant_id
     where m.restaurant_id = $1 order by m.sort_order, m.name, i.sort_order, i.name`, [restaurant.id]);
-  const origin = new URL(req.url).origin;
+  const origin = qrOrigin(req.url);
   const mapped = await Promise.all(tables.map(async (table) => {
     const qrUrl = `${origin}/t/${table.qr_token}`;
     return { id: table.id, label: table.label, enabled: table.active, sessionState: table.session_state,

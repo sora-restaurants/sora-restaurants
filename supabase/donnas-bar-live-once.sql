@@ -118,7 +118,7 @@ revoke execute on function guess_station(text, text), stamp_order_item_station()
 
 -- ===== Part 2: Donna's =====
 -- HOSTED DEMO ONLY: sends Donna's drinks to the Bar screen and food to the Kitchen screen.
--- Run once in the Supabase SQL Editor AFTER migration 20261126000000_bar_station.sql. Touches only Donna's.
+-- Run once in the Supabase SQL Editor AFTER migration 20261127000000_bar_station.sql. Touches only Donna's.
 -- Undo: set every Donna's section back to 'kitchen' (the last statement shows how).
 
 -- Drink sections: always the bar.

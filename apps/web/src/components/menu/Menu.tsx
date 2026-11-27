@@ -7,6 +7,8 @@ import { saveCheckoutAction } from "../../app/actions/save-checkout.ts";
 import type { ThemeId } from "../../themes/themes.ts";
 import type { MenuItem, TableMenu } from "./types.ts";
 import { SlideToPay } from "../order/SlideToPay.tsx";
+import { Receipt } from "../order/Receipt.tsx";
+import type { Receipt as ReceiptData } from "../../server/order-status.ts";
 import { newIdempotencyKey } from "../../lib/idempotency-key.ts";
 import { formatRand } from "../../lib/money.ts";
 import { BillSplit } from "../order/BillSplit.tsx";
@@ -49,6 +51,7 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
   const [status, setStatus] = useState<Status>({ kind: "idle" });
   // Keep the order tracker across a refresh (this tab only).
   const trackKey = `sora-order-${qrToken}`;
+  const builtIns = qrToken === "preview" || qrToken.startsWith("staging-demo");
   useEffect(() => {
     try { const saved = sessionStorage.getItem(trackKey); if (saved) setStatus(JSON.parse(saved)); } catch { /* storage blocked */ }
   }, [trackKey]);
@@ -71,6 +74,16 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
     const id = setInterval(poll, 4000);
     return () => clearInterval(id);
   }, [statusToken, finished]);
+  // Once paid (by staff or on this phone), read the receipt from the server: its lines and prices, never the cart.
+  const [receipt, setReceipt] = useState<ReceiptData | null>(null);
+  const paid = status.kind === "placed" && status.paid;
+  useEffect(() => {
+    if (!paid || !statusToken) return;
+    fetch(`/api/orders/status/${statusToken}`, { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { receipt?: ReceiptData } | null) => { if (d?.receipt) setReceipt(d.receipt); })
+      .catch(() => {});
+  }, [paid, statusToken]);
   const [basketOpen, setBasketOpen] = useState(false);
   const [paymentChoice, setPaymentChoice] = useState<"pay_later" | "pay_now">("pay_later");
   const [splitWays, setSplitWays] = useState<1 | 2 | 3 | 4>(1);
@@ -136,6 +149,7 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
       setStatus({ kind: "placed", publicRef, itemCount: count, totalCents: estimate, payNow: paymentChoice === "pay_now", paid: false, stage: "received", wait });
       setTableOrders((prev) => [{ ref: publicRef, total: estimate, count }, ...prev].slice(0, 5));
       setCart({});
+      setNotes({});
       setBasketOpen(false);
       sending.current = false;
       return;
@@ -161,6 +175,7 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
         setStatus({ kind: "placed", publicRef: result.publicRef, statusToken: result.statusToken, itemCount: count, totalCents: estimate, payNow: paymentChoice === "pay_now", paid: false, stage: "received", wait });
         setTableOrders((prev) => [{ ref: result.publicRef, total: estimate, count }, ...prev].slice(0, 5));
         setCart({});
+        setNotes({});
         setBasketOpen(false);
         idempotencyKey.current = null;
       } else setStatus({ kind: "error", message: ERRORS[result.error] ?? "We couldn't send your order. Please try again." });
@@ -193,6 +208,7 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
           <p className="text-xs font-bold uppercase tracking-[0.2em] opacity-80">{menu.restaurant} · {menu.table}</p>
           <h1 className="display mt-5 text-4xl">Paid — thank you</h1>
           <p className="mt-3 leading-relaxed opacity-80">Your bill is settled. Thanks for dining with us. To order again, scan the table QR code.</p>
+          {receipt ? <Receipt receipt={receipt} restaurant={menu.restaurant} table={menu.table} /> : null}
         </section>
       </main>
     );
@@ -207,7 +223,7 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
     <MenuCard key={item.id} item={item} showRatings={preview} categoryName={category.name} quantity={cart[item.id] ?? 0}
       note={(notes[item.id] ?? [[]])[Math.max(0, (notes[item.id]?.length ?? 1) - 1)] ?? []} index={index} onChange={setQuantity}
       onNote={(id, opts) => setNotes((c) => { const sets = c[id] ? [...c[id]] : [[]]; sets[sets.length - 1] = opts; return { ...c, [id]: sets }; })}
-      required={requiredGroups(menu.restaurant, item)} strict={donna} chefsPick={donna && DONNA_CHEFS_PICKS.has(item.name)} compact={browse} />
+      builtIns={builtIns} required={requiredGroups(menu.restaurant, item)} chefsPick={donna && DONNA_CHEFS_PICKS.has(item.name)} compact={browse} />
   );
 
   return (
@@ -217,11 +233,9 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
           <div className="mb-8 flex items-center justify-between gap-3">
             <span className="restaurant-mark" aria-hidden="true">{menu.restaurant.slice(0, 1)}</span>
             <div className="flex items-center gap-2">
-              {status.kind !== "placed" && (
-                <button type="button" onClick={() => setAssistanceOpen(true)} disabled={assistance !== "idle"} className="table-pill disabled:opacity-70">
-                  {assistance === "sending" ? "Calling…" : assistance === "sent" ? "Staff notified" : "Need something?"}
-                </button>
-              )}
+              {browse && <button type="button" onClick={() => setAssistanceOpen(true)} disabled={assistance !== "idle"} className="table-pill disabled:opacity-70">
+                {assistance === "sending" ? "Calling…" : assistance === "sent" ? "Staff notified" : "Need something?"}
+              </button>}
               <span className="table-pill">{menu.table}</span>
             </div>
           </div>
@@ -232,9 +246,15 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
       </header>
 
       {!browse && <nav aria-label="Menu sections" className="sticky top-0 z-20 border-b border-line/60 bg-bg/95 backdrop-blur">
-        <ul className="mx-auto flex max-w-(--t-max) gap-2 overflow-x-auto px-pad py-3">
-          {menu.categories.map((category, index) => <li key={category.id}><a href={`#c-${category.id}`} className="category-chip focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-accent"><span aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>{category.name}</a></li>)}
-        </ul>
+        {/* Sticky, so a guest can call staff from anywhere on the menu, before or after ordering. */}
+        <div className="mx-auto flex max-w-(--t-max) items-center gap-2 px-pad py-3">
+          <ul className="flex min-w-0 flex-1 gap-2 overflow-x-auto">
+            {menu.categories.map((category, index) => <li key={category.id}><a href={`#c-${category.id}`} className="category-chip focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-accent"><span aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>{category.name}</a></li>)}
+          </ul>
+          <button type="button" onClick={() => setAssistanceOpen(true)} disabled={assistance !== "idle"} className="shrink-0 rounded-full bg-accent px-4 py-2 text-sm font-bold text-on-accent disabled:opacity-70 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-accent">
+            {assistance === "sending" ? "Calling…" : assistance === "sent" ? "Staff notified" : "Need something?"}
+          </button>
+        </div>
       </nav>}
 
       <main id="menu-content" className="mx-auto max-w-(--t-max) px-pad pb-40">
@@ -321,11 +341,12 @@ function EmptyMenu() {
 
 const choiceLabel = (c: { label: string; priceCents: number }) => (c.priceCents ? `${c.label} (+${formatCents(c.priceCents)})` : c.label);
 
-function missingRequired(item: MenuItem, categoryName: string, note: string[], required: ChoiceGroup[] = [], strict = false): string[] {
-  // A restaurant's own required choices (from its menu) win; strict menus never get the built-in sample rules.
-  if (required.length || strict) return required.filter((g) => !g.choices.some((c) => note.includes(choiceLabel(c)))).map((g) => g.name);
+function missingRequired(item: MenuItem, categoryName: string, note: string[], builtIns: boolean, required: ChoiceGroup[] = []): string[] {
+  // A restaurant's own required choices (from its menu) win over the built-in sample rules.
+  if (required.length) return required.filter((g) => !g.choices.some((c) => note.includes(choiceLabel(c)))).map((g) => g.name);
   const missing: string[] = [];
-  if (item.options?.length) return missing; // owner-set options replace the built-in required choices
+  // Built-in choices suit only the generic demo menu; a real restaurant's own options (or none) are the truth.
+  if (!builtIns || item.options?.length) return missing;
   const name = item.name;
   if (/steak|ribeye/i.test(name)) {
     if (!STEAK_SIZE.some(s => note.includes(s.label))) missing.push("Size");
@@ -355,7 +376,7 @@ function missingRequired(item: MenuItem, categoryName: string, note: string[], r
 }
 
 // Ratings and reviews are sample data, so they only show on the demo table; real restaurants have none yet.
-function MenuCard({ item, showRatings, categoryName, quantity, note, index, onChange, onNote, required = [], strict = false, chefsPick = false, compact = false }: { item: MenuItem; showRatings: boolean; categoryName: string; quantity: number; note: string[]; index: number; onChange: (id: string, q: number) => void; onNote: (id: string, opts: string[]) => void; required?: ChoiceGroup[]; strict?: boolean; chefsPick?: boolean; compact?: boolean }) {
+function MenuCard({ item, builtIns, showRatings, categoryName, quantity, note, index, onChange, onNote, required = [], chefsPick = false, compact = false }: { item: MenuItem; builtIns: boolean; showRatings: boolean; categoryName: string; quantity: number; note: string[]; index: number; onChange: (id: string, q: number) => void; onNote: (id: string, opts: string[]) => void; required?: ChoiceGroup[]; chefsPick?: boolean; compact?: boolean }) {
   const [showReviews, setShowReviews] = useState(false);
   const [optsOpen, setOptsOpen] = useState(false);
   const reviews = demoReviewsFor(item.name);
@@ -420,7 +441,7 @@ function MenuCard({ item, showRatings, categoryName, quantity, note, index, onCh
                 </div>
               </div>
             ))}
-            {strict || item.options?.length ? (optional.length === 0 ? null :
+            {!builtIns || item.options?.length ? (optional.length === 0 ? null :
               <div>
                 <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">{required.length ? "Extras" : "Options"}</p>
                 <div className="flex flex-wrap gap-2">
@@ -652,8 +673,8 @@ function MenuCard({ item, showRatings, categoryName, quantity, note, index, onCh
           {compact && price}
           {quantity > 0 && hasChoices && !item.soldOut && <button type="button" onClick={() => setOptsOpen((v) => !v)} className="mr-auto text-sm font-semibold text-accent underline-offset-2 hover:underline">{optsOpen ? "Done" : required.length ? "Change choices" : "Add extras"}</button>}
           {item.soldOut ? <span className="inline-flex min-h-12 items-center rounded-full bg-highlight px-4 text-sm font-bold text-on-highlight">Sold out</span> : (() => {
-            const missing = missingRequired(item, categoryName, note, required, strict);
-            if (quantity === 0) return <button type="button" onClick={() => { if (missing.length > 0) { setOptsOpen(true); return; } onChange(item.id, 1); setOptsOpen(false); }} aria-label={`Add ${item.name}`} className="add-button focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ink">{missing.length > 0 ? (optsOpen ? `Choose ${missing[0]}` : <><span aria-hidden="true">＋</span> Add to order</>) : <><span aria-hidden="true">＋</span> Add to order</>}</button>;
+            const missing = missingRequired(item, categoryName, note, builtIns, required);
+            if (quantity === 0) return <button type="button" onClick={() => { if (missing.length > 0) { setOptsOpen(true); return; } onChange(item.id, 1); setOptsOpen(Boolean(item.options?.length) && !required.length); }} aria-label={`Add ${item.name}`} className="add-button focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ink">{missing.length > 0 ? (optsOpen ? `Choose ${missing[0]}` : <><span aria-hidden="true">＋</span> Add to order</>) : <><span aria-hidden="true">＋</span> Add to order</>}</button>;
             return <QuantityControl item={item} quantity={quantity} onChange={onChange} missing={missing} />;
           })()}
         </div>
