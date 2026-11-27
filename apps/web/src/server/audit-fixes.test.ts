@@ -43,8 +43,8 @@ describe("audit fixes", () => {
 
   it("receipt accepts ordinary addresses that contain an 's'", async () => {
     // Past validation it stops at the missing key or order, never at "invalid".
-    const result = await sendReceiptAction({ to: "james@sora.co.za", statusToken: "0".repeat(32), tipPercent: 0, splitWays: 1, weeklySpecials: false });
+    const result = await sendReceiptAction({ to: "james@sora.co.za", statusToken: "0".repeat(32), splitWays: 1, weeklySpecials: false });
     expect(result).not.toEqual({ ok: false, error: "invalid" });
-    expect(await sendReceiptAction({ to: "not an email", statusToken: "0".repeat(32), tipPercent: 0, splitWays: 1, weeklySpecials: false })).toEqual({ ok: false, error: "invalid" });
+    expect(await sendReceiptAction({ to: "not an email", statusToken: "0".repeat(32), splitWays: 1, weeklySpecials: false })).toEqual({ ok: false, error: "invalid" });
   });
 });

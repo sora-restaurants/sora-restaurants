@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { submitOrderAction } from "../../app/actions/submit-order.ts";
-import { sendReceiptAction } from "../../app/actions/send-receipt.ts";
 import { saveCheckoutAction } from "../../app/actions/save-checkout.ts";
 import type { ThemeId } from "../../themes/themes.ts";
 import type { MenuItem, TableMenu } from "./types.ts";
@@ -169,10 +168,11 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
       // A newer retry owns the screen; its answer (same key) is the one to show.
       if (attempt.current !== thisAttempt) return;
       if (result.ok) {
-        void saveCheckoutAction({ statusToken: result.statusToken, paymentChoice, tipPercent, splitWays });
-        if (emailReceipt.trim()) void sendReceiptAction({ to: emailReceipt, statusToken: result.statusToken, tipPercent, splitWays, weeklySpecials });
+        // Saved before the pay step shows, so the receipt always has the tip the guest chose.
+        await saveCheckoutAction({ statusToken: result.statusToken, paymentChoice, tipPercent, splitWays }).catch(() => {});
+        if (attempt.current !== thisAttempt) return;
         const wait = demoWaitMinutes(count);
-        setStatus({ kind: "placed", publicRef: result.publicRef, statusToken: result.statusToken, itemCount: count, totalCents: estimate, payNow: paymentChoice === "pay_now", paid: false, stage: "received", wait });
+        setStatus({ kind: "placed", publicRef: result.publicRef, statusToken: result.statusToken, itemCount: count, totalCents: estimate + Math.round(estimate * tipPercent / 100), payNow: paymentChoice === "pay_now", paid: false, stage: "received", wait });
         setTableOrders((prev) => [{ ref: result.publicRef, total: estimate, count }, ...prev].slice(0, 5));
         setCart({});
         setNotes({});
@@ -208,7 +208,7 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
           <p className="text-xs font-bold uppercase tracking-[0.2em] opacity-80">{menu.restaurant} · {menu.table}</p>
           <h1 className="display mt-5 text-4xl">Paid — thank you</h1>
           <p className="mt-3 leading-relaxed opacity-80">Your bill is settled. Thanks for dining with us. To order again, scan the table QR code.</p>
-          {receipt ? <Receipt receipt={receipt} restaurant={menu.restaurant} table={menu.table} /> : null}
+          {receipt ? <Receipt receipt={receipt} restaurant={menu.restaurant} table={menu.table} statusToken={statusToken} email={emailReceipt} weeklySpecials={weeklySpecials} /> : null}
         </section>
       </main>
     );
@@ -795,7 +795,7 @@ function BasketSheet({ returnFocusRef, lines, cart, notes, estimate, status, pay
                 <button key={n} type="button" onClick={() => onSplit(n)} className={`min-h-10 flex-1 rounded-theme border-2 text-sm font-bold ${splitWays === n ? "border-accent bg-accent text-on-accent" : "border-line"}`}>{n === 1 ? "No split" : `${n} ways`}</button>
               ))}
             </div>
-            {splitWays > 1 && <p className="mt-2 text-sm text-muted">About {formatCents(Math.round(estimate / splitWays))} each</p>}
+            {splitWays > 1 && <p className="mt-2 text-sm text-muted">About {formatCents(Math.round((estimate + Math.round(estimate * tipPercent / 100)) / splitWays))} each</p>}
           </div>
           {totalLine}
           <div className="flex gap-2">
@@ -807,7 +807,7 @@ function BasketSheet({ returnFocusRef, lines, cart, notes, estimate, status, pay
       {step === 3 && (
         <>
           <div className="mb-4">
-            <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-muted">Email receipt (optional)</label>
+            <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-muted">Email for your receipt (optional)</label>
             <input type="email" value={emailReceipt} onChange={(e) => onEmail(e.target.value)} placeholder="you@email.com" className="w-full rounded-theme border border-line bg-bg px-3 py-2 text-sm" />
           </div>
           <label className="mb-4 flex items-center gap-2 text-sm">
