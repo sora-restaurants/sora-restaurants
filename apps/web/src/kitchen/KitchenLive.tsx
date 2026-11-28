@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { KitchenOrder } from "../server/deps.ts";
+import { moveStation } from "./board-state.ts";
 import { KitchenBoard, LEAVES_BOARD, type Target } from "./KitchenBoard.tsx";
 import { Screen, SignIn } from "./StaffSignIn.tsx";
 import { dropOn401, type StaffAuth, staffAuth } from "./staff-auth.ts";
@@ -92,16 +93,17 @@ function LiveBoard({ restaurant, auth, onSignOut, screen }: { restaurant: Restau
       }));
       if (!res.ok && res.status !== 409) throw new Error(`advance ${res.status}`);
       // 409 means another tablet already moved it; the stream brings the true state either way.
-      // A station move changes only some lines; the stream brings the result.
-      if (res.ok && !(station && (to === "preparing" || to === "ready"))) {
+      if (res.ok) {
         dispatch(
-          LEAVES_BOARD.includes(to)
+          station && (to === "preparing" || to === "ready")
+            ? { event: "order", data: moveStation(board.orders[order.id] ?? order, station, to) } // the full ticket: only this screen's lines move
+            : LEAVES_BOARD.includes(to)
             ? { event: "order_removed", data: { id: order.id, status: to } }
             : { event: "order", data: { ...order, status: to } },
         );
       }
     },
-    [dispatch, getToken, auth],
+    [dispatch, getToken, auth, board],
   );
 
   return <KitchenBoard restaurant={restaurant.name} board={board} connection={connection} onAdvance={advance} onSignOut={onSignOut} screen={screen} />;

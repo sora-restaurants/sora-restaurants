@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { KitchenOrder } from "../server/deps.ts";
-import { applyBoardEvent, columns, EMPTY_BOARD } from "./board-state.ts";
+import { applyBoardEvent, columns, EMPTY_BOARD, forStation, moveStation } from "./board-state.ts";
 import { createSseParser } from "./sse.ts";
 
 const order = (id: string, status: string, createdAt = "2026-11-09T18:00:00.000Z"): KitchenOrder => ({
@@ -51,5 +51,19 @@ describe("createSseParser", () => {
     feed('er\ndata: {"id":"a"}\n');
     feed("\n");
     expect(seen).toEqual([{ event: "snapshot", data: { orders: [] } }, { event: "order", data: { id: "a" } }]);
+  });
+});
+
+describe("moveStation", () => {
+  const ticket = { id: "t", publicRef: "X", table: "T1", status: "submitted", totalCents: 0, createdAt: "", paid: false, payAtTable: true,
+    items: [{ name: "Coke", quantity: 1, notes: "", station: "bar", prep: "new" }, { name: "Pizza", quantity: 1, notes: "", station: "kitchen", prep: "new" }] } as KitchenOrder;
+  it("moves only that screen's lines, at once, and keeps the other screen's lines", () => {
+    const started = moveStation(ticket, "bar", "preparing");
+    expect(started.items.map((i) => i.prep)).toEqual(["preparing", "new"]);
+    expect(forStation([started], "bar")[0].status).toBe("preparing");
+    expect(forStation([started], "kitchen")[0].status).toBe("submitted");
+    const barDone = moveStation(started, "bar", "ready");
+    expect(barDone.status).toBe("preparing"); // the kitchen part is still to come
+    expect(moveStation(barDone, "kitchen", "ready").status).toBe("ready");
   });
 });

@@ -79,7 +79,8 @@ export function KitchenBoard({ restaurant, board, connection, onAdvance, onSignO
 
       {/* One grid row for both banners, so the stage tabs and columns keep their rows. */}
       <div>
-        {!soundOn && <p role="status" className="mx-2 mt-2 rounded-xl bg-[#F5DFC1] px-4 py-2 font-bold text-[#70420F] sm:mx-3">Tap anywhere to turn on the new-order sound</p>}
+        {/* Floats over the board: in the flow it vanished on the first pointerdown and slid the ticket away, losing that tap. */}
+        {!soundOn && <p role="status" className="pointer-events-none fixed inset-x-3 bottom-3 z-20 mx-auto max-w-md rounded-xl bg-[#F5DFC1] px-4 py-2 text-center font-bold text-[#70420F] shadow-xl">Tap anywhere to turn on the new-order sound</p>}
         {connection === "reconnecting" && (
           <p role="alert" className="mx-2 mt-2 rounded-xl bg-[#8B3F1D] px-4 py-3 text-xl font-black text-white sm:mx-3">
             Connection lost — reconnecting. Tickets may be out of date.

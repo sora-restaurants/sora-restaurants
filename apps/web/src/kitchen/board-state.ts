@@ -49,6 +49,17 @@ export function forStation(orders: KitchenOrder[], station: Station): StationOrd
   });
 }
 
+/**
+ * What a Kitchen or Bar screen's move does to the ticket, applied at once so the tap shows (the stream only
+ * confirms it on its next poll, seconds later, and a ticket left on "Start" looks like a lost tap).
+ * Mirrors kitchen_move: the order is ready when every line is, and preparing once any line has started.
+ */
+export function moveStation(order: KitchenOrder, station: "kitchen" | "bar", to: "preparing" | "ready"): KitchenOrder {
+  const items = order.items.map((i) => ((i.station ?? "kitchen") === station ? { ...i, prep: to } : i));
+  const status = items.every((i) => i.prep === "ready") ? "ready" : "preparing";
+  return { ...order, items, status };
+}
+
 /** The board's three columns, each oldest ticket first. */
 export function columns(state: BoardState, station: Station = "all"): { id: ColumnId; title: string; statuses: string[]; orders: StationOrder[] }[] {
   const all = forStation(Object.values(state.orders), station).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
