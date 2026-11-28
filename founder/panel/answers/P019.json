@@ -1,0 +1,13 @@
+{
+  "id": "P019",
+  "buys": false,
+  "purchases_first_month": 0,
+  "reason_code": "trust",
+  "reason": "I run a sit-down place where most of my regulars are over 45, and they want a waiter and a paper menu. I am not going to pay R699 a month on a new company that has no restaurant live yet to show me.",
+  "objection": "Half my regulars will not scan a QR code at the table, and I would still be ringing everything up on my POS, so I would be paying for a second screen in the kitchen on top of what I already have.",
+  "would_change_my_mind": "Two or three restaurants like mine running it for a few months, with real numbers on table turnover and older guests actually ordering this way.",
+  "price_too_cheap": 150,
+  "price_cheap": 350,
+  "price_expensive": 600,
+  "price_too_expensive": 750
+}

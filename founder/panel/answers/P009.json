@@ -1,0 +1,13 @@
+{
+  "id": "P009",
+  "buys": false,
+  "purchases_first_month": 0,
+  "reason_code": "trust",
+  "reason": "My POS company already runs my orders and payments, and I trust them. A new start-up with no restaurants live yet asking me to add a second system at my tables is a risk I would rather not take right now.",
+  "objection": "Setting it up and training staff takes time I don't have, and I would still be ringing everything up on my POS anyway, so I would be paying to do the work twice.",
+  "would_change_my_mind": "A proven live pilot in a sit-down restaurant like mine, with the QR orders flowing into my POS without double entry, and my regulars over 45 actually ordering on their phones.",
+  "price_too_cheap": 199,
+  "price_cheap": 400,
+  "price_expensive": 800,
+  "price_too_expensive": 1200
+}

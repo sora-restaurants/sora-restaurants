@@ -1,0 +1,222 @@
+[
+ {
+  "id": "P001",
+  "name": "Mei",
+  "age": 55,
+  "segment": "Franchisee of a national chain (e.g. one family-restaurant branch)",
+  "income": 1549000,
+  "behaviour": "Needs proof first",
+  "behaviour_how": "Wants to see it working at a restaurant they know, or a free trial, before paying.",
+  "objection": "My older customers want a waiter and a paper menu",
+  "habit": "you run a generator or inverter for load-shedding"
+ },
+ {
+  "id": "P002",
+  "name": "Nadia",
+  "age": 29,
+  "segment": "Small local group (2-5 restaurants or cafes)",
+  "income": 4231000,
+  "behaviour": "Staff-shortage pain",
+  "behaviour_how": "Struggles to hire and keep waiters; busy nights mean slow service and lost tables.",
+  "objection": "My older customers want a waiter and a paper menu",
+  "habit": "you lost two waiters to other jobs this year"
+ },
+ {
+  "id": "P003",
+  "name": "Callum",
+  "age": 54,
+  "segment": "Independent owner-operator (one sit-down restaurant, 40-120 seats)",
+  "income": 685000,
+  "behaviour": "Old-school hospitality",
+  "behaviour_how": "Believes guests want a waiter, not a phone; worries tech feels impersonal.",
+  "objection": "Will it work with my POS, or will my staff have to type orders in twice?",
+  "habit": "you lost two waiters to other jobs this year"
+ },
+ {
+  "id": "P004",
+  "name": "Omar",
+  "age": 36,
+  "segment": "Franchisee of a national chain (e.g. one family-restaurant branch)",
+  "income": 1498000,
+  "behaviour": "Needs proof first",
+  "behaviour_how": "Wants to see it working at a restaurant they know, or a free trial, before paying.",
+  "objection": "Another monthly subscription when margins are already tight",
+  "habit": "your POS company's sales rep visits twice a year"
+ },
+ {
+  "id": "P005",
+  "name": "Jonah",
+  "age": 43,
+  "segment": "Franchisee of a national chain (e.g. one family-restaurant branch)",
+  "income": 737000,
+  "behaviour": "Cost-cutter",
+  "behaviour_how": "Questions every monthly subscription; margins are thin and load-shedding and food costs already squeeze them.",
+  "objection": "Setting it up and training staff takes time I don't have",
+  "habit": "your busiest service is Friday and Saturday night"
+ },
+ {
+  "id": "P006",
+  "name": "Fatima",
+  "age": 37,
+  "segment": "Independent owner-operator (one sit-down restaurant, 40-120 seats)",
+  "income": 527000,
+  "behaviour": "Cost-cutter",
+  "behaviour_how": "Questions every monthly subscription; margins are thin and load-shedding and food costs already squeeze them.",
+  "objection": "My older customers want a waiter and a paper menu",
+  "habit": "you run a generator or inverter for load-shedding"
+ },
+ {
+  "id": "P007",
+  "name": "Nia",
+  "age": 41,
+  "segment": "Upmarket destination venue (wine farm, tourist area)",
+  "income": 1947000,
+  "behaviour": "Staff-shortage pain",
+  "behaviour_how": "Struggles to hire and keep waiters; busy nights mean slow service and lost tables.",
+  "objection": "Will it work with my POS, or will my staff have to type orders in twice?",
+  "habit": "your POS company's sales rep visits twice a year"
+ },
+ {
+  "id": "P008",
+  "name": "Farah",
+  "age": 38,
+  "segment": "Franchisee of a national chain (e.g. one family-restaurant branch)",
+  "income": 940000,
+  "behaviour": "Tech-curious",
+  "behaviour_how": "Already tried a QR menu or online ordering and likes trying new tools.",
+  "objection": "Who are you? A new company with no restaurants using it yet",
+  "habit": "most of your regulars are over 45"
+ },
+ {
+  "id": "P009",
+  "name": "Leah",
+  "age": 44,
+  "segment": "Independent owner-operator (one sit-down restaurant, 40-120 seats)",
+  "income": 313000,
+  "behaviour": "Loyal to their POS",
+  "behaviour_how": "Trusts their POS vendor and would rather wait for the POS company to add a feature than add another system.",
+  "objection": "Setting it up and training staff takes time I don't have",
+  "habit": "most of your regulars are over 45"
+ },
+ {
+  "id": "P010",
+  "name": "Julian",
+  "age": 54,
+  "segment": "Small local group (2-5 restaurants or cafes)",
+  "income": 3742000,
+  "behaviour": "Cost-cutter",
+  "behaviour_how": "Questions every monthly subscription; margins are thin and load-shedding and food costs already squeeze them.",
+  "objection": "Another monthly subscription when margins are already tight",
+  "habit": "your busiest service is Friday and Saturday night"
+ },
+ {
+  "id": "P011",
+  "name": "Emil",
+  "age": 53,
+  "segment": "Independent owner-operator (one sit-down restaurant, 40-120 seats)",
+  "income": 487000,
+  "behaviour": "Old-school hospitality",
+  "behaviour_how": "Believes guests want a waiter, not a phone; worries tech feels impersonal.",
+  "objection": "Will it work with my POS, or will my staff have to type orders in twice?",
+  "habit": "you run a generator or inverter for load-shedding"
+ },
+ {
+  "id": "P012",
+  "name": "Marcus",
+  "age": 29,
+  "segment": "Independent owner-operator (one sit-down restaurant, 40-120 seats)",
+  "income": 809000,
+  "behaviour": "Cost-cutter",
+  "behaviour_how": "Questions every monthly subscription; margins are thin and load-shedding and food costs already squeeze them.",
+  "objection": "Setting it up and training staff takes time I don't have",
+  "habit": "your POS company's sales rep visits twice a year"
+ },
+ {
+  "id": "P013",
+  "name": "Hamza",
+  "age": 51,
+  "segment": "Upmarket destination venue (wine farm, tourist area)",
+  "income": 1445000,
+  "behaviour": "Franchise rules bound",
+  "behaviour_how": "Needs head office approval for any customer-facing system or menu change.",
+  "objection": "Who are you? A new company with no restaurants using it yet",
+  "habit": "you do the books yourself on Monday mornings"
+ },
+ {
+  "id": "P014",
+  "name": "Zara",
+  "age": 45,
+  "segment": "Independent owner-operator (one sit-down restaurant, 40-120 seats)",
+  "income": 738000,
+  "behaviour": "Loyal to their POS",
+  "behaviour_how": "Trusts their POS vendor and would rather wait for the POS company to add a feature than add another system.",
+  "objection": "My older customers want a waiter and a paper menu",
+  "habit": "your busiest service is Friday and Saturday night"
+ },
+ {
+  "id": "P015",
+  "name": "Bilal",
+  "age": 32,
+  "segment": "Small local group (2-5 restaurants or cafes)",
+  "income": 2970000,
+  "behaviour": "Loyal to their POS",
+  "behaviour_how": "Trusts their POS vendor and would rather wait for the POS company to add a feature than add another system.",
+  "objection": "Head office or my POS company may already offer this",
+  "habit": "most of your regulars are over 45"
+ },
+ {
+  "id": "P016",
+  "name": "Liam",
+  "age": 47,
+  "segment": "Independent owner-operator (one sit-down restaurant, 40-120 seats)",
+  "income": 292000,
+  "behaviour": "Franchise rules bound",
+  "behaviour_how": "Needs head office approval for any customer-facing system or menu change.",
+  "objection": "Customers might order and leave without paying",
+  "habit": "you run a generator or inverter for load-shedding"
+ },
+ {
+  "id": "P017",
+  "name": "Ben",
+  "age": 30,
+  "segment": "Independent owner-operator (one sit-down restaurant, 40-120 seats)",
+  "income": 558000,
+  "behaviour": "Tech-curious",
+  "behaviour_how": "Already tried a QR menu or online ordering and likes trying new tools.",
+  "objection": "Another monthly subscription when margins are already tight",
+  "habit": "your POS company's sales rep visits twice a year"
+ },
+ {
+  "id": "P018",
+  "name": "Sara",
+  "age": 47,
+  "segment": "Upmarket destination venue (wine farm, tourist area)",
+  "income": 1514000,
+  "behaviour": "Staff-shortage pain",
+  "behaviour_how": "Struggles to hire and keep waiters; busy nights mean slow service and lost tables.",
+  "objection": "Will it work with my POS, or will my staff have to type orders in twice?",
+  "habit": "your POS company's sales rep visits twice a year"
+ },
+ {
+  "id": "P019",
+  "name": "Ada",
+  "age": 43,
+  "segment": "Independent owner-operator (one sit-down restaurant, 40-120 seats)",
+  "income": 307000,
+  "behaviour": "Cost-cutter",
+  "behaviour_how": "Questions every monthly subscription; margins are thin and load-shedding and food costs already squeeze them.",
+  "objection": "My older customers want a waiter and a paper menu",
+  "habit": "most of your regulars are over 45"
+ },
+ {
+  "id": "P020",
+  "name": "Kofi",
+  "age": 58,
+  "segment": "Franchisee of a national chain (e.g. one family-restaurant branch)",
+  "income": 769000,
+  "behaviour": "Loyal to their POS",
+  "behaviour_how": "Trusts their POS vendor and would rather wait for the POS company to add a feature than add another system.",
+  "objection": "Setting it up and training staff takes time I don't have",
+  "habit": "you do the books yourself on Monday mornings"
+ }
+]

@@ -1,0 +1,13 @@
+{
+  "id": "P004",
+  "buys": false,
+  "purchases_first_month": 0,
+  "reason_code": "trust",
+  "reason": "I already pay for a POS and my margins are tight, and this is a company with no restaurant live yet. I would need to see it working in a restaurant I know before I add R699 a month to my costs.",
+  "objection": "Nobody has run this in a live restaurant yet, so I would be the pilot paying for it while they find out whether it works.",
+  "would_change_my_mind": "A free trial running in my branch for a month, with the numbers showing more orders and fewer walk-outs.",
+  "price_too_cheap": 150,
+  "price_cheap": 350,
+  "price_expensive": 600,
+  "price_too_expensive": 800
+}

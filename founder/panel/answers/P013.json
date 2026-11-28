@@ -1,0 +1,13 @@
+{
+  "id": "P013",
+  "buys": false,
+  "purchases_first_month": 0,
+  "reason_code": "trust",
+  "reason": "I run a franchise, so head office has to approve any change a customer sees, and this company has no restaurants live that I could point them to. I'm not going to be the first to sign up for something I can't check against anyone else's experience.",
+  "objection": "Who are you? A new company with no restaurants using it yet, asking me to put my guests' ordering and payments through you and get head office to sign off on it.",
+  "would_change_my_mind": "A comparable sit-down restaurant already running Sora for a few months with the numbers to show, and written approval from head office.",
+  "price_too_cheap": 150,
+  "price_cheap": 450,
+  "price_expensive": 900,
+  "price_too_expensive": 1200
+}

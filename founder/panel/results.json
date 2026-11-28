@@ -1,0 +1,147 @@
+{
+ "business": "Sora: QR table ordering for South African restaurants, works alongside the existing POS",
+ "seed": 184747,
+ "dealt": 20,
+ "answered": 20,
+ "skipped": [],
+ "buys": 0,
+ "passes": 20,
+ "buy_rate": 0.0,
+ "by_segment": [
+  [
+   "Franchisee of a national chain (e.g. one family-restaurant branch)",
+   5,
+   0.0
+  ],
+  [
+   "Small local group (2-5 restaurants or cafes)",
+   3,
+   0.0
+  ],
+  [
+   "Independent owner-operator (one sit-down restaurant, 40-120 seats)",
+   9,
+   0.0
+  ],
+  [
+   "Upmarket destination venue (wine farm, tourist area)",
+   3,
+   0.0
+  ]
+ ],
+ "by_behaviour": [
+  [
+   "Needs proof first",
+   2,
+   0.0
+  ],
+  [
+   "Staff-shortage pain",
+   3,
+   0.0
+  ],
+  [
+   "Old-school hospitality",
+   2,
+   0.0
+  ],
+  [
+   "Cost-cutter",
+   5,
+   0.0
+  ],
+  [
+   "Tech-curious",
+   2,
+   0.0
+  ],
+  [
+   "Loyal to their POS",
+   4,
+   0.0
+  ],
+  [
+   "Franchise rules bound",
+   2,
+   0.0
+  ]
+ ],
+ "by_income": [
+  [
+   "$1,498,000 and up",
+   7,
+   0.0
+  ],
+  [
+   "$685,000 to $1,498,000",
+   7,
+   0.0
+  ],
+  [
+   "under $685,000",
+   6,
+   0.0
+  ]
+ ],
+ "why_not": [
+  [
+   "trust",
+   17,
+   [
+    "I have not seen this run in a restaurant, and nobody has told me it works. You are not live anywhere yet, so I would be the guinea pig, and I already run a generator and inverter for load-shedding, so I do not need one more thing that can fail on a Friday night.",
+    "I am losing waiters and my tables are slow on busy nights, so the pain is real. But Sora is a company with no restaurants live yet, and I would be their guinea pig on a Friday night when I cannot afford a slow service."
+   ],
+   [
+    "P001",
+    "P002"
+   ]
+  ],
+  [
+   "habit",
+   2,
+   [
+    "I run a sit-down place because guests want a waiter who knows their name, not a phone on the table. I lost two waiters this year and I am not going to hand my floor to a screen that makes the room feel emptier.",
+    "My POS vendor already runs my orders and I trust them. A QR ordering app that is not linked to the POS means my staff still ring everything up twice, and I do not have the time to set that up."
+   ],
+   [
+    "P003",
+    "P020"
+   ]
+  ],
+  [
+   "convenience",
+   1,
+   [
+    "The idea of diners ordering from their phones would help with the waiter shortage, but if my staff still ring every order into the POS, that is double the work on busy nights, and that is exactly when I can least afford it. I would not sign up for something that adds steps before the direct POS link exists."
+   ],
+   [
+    "P018"
+   ]
+  ]
+ ],
+ "why_yes": [],
+ "flip": [
+  "A free trial running in a restaurant I already know, with the numbers showing more covers or fewer mistakes before I pay anything.",
+  "A working pilot in a restaurant like mine, with a named owner I can phone, showing that tables turn faster and the kitchen screen does not drop orders, ideally with a free trial month.",
+  "A direct link to my POS so orders are not keyed in twice, plus a restaurant my size already running it for a few months that I can call and ask.",
+  "A free trial running in my branch for a month, with the numbers showing more orders and fewer walk-outs.",
+  "A live reference restaurant like mine showing a month of real numbers, with setup and staff training done for me and a pilot I can stop without a penalty.",
+  "A free pilot in my own restaurant, running through a load-shedding evening, with proof that the tablets keep working and that my older customers still get a waiter if they ask for one.",
+  "A working direct link to my POS, or two or three live restaurants of my kind that show orders going straight to the kitchen screen without double entry.",
+  "Two or three sit-down restaurants like mine running it live for a few months, with owners I can phone and ask about breakdowns and staff pushback.",
+  "A proven live pilot in a sit-down restaurant like mine, with the QR orders flowing into my POS without double entry, and my regulars over 45 actually ordering on their phones.",
+  "Two or three existing pilot restaurants that I can call, showing fewer order errors or faster table turns, plus a free or cancellable trial period on my busiest nights.",
+  "A direct link to my POS that works, shown running in a restaurant like mine that I can call and ask about.",
+  "A working restaurant like mine that I can call and visit, showing fewer walk-outs or faster table turns, with the setup done on site and a free trial month before the first charge.",
+  "A comparable sit-down restaurant already running Sora for a few months with the numbers to show, and written approval from head office.",
+  "Direct POS integration that sends orders straight into my POS, plus a live restaurant like mine that I can visit and see working on a Saturday night.",
+  "My POS vendor confirms it will not add QR ordering soon, or a comparable restaurant I know runs Sora for a month and shows it removes work for my staff.",
+  "A head office sign-off plus a live restaurant of similar size that has run it for a few months and confirms the pay-now setting stopped walk-outs.",
+  "A free or heavily discounted pilot in a restaurant like mine, with a named owner I can call, that shows more covers or fewer walk-outs in the first month.",
+  "A working direct link to my POS, or a pilot where I can see orders flow through without my staff re-entering them.",
+  "Two or three restaurants like mine running it for a few months, with real numbers on table turnover and older guests actually ordering this way.",
+  "My POS vendor adding QR table ordering, or Sora doing the set-up and staff training on site in one visit with a direct POS link ready to go."
+ ],
+ "purchases_first_month_per_buyer": null,
+ "price_answers": 20
+}

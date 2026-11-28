@@ -1,0 +1,13 @@
+{
+  "id": "P018",
+  "buys": false,
+  "purchases_first_month": 0,
+  "reason_code": "convenience",
+  "reason": "The idea of diners ordering from their phones would help with the waiter shortage, but if my staff still ring every order into the POS, that is double the work on busy nights, and that is exactly when I can least afford it. I would not sign up for something that adds steps before the direct POS link exists.",
+  "objection": "Will it work with my POS, or will my staff have to type orders in twice?",
+  "would_change_my_mind": "A working direct link to my POS, or a pilot where I can see orders flow through without my staff re-entering them.",
+  "price_too_cheap": 150,
+  "price_cheap": 400,
+  "price_expensive": 900,
+  "price_too_expensive": 1200
+}

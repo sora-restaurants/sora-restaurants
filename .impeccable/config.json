@@ -1,0 +1,26 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "oversized-h1",
+        "value": "*",
+        "files": [
+          "marketing/meetings/sora-questions.html"
+        ],
+        "createdAt": "2026-11-25T11:00:03.314Z",
+        "reason": "Claude: printed A4 document, 22-26pt title is a normal document heading, not a web hero"
+      },
+      {
+        "rule": "oversized-h1",
+        "value": "*",
+        "files": [
+          "marketing/meetings/ngidi-pitch.html"
+        ],
+        "createdAt": "2026-11-25T11:00:03.872Z",
+        "reason": "Claude: printed A4 document, 22-26pt title is a normal document heading, not a web hero"
+      }
+    ]
+  }
+}

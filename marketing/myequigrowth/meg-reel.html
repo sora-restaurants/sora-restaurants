@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="en-ZA">
+<head>
+<meta charset="utf-8">
+<title>MyEquiGrowth reel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,500;0,600;0,700;0,800;1,300&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; background: #05070d; color: #ddd; font: 14px system-ui; }
+  #out { display: block; height: 92vh; margin: 2vh auto 0; aspect-ratio: 9 / 16; }
+  #bar { text-align: center; padding: 6px; }
+</style>
+</head>
+<body>
+<canvas id="out" width="1080" height="1920"></canvas>
+<div id="bar">?t=12 one frame · ?play preview · ?render encode (with voice/) · &amp;nocaptions · &amp;novoice <span id="status"></span></div>
+<script type="module">
+// MyEquiGrowth funeral-cover reel, flat cartoon, 45 s, 1080 x 1920. Same engine as marketing/reel/qr-reel.html:
+// every frame is a pure function of time, frame(t). Wording follows the client's brief; no invented figures.
+const W = 1080, H = 1920, FPS = 30, DURATION = 45;
+const SITE = "myequigrowth.com";
+const DISCLOSURE = ["MyEquiGrowth (Pty) Ltd is a juristic representative", "of Sibiya Brokers (FSP 46798)."];
+const NAVY = "#0e1626", NAVY2 = "#16213a", GOLD = "#e0a72e", GOLD_D = "#b9761c", CREAM = "#fbf4e6", INK = "#141a26";
+const F = "Poppins, system-ui, sans-serif";
+const params = new URLSearchParams(location.search);
+const sm = (x) => (x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x));
+const seg = (t, a, b) => sm((t - a) / (b - a));
+const backOut = (x) => { x = Math.min(1, Math.max(0, x)); const c = 1.9; return 1 + (c + 1) * (x - 1) ** 3 + c * (x - 1) ** 2; };
+const pop = (t, a, d = 0.3) => (t < a ? 0 : backOut((t - a) / d));
+const lerp = (a, b, k) => a + (b - a) * k;
+
+const out = document.getElementById("out"), ctx = out.getContext("2d");
+const rr = (x, y, w, h, r) => { ctx.beginPath(); ctx.roundRect(x, y, w, h, r); };
+const fill = (c) => { ctx.fillStyle = c; ctx.fill(); };
+const circle = (x, y, r, c) => { ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); fill(c); };
+const ell = (x, y, rx, ry, c, rot = 0) => { ctx.beginPath(); ctx.ellipse(x, y, rx, ry, rot, 0, Math.PI * 2); fill(c); };
+const text = (s, x, y, size, color, weight = 700, align = "left", style = "") => { ctx.font = `${style} ${weight} ${size}px ${F}`; ctx.fillStyle = color; ctx.textAlign = align; ctx.textBaseline = "alphabetic"; ctx.fillText(s, x, y); };
+const alpha = (a, fn) => { if (a <= 0.001) return; ctx.save(); ctx.globalAlpha *= Math.min(1, a); fn(); ctx.restore(); };
+const around = (x, y, s, r, fn) => { ctx.save(); ctx.translate(x, y); ctx.rotate(r); ctx.scale(s, s); fn(); ctx.restore(); };
+const goldGrad = (x0, x1) => { const g = ctx.createLinearGradient(x0, 0, x1, 0); g.addColorStop(0, "#c47a1c"); g.addColorStop(0.35, "#b36d1a"); g.addColorStop(0.75, "#f2c63a"); g.addColorStop(1, "#d39b22"); return g; };
+
+// ---------- the client's logo, redrawn from their file (designed for a dark background) ----------
+// drawn in the original 2000 x 650 artwork's units, centred; s scales it
+function logo(x, y, s, tagline = true, build = 1) {
+  around(x, y, s, 0, () => {
+    ctx.translate(-1000, -325);
+    const bars = [[97, 313], [184, 259], [270, 206]];
+    bars.forEach(([bx, top], i) => { const k = seg(build, i * 0.15, i * 0.15 + 0.35), h = (510 - top) * k; ctx.fillStyle = goldGrad(bx, bx + 32); ctx.fillRect(bx, 510 - h, 32, h); });
+    alpha(seg(build, 0.3, 0.7), () => {
+      ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 9; ctx.lineJoin = "round"; ctx.beginPath(); ctx.moveTo(300, 556); ctx.lineTo(25, 556); ctx.lineTo(25, 300); ctx.lineTo(345, 102); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(374, 86); ctx.lineTo(312, 98); ctx.lineTo(344, 140); ctx.closePath(); fill("#ffffff");
+    });
+    alpha(seg(build, 0.45, 0.85), () => {
+      ctx.font = `700 228px ${F}`; ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+      ctx.fillStyle = "#ffffff"; ctx.fillText("EQUI", 352, 408);
+      const gx = 352 + ctx.measureText("EQUI").width + 40; ctx.fillStyle = goldGrad(gx, 1955); ctx.fillText("GROWTH", gx, 408);
+      if (tagline) text("Empowering Your Financial Journey", 356, 538, 96, "rgba(255,255,255,.85)", 300, "left", "italic");
+    });
+  });
+}
+
+// ---------- people ----------
+// a waist-up presenter facing camera; talk 0..1 opens the mouth, gesture raises the right hand
+function presenter(x, y, s, t, talk, gesture) {
+  around(x, y, s, 0, () => {
+    const sway = Math.sin(t * 1.3) * 6;
+    ctx.translate(sway, 0);
+    // body and blazer
+    rr(-250, 260, 500, 520, 160); fill("#1f3b63");
+    ctx.beginPath(); ctx.moveTo(-70, 262); ctx.lineTo(0, 420); ctx.lineTo(70, 262); fill("#f6efe3");
+    ctx.beginPath(); ctx.moveTo(-70, 262); ctx.lineTo(-20, 470); ctx.lineTo(-120, 300); fill("#183052");
+    ctx.beginPath(); ctx.moveTo(70, 262); ctx.lineTo(20, 470); ctx.lineTo(120, 300); fill("#183052");
+    circle(0, 480, 11, GOLD);
+    // neck, head, hair
+    rr(-48, 160, 96, 120, 30); fill("#8a5a3c");
+    ell(0, 40, 150, 175, "#2a1a14");                       // hair behind
+    ell(0, 60, 128, 150, "#9a6646");                        // face
+    ell(-128, 70, 22, 34, "#8a5a3c"); ell(128, 70, 22, 34, "#8a5a3c");
+    ctx.beginPath(); ctx.ellipse(0, -10, 140, 110, 0, Math.PI, 0); fill("#2a1a14");
+    ell(-110, 10, 40, 90, "#2a1a14", 0.25); ell(110, 10, 40, 90, "#2a1a14", -0.25);
+    circle(130, -60, 0, "#000");
+    // eyes (blink every few seconds), brows, smile
+    const blink = (t % 3.7) < 0.12 ? 0.15 : 1;
+    for (const dx of [-48, 48]) { ell(dx, 50, 15, 17 * blink, "#1c120e"); circle(dx + 5, 44, blink > 0.5 ? 5 : 0, "#fff"); ctx.strokeStyle = "#2a1a14"; ctx.lineWidth = 8; ctx.lineCap = "round"; ctx.beginPath(); ctx.moveTo(dx - 24, 14); ctx.quadraticCurveTo(dx, 2, dx + 24, 12); ctx.stroke(); }
+    ell(-78, 104, 22, 12, "rgba(220,90,80,.25)"); ell(78, 104, 22, 12, "rgba(220,90,80,.25)");
+    ctx.beginPath(); ctx.moveTo(0, 70); ctx.quadraticCurveTo(-10, 96, 4, 100); ctx.strokeStyle = "#7b4c30"; ctx.lineWidth = 6; ctx.stroke();
+    const m = 6 + 26 * talk;
+    ctx.beginPath(); ctx.ellipse(0, 140, 40, m, 0, 0, Math.PI * 2); fill("#5a1d1d");
+    ctx.beginPath(); ctx.ellipse(0, 140 - m * 0.55, 34, Math.max(3, m * 0.35), 0, 0, Math.PI * 2); fill("#ffffff");
+    // earrings
+    circle(-130, 110, 9, GOLD); circle(130, 110, 9, GOLD);
+    // arms: left resting, right gesturing open-palm
+    rr(-262, 330, 80, 330, 40); fill("#1f3b63");
+    ctx.save(); ctx.translate(210, 340); ctx.rotate(-0.15 - gesture * 1.2);
+    rr(-40, 0, 80, 300, 40); fill("#1f3b63"); circle(0, 318, 46, "#9a6646"); ctx.restore();
+  });
+}
+// a pictogram person for the plan cards; kind = adult | child | elder
+function figure(x, y, kind, color, s = 1) {
+  if (s <= 0) return;
+  const k = kind === "child" ? 0.68 : 1;
+  around(x, y, s * k, 0, () => {
+    rr(-46, -150, 92, 150, [46, 46, 14, 14]); fill(color);
+    circle(0, -196, 40, kind === "elder" ? "#8a5a3c" : "#a06a48");
+    ctx.beginPath(); ctx.arc(0, -204, 42, Math.PI * 1.05, Math.PI * 1.95); fill(kind === "elder" ? "#d8d8d8" : "#2a1a14");
+    if (kind === "elder") { ctx.strokeStyle = "#e9dcc4"; ctx.lineWidth = 8; ctx.beginPath(); ctx.moveTo(62, -70); ctx.lineTo(62, 0); ctx.stroke(); }
+  });
+}
+
+// ---------- backgrounds ----------
+function navyGround(t) {
+  const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, NAVY2); g.addColorStop(1, NAVY); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = "rgba(224,167,46,.06)"; for (let i = 0; i < 7; i++) { const x = ((i * 190 + t * 22) % (W + 300)) - 150; ctx.fillRect(x, 0, 60, H); }
+}
+function livingRoom() {
+  ctx.fillStyle = "#efe2c8"; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = "#e6d4b2"; for (let x = 0; x < W; x += 90) ctx.fillRect(x, 0, 4, 1300);
+  ctx.fillStyle = "#b98d5e"; ctx.fillRect(0, 1300, W, 620);
+  // picture frames, a lamp and a plant behind the presenter
+  rr(110, 300, 220, 170, 10); fill("#7a4a2a"); rr(124, 314, 192, 142, 6); fill("#cfe3ef"); figure(190, 440, "adult", "#d07b4a", 0.42); figure(240, 440, "child", "#5a8f6b", 0.42); figure(280, 440, "adult", "#3a6ea5", 0.42);
+  rr(760, 260, 180, 230, 10); fill("#7a4a2a"); rr(774, 274, 152, 202, 6); fill("#f2d9a8"); circle(850, 360, 40, "#e9a65a");
+  ctx.fillStyle = "#3a2a20"; ctx.fillRect(905, 700, 10, 600); ctx.beginPath(); ctx.moveTo(840, 700); ctx.lineTo(980, 700); ctx.lineTo(945, 600); ctx.lineTo(875, 600); fill(GOLD);
+  rr(80, 1120, 140, 180, 16); fill("#b35a3a"); for (const [dx, r] of [[-40, -0.5], [0, 0], [40, 0.5], [-20, -0.2], [20, 0.25]]) ell(150 + dx, 1030, 26, 90, "#3f7a52", r);
+  // sofa behind
+  rr(-40, 1130, 1160, 260, 60); fill("#6d8fae"); rr(-40, 1060, 1160, 140, 50); fill("#7c9dbb");
+}
+
+// ---------- scene 1 (0–9): presenter to camera, the question, the name ----------
+function sceneIntro(t) {
+  livingRoom();
+  const zoom = lerp(1.06, 1.0, seg(t, 0, 3));
+  around(W / 2, 1060, zoom, 0, () => presenter(0, -160, 1.25, t, talking(t), seg(t, 4.0, 4.5) - seg(t, 8.2, 8.8)));
+  // the question
+  const q = pop(t, 1.0, 0.35) * (1 - seg(t, 3.7, 3.95));
+  if (q > 0) around(W / 2, 250, q, 0, () => {
+    rr(-440, -120, 880, 230, 40); fill(NAVY); ctx.beginPath(); ctx.moveTo(-20, 108); ctx.lineTo(40, 108); ctx.lineTo(0, 160); fill(NAVY);
+    text("Who would you want", 0, -18, 60, "#ffffff", 700, "center"); text("on your plan?", 0, 66, 60, GOLD, 800, "center");
+  });
+  // the company name
+  const l = pop(t, 4.0, 0.4);
+  if (l > 0) around(W / 2, 250, l, 0, () => { rr(-480, -150, 960, 300, 44); fill(NAVY); logo(0, 0, 0.44, true, seg(t, 4.0, 5.2)); });
+}
+
+// ---------- scene 2 (9–18): individual, family, extended family ----------
+const KIDS = ["#5a8f6b", "#d07b4a", "#8a6bb8", "#3f9aa8", "#c45b6b", "#7aa04a"];
+function planCard(cy, p, title, sub, drawPeople) {
+  around(W / 2, cy, p, 0, () => {
+    rr(-470, -190, 940, 380, 40); fill("#1b2945"); ctx.strokeStyle = "rgba(224,167,46,.55)"; ctx.lineWidth = 3; ctx.stroke();
+    text(title, -420, -115, 50, "#ffffff", 800); text(sub, -420, -64, 30, GOLD, 600);
+    around(0, 40, 0.85, 0, drawPeople);
+  });
+}
+function scenePlans(t) {
+  navyGround(t);
+  text("WHO CAN YOU COVER?", W / 2, 170, 44, GOLD, 800, "center");
+  const a = pop(t, 9.3, 0.35), b = pop(t, 10.6, 0.35), c = pop(t, 13.9, 0.35);
+  if (a > 0) planCard(470, a, "Individual", "Cover for yourself", () => figure(0, 150, "adult", "#3a6ea5", pop(t, 9.5)));
+  if (b > 0) planCard(900, b, "Family", "A spouse and up to six children", () => {
+    figure(-350, 150, "adult", "#3a6ea5", pop(t, 10.8)); figure(-250, 150, "adult", "#d07b4a", pop(t, 11.0));
+    KIDS.forEach((col, i) => figure(-130 + i * 95, 150, "child", col, pop(t, 11.6 + i * 0.35)));
+    alpha(seg(t, 13.6, 13.9), () => text("+6", 440, -110, 40, GOLD, 800, "right"));
+  });
+  if (c > 0) planCard(1330, c, "Extended family", "Selected plans: parents & extended family", () => {
+    figure(-350, 150, "adult", "#3a6ea5", 1); figure(-250, 150, "adult", "#d07b4a", 1); figure(-150, 150, "child", KIDS[0], 1);
+    ctx.fillStyle = "rgba(255,255,255,.18)"; ctx.fillRect(-80, 0, 4, 150);
+    [["elder", "#7a6a5a"], ["elder", "#9a7a5a"], ["adult", "#5a8f6b"], ["adult", "#8a6bb8"], ["child", "#c45b6b"]].forEach(([k, col], i) => figure(20 + i * 95, 150, k, col, pop(t, 14.6 + i * 0.4)));
+  });
+}
+
+// ---------- scene 3 (18–27.5): grocery & pharmacy coupons, then the 24-hour helpline ----------
+function phone(x, y, s, rot, screen) {
+  around(x, y, s, rot, () => { rr(-110, -210, 220, 420, 30); fill("#11151c"); rr(-98, -192, 196, 384, 20); fill("#ffffff"); screen(); });
+}
+function sceneCoupon(t) {
+  // a shop: shelves behind a till, a shopper shows a coupon on her phone
+  ctx.fillStyle = "#f6efe2"; ctx.fillRect(0, 0, W, H);
+  for (let r = 0; r < 3; r++) { ctx.fillStyle = "#c7a37a"; ctx.fillRect(60, 300 + r * 230, 960, 22); for (let i = 0; i < 9; i++) { const col = ["#d9534f", "#5cb85c", "#f0ad4e", "#5bc0de", "#8a6bb8"][(i + r * 2) % 5]; rr(80 + i * 106, 300 + r * 230 - 130 + (i % 2) * 20, 80, 130 - (i % 2) * 20, 10); fill(col); } }
+  rr(-20, 1180, 1120, 760, 0); fill("#6b4a33"); rr(-20, 1160, 1120, 60, 0); fill("#8a6345");
+  rr(120, 1010, 260, 170, 14); fill("#2b313b"); rr(140, 1030, 220, 90, 8); fill("#7fd1a0"); text("R", 250, 1095, 50, "#1e3b2a", 800, "center");
+  // shopper
+  figure(760, 1180, "adult", "#c0563b", 2.4);
+  const lift = seg(t, 18.6, 19.3);
+  phone(lerp(820, 600, lift), lerp(1500, 1080, lift), 1.15, lerp(0.3, -0.08, lift), () => {
+    rr(-82, -170, 164, 70, 12); fill(GOLD); text("MEMBER", 0, -124, 26, INK, 800, "center");
+    const v = pop(t, 19.6, 0.3);
+    alpha(v, () => {
+      for (const [i, label] of [["Grocery", 0], ["Pharmacy", 1]].map(([l], i) => [i, l])) {
+        const y = -60 + i * 130; rr(-82, y, 164, 110, 12); fill("#fff6df"); ctx.setLineDash([10, 8]); ctx.strokeStyle = GOLD_D; ctx.lineWidth = 3; ctx.stroke(); ctx.setLineDash([]);
+        text("COUPON", 0, y + 44, 22, GOLD_D, 800, "center"); text(label, 0, y + 84, 30, INK, 800, "center");
+      }
+    });
+  });
+  const ok = pop(t, 21.0, 0.3);
+  if (ok > 0) around(250, 900, ok, 0, () => { rr(-190, -50, 380, 100, 50); fill("#2f8f4e"); text("✓ Coupon", 0, 18, 44, "#fff", 800, "center"); });
+  label(t, 18.4, "Grocery & pharmacy coupons");
+}
+function sceneHelpline(t) {
+  // home emergency: a leaking pipe, a member calls the helpline
+  ctx.fillStyle = "#e4ecf2"; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = "#cfdbe4"; for (let y = 0; y < 1300; y += 80) ctx.fillRect(0, y, W, 3);
+  ctx.fillStyle = "#9aa7b2"; ctx.fillRect(0, 1300, W, 620);
+  ctx.fillStyle = "#6c7a86"; ctx.fillRect(140, 200, 40, 700); ctx.fillRect(140, 880, 300, 40);
+  circle(440, 900, 34, "#55636e");
+  for (let i = 0; i < 9; i++) { const ph = ((t * 1.6 + i / 9) % 1); ell(470 + Math.sin(i * 7) * 30, 940 + ph * 380, 10, 18, `rgba(70,150,220,${1 - ph})`); }
+  ell(500, 1360, 220 * seg(t, 23.0, 25), 34, "rgba(70,150,220,.45)");
+  figure(800, 1360, "adult", "#3a6ea5", 2.4);
+  phone(700, 900, 0.9, -0.2, () => {
+    text("24/7", 0, -90, 60, INK, 800, "center"); text("HELPLINE", 0, -40, 28, GOLD_D, 800, "center");
+    const r = 1 + 0.12 * Math.sin(t * 10); circle(0, 60, 56 * r, "#2f8f4e"); text("✆", 0, 82, 64, "#fff", 700, "center");
+  });
+  for (let i = 0; i < 3; i++) { const ph = (t * 1.2 + i / 3) % 1; ctx.strokeStyle = `rgba(47,143,78,${1 - ph})`; ctx.lineWidth = 6; ctx.beginPath(); ctx.arc(700, 900, 140 + ph * 140, -1.2, -0.2); ctx.stroke(); }
+  const ok = pop(t, 25.4, 0.3);
+  if (ok > 0) around(W / 2, 330, ok, 0, () => { rr(-330, -60, 660, 120, 60); fill("#2f8f4e"); text("✓ Assistance arranged", 0, 18, 44, "#fff", 800, "center"); });
+  label(t, 23.0, "24-hour helpline for home emergencies");
+}
+// a small heading tag at the top of a scene
+function label(t, at, s) { const p = pop(t, at, 0.3); if (p > 0) around(W / 2, 130, p, 0, () => { ctx.font = `800 40px ${F}`; const w = ctx.measureText(s).width + 70; rr(-w / 2, -48, w, 96, 48); fill(NAVY); text(s, 0, 14, 40, GOLD, 800, "center"); }); }
+
+// ---------- scene 4 (27.5–36.6): referral ----------
+function sceneReferral(t) {
+  navyGround(t);
+  // two friends; the one on the right asks, the member shares referral details
+  figure(300, 1250, "adult", "#d07b4a", 2.5); figure(800, 1250, "adult", "#5a8f6b", 2.5);
+  const ask = pop(t, 28.4, 0.3);
+  if (ask > 0) around(780, 520, ask, 0, () => { rr(-230, -80, 460, 160, 40); fill("#ffffff"); ctx.beginPath(); ctx.moveTo(20, 78); ctx.lineTo(80, 78); ctx.lineTo(40, 140); fill("#ffffff"); text("How do I join?", 0, 18, 46, INK, 800, "center"); });
+  phone(360, 820, 0.8, 0.12, () => { text("MY REFERRAL", 0, -110, 24, GOLD_D, 800, "center"); text("DETAILS", 0, -76, 24, GOLD_D, 800, "center"); rr(-70, -40, 140, 140, 14); fill("#eef0f4"); text("Share", 0, 160, 34, INK, 800, "center"); for (let i = 0; i < 5; i++) for (let j = 0; j < 5; j++) if ((i * 3 + j * 7) % 4 < 2) { ctx.fillStyle = INK; ctx.fillRect(-60 + i * 24, -30 + j * 24, 20, 20); } });
+  // the details fly across to the friend's phone
+  const fly = seg(t, 30.2, 31.2);
+  if (fly > 0 && fly < 1) around(lerp(460, 700, fly), 820 - Math.sin(fly * Math.PI) * 160, 1, 0, () => { rr(-60, -40, 120, 80, 14); fill(GOLD); text("✉", 0, 18, 50, INK, 700, "center"); });
+  if (fly >= 1) phone(760, 820, 0.8, -0.12, () => { rr(-82, -60, 164, 120, 16); fill(GOLD); text("Referral", 0, -6, 30, INK, 800, "center"); text("received", 0, 32, 30, INK, 800, "center"); });
+  const r = pop(t, 32.2, 0.35);
+  if (r > 0) around(W / 2, 1540, r, 0, () => {
+    rr(-460, -150, 920, 300, 40); fill(GOLD);
+    text("You may qualify for a", 0, -62, 40, INK, 600, "center"); text("referral reward", 0, 10, 64, INK, 800, "center");
+    text("Depends on your membership level", 0, 70, 30, INK, 600, "center"); text("and the programme rules", 0, 110, 30, INK, 600, "center");
+  });
+}
+
+// ---------- scene 5 (36.6–45): end card with the website and the FSP disclosure ----------
+function sceneEnd(t) {
+  navyGround(t);
+  logo(W / 2, 560, 0.5, true, seg(t, 36.7, 37.9));
+  const a = pop(t, 37.6, 0.35);
+  if (a > 0) around(W / 2, 900, a, 0, () => { text("Compare the plans.", 0, 0, 64, "#ffffff", 800, "center"); text("See who you can cover.", 0, 84, 64, GOLD, 800, "center"); });
+  const b = pop(t, 38.6, 0.4), pulse = 1 + 0.02 * Math.sin(t * 5);
+  if (b > 0) around(W / 2, 1170, b * pulse, 0, () => { ctx.shadowColor = "rgba(224,167,46,.5)"; ctx.shadowBlur = 50; rr(-400, -76, 800, 152, 76); fill(GOLD); ctx.shadowColor = "transparent"; text(SITE, 0, 22, 62, INK, 800, "center"); });
+  // the disclosure stays up from 37.5 s to the end, large enough to read on a phone
+  alpha(seg(t, 37.5, 38.0), () => { rr(70, 1560, 940, 170, 24); fill("rgba(255,255,255,.07)"); DISCLOSURE.forEach((l, i) => text(l, W / 2, 1630 + i * 56, 36, "#e8e8e8", 500, "center")); });
+}
+
+// ---------- captions for sound-off viewing, one short phrase at a time ----------
+const CAPTIONS = [[0.3, "Funeral cover:"], [1.9, "who would you want on your plan?"], [4.0, "At MyEquiGrowth, choose cover for yourself"], [6.6, "or options for your family"],
+  [9.2, "A spouse and up to six children"], [13.4, "Selected plans: parents & extended family"], [18.4, "Depending on your package"], [20.2, "grocery & pharmacy coupons"],
+  [23.0, "plus a 24-hour helpline"], [24.6, "for home emergencies"], [28.0, "Refer someone who joins"], [30.0, "you may qualify for a referral reward"],
+  [32.3, "Depends on your membership level"], [34.2, "and the programme rules"], [36.6, ""]];
+function captions(t) {
+  let i = CAPTIONS.findIndex(([at]) => at > t) - 1; if (i < 0) i = CAPTIONS.length - 1;
+  const [at, line] = CAPTIONS[i]; if (!line) return;
+  const y = t >= 27.5 && t < 36.6 ? 1840 : 1760, p = pop(t, at, 0.18);
+  ctx.font = `700 44px ${F}`; const w = ctx.measureText(line).width + 50;
+  around(W / 2, y, 0.9 + 0.1 * p, 0, () => { rr(-w / 2, -42, w, 84, 14); fill("rgba(10,14,22,.9)"); text(line, 0, 15, 44, "#ffffff", 700, "center"); });
+}
+
+// mouth movement while the voice speaks (windows match the placed voice lines)
+let TALK = [[0.3, 3.4], [4.0, 8.9]];
+function talking(t) { return TALK.some(([a, b]) => t >= a && t <= b) ? 0.25 + 0.75 * Math.abs(Math.sin(t * 13) * Math.sin(t * 7.3)) : 0; }
+
+// ---------- one frame; a quick gold wipe between scenes ----------
+const SCENES = [[0, sceneIntro], [9.0, scenePlans], [18.2, sceneCoupon], [22.8, sceneHelpline], [27.5, sceneReferral], [36.6, sceneEnd]];
+function frame(t) {
+  ctx.clearRect(0, 0, W, H);
+  let i = SCENES.findIndex(([at]) => at > t) - 1; if (i < 0) i = SCENES.length - 1;
+  SCENES[i][1](t);
+  if (!params.has("nocaptions")) captions(t);
+  const [at] = SCENES[i];
+  if (i > 0 && t - at < 0.35) { const k = (t - at) / 0.35; ctx.fillStyle = GOLD; ctx.beginPath(); ctx.moveTo(W * k * 1.6 - 300, 0); ctx.lineTo(W * k * 1.6 + 200, 0); ctx.lineTo(W * k * 1.6 - 300, H); ctx.lineTo(W * k * 1.6 - 800, H); ctx.fill(); }
+}
+
+// ---------- voice-over: the lines in voice/, trimmed of silence and placed on the timeline ----------
+const RATE = 48000;
+const VOICE_DIR = /^[a-z-]+$/.test(params.get("voice") ?? "") ? params.get("voice") : "voice";
+async function loadVoice() {
+  const lines = await (await fetch(VOICE_DIR + "/lines.json")).json();
+  const ac = new OfflineAudioContext(1, RATE, RATE);
+  let prevEnd = 0;
+  for (const l of lines) {
+    const buf = await ac.decodeAudioData(await (await fetch(VOICE_DIR + "/" + l.file)).arrayBuffer());
+    const d = buf.getChannelData(0), thr = 0.01;
+    let a = 0, b = d.length - 1; while (a < b && Math.abs(d[a]) < thr) a++; while (b > a && Math.abs(d[b]) < thr) b--;
+    l.buf = buf; l.from = Math.max(0, a / buf.sampleRate - 0.02); l.len = (b - a) / buf.sampleRate + 0.06;
+    // a line never starts before the previous one ends
+    l.at = Math.max(l.start, prevEnd + 0.06); prevEnd = l.at + l.len;
+  }
+  return lines;
+}
+window.voiceInfo = async () => (await loadVoice()).map((l) => [l.line.slice(0, 30), +l.len.toFixed(2), l.start, +l.at.toFixed(2), +(l.at + l.len).toFixed(2)]);
+async function mixVoice() {
+  const lines = await loadVoice();
+  const ac = new OfflineAudioContext(1, RATE * DURATION, RATE);
+  for (const l of lines) { const s = ac.createBufferSource(); s.buffer = l.buf; s.connect(ac.destination); s.start(l.at, l.from, l.len); }
+  return ac.startRendering();
+}
+
+// ---------- modes ----------
+const status = document.getElementById("status");
+await Promise.all([document.fonts.load(`700 60px Poppins`), document.fonts.load(`800 60px Poppins`), document.fonts.load(`600 30px Poppins`), document.fonts.load(`500 30px Poppins`), document.fonts.load(`italic 300 60px Poppins`)]);
+try { TALK = (await loadVoice()).slice(0, 2).map((l) => [l.at, l.at + l.len]); } catch { /* no voice folder: keep the default windows */ }
+window.renderAt = (t) => { frame(t); return t; };
+if (params.has("play")) { const start = performance.now(); const loop = () => { frame(((performance.now() - start) / 1000) % DURATION); requestAnimationFrame(loop); }; loop(); }
+else if (params.has("render")) status.textContent = await encode();
+else frame(Number(params.get("t") ?? 5));
+
+async function encode() {
+  const cfg = { codec: "avc1.640028", width: W, height: H, bitrate: 8_000_000, framerate: FPS };
+  if (!(await VideoEncoder.isConfigSupported(cfg)).supported) return "this browser cannot encode H.264";
+  const { Muxer, ArrayBufferTarget } = await import("https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/+esm");
+  const voice = !params.has("novoice");
+  const acfg = { codec: "mp4a.40.2", sampleRate: RATE, numberOfChannels: 1, bitrate: 128000 };
+  if (voice && !(await AudioEncoder.isConfigSupported(acfg)).supported) return "this browser cannot encode AAC audio";
+  const target = new ArrayBufferTarget(), muxer = new Muxer({ target, video: { codec: "avc", width: W, height: H },
+    ...(voice ? { audio: { codec: "aac", numberOfChannels: 1, sampleRate: RATE } } : {}), fastStart: "in-memory" });
+  let failed = null;
+  const enc = new VideoEncoder({ output: (c, m) => muxer.addVideoChunk(c, m), error: (e) => (failed = e) });
+  enc.configure(cfg);
+  for (let i = 0; i < DURATION * FPS; i++) {
+    frame(i / FPS);
+    const vf = new VideoFrame(out, { timestamp: Math.round(i * 1e6 / FPS), duration: Math.round(1e6 / FPS) });
+    enc.encode(vf, { keyFrame: i % 60 === 0 }); vf.close();
+    while (enc.encodeQueueSize > 8) await new Promise((r) => setTimeout(r, 5));
+    if (failed) return `encoder error: ${failed}`;
+    if (i % 30 === 0) status.textContent = `encoding ${Math.round(i / (DURATION * FPS) * 100)}%`;
+  }
+  await enc.flush();
+  if (voice) {
+    status.textContent = "mixing the voice";
+    const pcm = (await mixVoice()).getChannelData(0);
+    const aenc = new AudioEncoder({ output: (c, m) => muxer.addAudioChunk(c, m), error: (e) => (failed = e) });
+    aenc.configure(acfg);
+    for (let i = 0; i < pcm.length; i += 1024) {
+      const data = pcm.slice(i, i + 1024);
+      const ad = new AudioData({ format: "f32-planar", sampleRate: RATE, numberOfFrames: data.length, numberOfChannels: 1, timestamp: Math.round(i * 1e6 / RATE), data });
+      aenc.encode(ad); ad.close();
+    }
+    await aenc.flush();
+    if (failed) return `audio encoder error: ${failed}`;
+  }
+  muxer.finalize();
+  const file = `myequigrowth-reel${params.has("nocaptions") ? "-no-captions" : ""}${voice ? "-voice" : ""}`;
+  const res = await fetch(`/save?file=${file}`, { method: "POST", body: target.buffer });
+  window.renderDone = await res.text();
+  return window.renderDone;
+}
+</script>
+</body>
+</html>

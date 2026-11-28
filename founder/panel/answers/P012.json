@@ -1,0 +1,13 @@
+{
+  "id": "P012",
+  "buys": false,
+  "purchases_first_month": 0,
+  "reason_code": "trust",
+  "reason": "I am not going to be the guinea pig for a company with no restaurants live. Setup and staff training take time I don't have in a normal week, and my staff would still ring every order on the POS, so the kitchen screen is extra work before it saves me any.",
+  "objection": "Who else is using this? Nobody is live yet, so I'd be paying R699 a month to find out what it does to my floor and my service.",
+  "would_change_my_mind": "A working restaurant like mine that I can call and visit, showing fewer walk-outs or faster table turns, with the setup done on site and a free trial month before the first charge.",
+  "price_too_cheap": 250,
+  "price_cheap": 450,
+  "price_expensive": 550,
+  "price_too_expensive": 800
+}

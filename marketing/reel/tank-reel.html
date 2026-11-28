@@ -1,0 +1,353 @@
+<!doctype html>
+<html lang="en-ZA">
+<head>
+<meta charset="utf-8">
+<title>Sora tank reel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; background: #05070d; color: #ddd; font: 14px system-ui; }
+  #out { display: block; height: 92vh; margin: 2vh auto 0; aspect-ratio: 9 / 16; }
+  #bar { text-align: center; padding: 6px; }
+</style>
+</head>
+<body>
+<canvas id="out" width="1080" height="1920"></canvas>
+<div id="bar">?t=12 one frame · ?play preview · ?render encode · add &amp;nocaptions to drop the captions. <span id="status"></span></div>
+<script type="module">
+import qrcode from "https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/+esm";
+
+// A flat cartoon reel in the shape of a deadpan QR-code joke: QR codes on everything, a guest scans one, it opens
+// Sora's site, a glitch cut, then what Sora is and the founding pilot. 36 s, 1080 x 1920.
+const W = 1080, H = 1920, FPS = 30, DURATION = 36;
+const SITE = "soraqr.co.za";
+const GOLD = "#e0a030", INK = "#1c1a17";
+const F = "Inter, system-ui, sans-serif", MONO = "'JetBrains Mono', ui-monospace, monospace";
+const params = new URLSearchParams(location.search);
+const sm = (x) => (x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x));
+const seg = (t, a, b) => sm((t - a) / (b - a));
+const backOut = (x) => { x = Math.min(1, Math.max(0, x)); const c = 1.9; return 1 + (c + 1) * (x - 1) ** 3 + c * (x - 1) ** 2; };
+const pop = (t, a, d = 0.3) => (t < a ? 0 : backOut((t - a) / d));
+const lerp = (a, b, k) => a + (b - a) * k;
+let seed = 11; const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+
+const out = document.getElementById("out"), ctx = out.getContext("2d");
+const rr = (x, y, w, h, r) => { ctx.beginPath(); ctx.roundRect(x, y, w, h, r); };
+const fill = (c) => { ctx.fillStyle = c; ctx.fill(); };
+const circle = (x, y, r, c) => { ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); fill(c); };
+const text = (s, x, y, size, color, weight = 800, align = "left", family = F) => { ctx.font = `${weight} ${size}px ${family}`; ctx.fillStyle = color; ctx.textAlign = align; ctx.textBaseline = "alphabetic"; ctx.fillText(s, x, y); };
+const alpha = (a, fn) => { if (a <= 0.001) return; ctx.save(); ctx.globalAlpha *= Math.min(1, a); fn(); ctx.restore(); };
+const around = (x, y, s, r, fn) => { ctx.save(); ctx.translate(x, y); ctx.rotate(r); ctx.scale(s, s); fn(); ctx.restore(); };
+
+// a real QR code for the site, pre-drawn once
+const qr = qrcode(0, "L"); qr.addData(`https://${SITE}`); qr.make();
+const qrImg = document.createElement("canvas"); qrImg.width = qrImg.height = 220;
+{ const g = qrImg.getContext("2d"), n = qr.getModuleCount(), m = 180 / n; g.fillStyle = "#fff"; g.fillRect(0, 0, 220, 220); g.fillStyle = "#111";
+  for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (qr.isDark(r, c)) g.fillRect(20 + c * m, 20 + r * m, Math.ceil(m), Math.ceil(m)); }
+// a QR sticker: white square, soft shadow, slight tilt
+function sticker(x, y, size, rot, scale = 1) {
+  if (scale <= 0) return;
+  around(x, y, scale, rot, () => {
+    ctx.shadowColor = "rgba(0,0,0,.28)"; ctx.shadowBlur = size * 0.12; ctx.shadowOffsetY = size * 0.05;
+    ctx.fillStyle = "#fff"; ctx.fillRect(-size / 2, -size / 2, size, size); ctx.shadowColor = "transparent";
+    ctx.drawImage(qrImg, -size / 2, -size / 2, size, size);
+  });
+}
+
+// ---------- scene A: the restaurant that puts QR codes on everything ----------
+function person(x, y, { body, skin, hair, seated = false, apron = false, hat = false, armUp = 0, facing = 1 }) {
+  // y is the floor line under the feet
+  const top = seated ? y - 330 : y - 470;
+  if (!seated) { ctx.fillStyle = "#2b2b33"; ctx.fillRect(x - 34, y - 190, 26, 190); ctx.fillRect(x + 8, y - 190, 26, 190); circle(x - 21, y - 2, 16, "#1b1b20"); circle(x + 21, y - 2, 16, "#1b1b20"); }
+  rr(x - 62, top + 110, 124, seated ? 190 : 190, 40); fill(body);
+  if (apron) { rr(x - 46, top + 190, 92, 150, 12); fill("#f4f1ea"); }
+  // arm: from shoulder, raised by armUp (0 down, 1 straight out)
+  ctx.save(); ctx.translate(x + facing * 48, top + 140); ctx.rotate(facing * (-0.2 - armUp * 1.35));
+  rr(-14, 0, 28, 130, 14); fill(body); circle(0, 132, 16, skin); ctx.restore();
+  rr(x - 56 * facing - 14, top + 140, 28, 120, 14); fill(body);
+  circle(x, top + 62, 56, skin);
+  ctx.beginPath(); ctx.arc(x, top + 52, 58, Math.PI, 0); fill(hair);
+  circle(x + facing * 22, top + 66, 5, "#1b1b1b");
+  if (hat) { rr(x - 48, top - 62, 96, 70, 20); fill("#ffffff"); rr(x - 60, top - 4, 120, 20, 8); fill("#f2f2f2"); }
+}
+function chair(x, y, facing) {
+  ctx.fillStyle = "#6b3b1f"; ctx.fillRect(x - 70, y - 200, 140, 22); ctx.fillRect(x - 64, y - 180, 14, 180); ctx.fillRect(x + 50, y - 180, 14, 180);
+  ctx.fillRect(x - facing * 64 - 7, y - 420, 14, 230);
+}
+function soldier(x, y, facing, armUp) {
+  person(x, y, { body: "#5b6b3a", skin: facing > 0 ? "#e0b089" : "#8d5a3b", hair: "#3a2a1a", armUp, facing });
+  const top = y - 470;
+  ctx.beginPath(); ctx.ellipse(x, top + 22, 92, 16, 0, 0, Math.PI * 2); fill("#4a5530");
+  rr(x - 50, top - 28, 100, 54, 18); fill("#56633a");
+  ctx.fillStyle = "#3d4627"; ctx.fillRect(x - 50, top + 6, 100, 10);
+}
+function drone(x, y, t) {
+  ctx.fillStyle = "#2c2f36"; ctx.fillRect(x - 70, y - 6, 140, 12);
+  rr(x - 34, y - 18, 68, 34, 10); fill("#3a3e47"); circle(x, y + 14, 9, "#e0a030");
+  for (const dx of [-70, 70]) { ctx.fillStyle = "#2c2f36"; ctx.fillRect(x + dx - 4, y - 24, 8, 20);
+    ctx.beginPath(); ctx.ellipse(x + dx, y - 26, 46 * Math.abs(Math.cos(t * 40 + dx)), 6, 0, 0, Math.PI * 2); fill("rgba(40,40,46,.7)"); }
+}
+const TANK = { x0: 220, x1: 920, y0: 1035, y1: 1215 };
+function tank() {
+  // tracks and wheels
+  rr(200, 1190, 740, 100, 50); fill("#33343a");
+  for (let i = 0; i < 7; i++) { circle(270 + i * 100, 1242, 36, "#5c5f66"); circle(270 + i * 100, 1242, 16, "#8b8f97"); }
+  // hull
+  ctx.beginPath(); ctx.moveTo(190, 1150); ctx.lineTo(240, 1095); ctx.lineTo(900, 1095); ctx.lineTo(965, 1160); ctx.lineTo(910, 1210); ctx.lineTo(230, 1210); ctx.closePath(); fill("#d6bd88");
+  ctx.fillStyle = "#b99d68"; ctx.fillRect(230, 1178, 680, 32);
+  // turret, hatch, barrel, antenna
+  ctx.fillStyle = "#b99d68"; ctx.fillRect(730, 1048, 330, 22); rr(1040, 1042, 34, 34, 6); fill("#a88c58");
+  rr(420, 1010, 330, 95, 30); fill("#ccb17c"); rr(500, 990, 110, 30, 12); fill("#b99d68");
+  ctx.strokeStyle = "#333"; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(700, 1012); ctx.lineTo(690, 880); ctx.stroke();
+}
+function sceneA(t) {
+  const k = seg(t, 0.2, 6.5), s = lerp(1.7, 1.12, k) - 0.06 * seg(t, 7, 11), cx = lerp(330, 560, k), cy = lerp(1150, 1060, k);
+  ctx.save(); ctx.translate(W / 2, H / 2 - 40); ctx.scale(s, s); ctx.translate(-cx, -cy);
+  // sky, sun, clouds
+  const g = ctx.createLinearGradient(0, -400, 0, 900); g.addColorStop(0, "#6fb2e6"); g.addColorStop(1, "#d8ecf6"); ctx.fillStyle = g; ctx.fillRect(-700, -400, 2500, 1400);
+  circle(860, 260, 70, "#ffe08a");
+  for (const [x, y, w] of [[120, 220, 160], [760, 120, 200], [1180, 300, 150]]) { const dx = (t * 6) % 2000; for (const [ox, oy, r] of [[0, 0, 0.5], [w * 0.45, -20, 0.6], [w * 0.9, 0, 0.45]]) circle(x + dx * 0.3 + ox, y + oy, w * r * 0.6, "rgba(255,255,255,.92)"); }
+  // mesas and ground
+  const mesa = (pts, c) => { ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]); for (const p of pts.slice(1)) ctx.lineTo(p[0], p[1]); ctx.closePath(); fill(c); };
+  mesa([[-700, 900], [-650, 640], [-380, 610], [-300, 900]], "#d98a55"); mesa([[-200, 900], [-120, 720], [220, 700], [300, 900]], "#c96f3c");
+  mesa([[260, 900], [380, 690], [560, 680], [640, 900]], "#b85a2e"); mesa([[600, 900], [700, 620], [1050, 600], [1180, 900]], "#d98a55"); mesa([[1100, 900], [1220, 700], [1700, 690], [1800, 900]], "#c96f3c");
+  ctx.fillStyle = "#e07a3a"; ctx.fillRect(-700, 880, 2500, 1500);
+  for (const [x, y, w] of [[-200, 1400, 600], [700, 1560, 700], [100, 1800, 900], [-400, 2050, 800]]) { ctx.beginPath(); ctx.ellipse(x, y, w, 26, 0, 0, Math.PI * 2); fill("#c9652e"); }
+  seed = 5; for (let i = 0; i < 18; i++) { const x = -500 + rnd() * 2000, y = 1300 + rnd() * 900; ctx.fillStyle = "#6f8a3a"; for (const a of [-0.5, 0, 0.5]) { ctx.save(); ctx.translate(x, y); ctx.rotate(a); ctx.fillRect(-3, -34, 6, 34); ctx.restore(); } }
+  ctx.beginPath(); ctx.ellipse(570, 1295, 420, 26, 0, 0, Math.PI * 2); fill("rgba(120,50,20,.35)");
+  tank();
+  // soldiers sticking codes on, then stepping back to admire it
+  const reach = t < 10 ? 0.55 + 0.45 * Math.abs(Math.sin(t * 2.4)) : 0.1;
+  soldier(130, 1310, 1, reach); soldier(1010, 1310, -1, t < 10 ? 0.55 + 0.45 * Math.abs(Math.cos(t * 2.1)) : 0.1);
+  for (const [at, x, y, size, rot] of STICKERS) sticker(x, y, size, rot, pop(t, at, 0.25));
+  // the drones arrive and scan
+  const d = seg(t, 9.9, 10.9);
+  if (d > 0) {
+    for (const [ox, oy, delay] of [[-180, 0, 0], [160, -60, 0.25]]) {
+      const k2 = seg(t, 9.9 + delay, 10.9 + delay), x = lerp(1500, 560 + ox, k2), y = lerp(200, 760 + oy, k2) + Math.sin(t * 6 + ox) * 8;
+      if (t > 10.6 + delay) { ctx.beginPath(); ctx.moveTo(x - 12, y + 20); ctx.lineTo(x + 12, y + 20); ctx.lineTo(x + 130, 1110); ctx.lineTo(x - 130, 1110); ctx.closePath();
+        fill(`rgba(224,160,48,${0.22 + 0.1 * Math.sin(t * 20)})`); }
+      drone(x, y, t);
+    }
+  }
+  ctx.restore();
+}
+// [time, x, y, size, tilt]: the hull first, then panels, the hatch, the barrel, then everywhere
+const STICKERS = [[3.0, 420, 1140, 52, 0.05], [3.4, 700, 1135, 48, -0.08], [4.1, 300, 1150, 46, 0.1], [4.4, 820, 1150, 46, -0.1],
+  [5.3, 560, 1060, 48, 0.06], [5.6, 470, 1150, 44, -0.12], [6.6, 555, 1000, 40, 0.08], [7.7, 960, 1058, 30, 0.0], [7.9, 860, 1058, 30, 0.1]];
+seed = 21;
+for (let i = 0; i < 60; i++) STICKERS.push([8.0 + i * 0.035, TANK.x0 + 20 + rnd() * (TANK.x1 - TANK.x0 - 40), TANK.y0 + rnd() * (TANK.y1 - TANK.y0), 30 + rnd() * 16, (rnd() - 0.5) * 0.5]);
+
+// ---------- scene A2: close on the wall of codes, a scan, the link opens ----------
+function sceneScan(t) {
+  ctx.fillStyle = "#c9a46a"; ctx.fillRect(0, 0, W, H);
+  const z = 1 + 0.25 * seg(t, 11.6, 15.2);
+  ctx.save(); ctx.translate(W / 2, H / 2 - 100); ctx.scale(z, z); ctx.translate(-W / 2, -(H / 2 - 100));
+  seed = 99;
+  for (let r = -1; r < 10; r++) for (let c = -1; c < 6; c++) sticker(90 + c * 220 + (r % 2) * 40, 100 + r * 220, 160, (rnd() - 0.5) * 0.22);
+  sticker(W / 2, H / 2 - 100, 260, 0.02);
+  const lock = seg(t, 12.6, 13.0);
+  if (lock > 0) {
+    ctx.strokeStyle = GOLD; ctx.lineWidth = 10; const s = lerp(260, 190, lock), m = 50, cx = W / 2, cy = H / 2 - 100;
+    for (const [dx, dy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) { const x = cx + dx * s, y = cy + dy * s; ctx.beginPath(); ctx.moveTo(x, y - dy * m); ctx.lineTo(x, y); ctx.lineTo(x - dx * m, y); ctx.stroke(); }
+    text(`${SITE.toUpperCase()}`, cx - s, cy - s - 28, 26, GOLD, 700, "left", MONO); text("QR DETECTED", cx + s, cy - s - 28, 26, GOLD, 700, "right", MONO);
+  }
+  ctx.restore();
+  // the "opening link" box
+  const open = pop(t, 13.9, 0.3);
+  if (open > 0) around(W / 2, H / 2 - 100, open, 0, () => {
+    rr(-380, -150, 760, 300, 22); fill("rgba(14,16,14,.94)"); ctx.strokeStyle = GOLD; ctx.lineWidth = 3; ctx.stroke();
+    text("Opening link…", -330, -70, 34, "#d8d8d8", 700, "left", MONO);
+    text(`https://${SITE}`, -330, 0, 40, "#ffffff", 700, "left", MONO);
+    rr(-330, 50, 660, 22, 11); fill("#2e2e2e"); rr(-330, 50, 660 * seg(t, 14.1, 15.2), 22, 11); fill(GOLD);
+  });
+}
+
+// ---------- scene B: dark product section ----------
+function darkGround() {
+  ctx.fillStyle = "#0c0d0f"; ctx.fillRect(0, 0, W, H);
+  ctx.strokeStyle = "rgba(255,255,255,.045)"; ctx.lineWidth = 2;
+  for (let x = 0; x <= W; x += 60) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+  for (let y = 0; y <= H; y += 60) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+  const g = ctx.createRadialGradient(W / 2, H / 2, 200, W / 2, H / 2, 1200); g.addColorStop(0, "rgba(0,0,0,0)"); g.addColorStop(1, "rgba(0,0,0,.7)"); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+}
+// cities, placed roughly where they sit in South Africa
+const CITIES = [["Pretoria", 0.64, 0.06], ["Johannesburg", 0.58, 0.26], ["Durban", 0.84, 0.58], ["Bloemfontein", 0.44, 0.48], ["Gqeberha", 0.54, 0.86], ["Stellenbosch", 0.14, 0.98], ["Cape Town", 0.02, 0.72]];
+function sceneMap(t) {
+  darkGround();
+  const a = pop(t, 15.9, 0.35);
+  around(W / 2, 820, a, 0, () => {
+    rr(-440, -330, 880, 660, 34); fill("#15171b"); ctx.strokeStyle = "rgba(255,255,255,.08)"; ctx.lineWidth = 2; ctx.stroke();
+    text("LOOKING FOR 5 FOUNDING RESTAURANTS", 0, -260, 26, "#8a8f98", 700, "center", MONO);
+    CITIES.forEach(([name, fx, fy], i) => {
+      const p = pop(t, 16.4 + i * 0.22, 0.3); if (p <= 0) return;
+      const x = -360 + fx * 700, y = -180 + fy * 420;
+      circle(x, y, 26 * p, "rgba(224,160,48,.25)"); circle(x, y, 13 * p, GOLD);
+      alpha(p, () => { rr(x + 24, y - 24, ctx.measureText ? name.length * 17 + 30 : 200, 48, 10); fill("rgba(255,255,255,.06)"); text(name.toUpperCase(), x + 38, y + 9, 24, "#e6e6e6", 700, "left", MONO); });
+    });
+    text("SOUTH AFRICA", 0, 290, 24, "#5d626b", 700, "center", MONO);
+  });
+}
+const FEATURES = [["Table ordering", "SCAN · ORDER"], ["Kitchen screen", "LIVE"], ["Call a waiter", "ONE TAP"], ["Pay now or after", "YOU CHOOSE"]];
+function sceneFeatures(t) {
+  darkGround();
+  FEATURES.forEach(([name, tag], i) => {
+    const p = pop(t, 19.7 + i * 0.9, 0.35); if (p <= 0) return;
+    const y = 520 + i * 200;
+    around(W / 2, y, p, 0, () => {
+      rr(-430, -78, 860, 156, 28); fill("#15171b"); ctx.strokeStyle = GOLD; ctx.lineWidth = 3; ctx.stroke();
+      text(name, -380, 18, 50, "#ffffff", 800);
+      text(tag, 380, 12, 24, GOLD, 700, "right", MONO);
+    });
+  });
+  const n = pop(t, 24.0, 0.35);
+  if (n > 0) around(W / 2, 400, n, 0, () => { rr(-330, -52, 660, 104, 52); fill("#ffffff"); circle(-270, 0, 30, "#2f8f4e"); text("✓", -270, 13, 36, "#fff", 900, "center"); text("Table 7 · order in the kitchen", -220, 13, 34, INK, 800); });
+}
+function scenePilot(t) {
+  darkGround();
+  const p = pop(t, 27.3, 0.35), glow = 0.6 + 0.4 * Math.sin(t * 5);
+  around(W / 2, 800, p, 0, () => {
+    ctx.shadowColor = `rgba(224,160,48,${0.7 * glow})`; ctx.shadowBlur = 90; rr(-400, -230, 800, 460, 44); fill(GOLD); ctx.shadowColor = "transparent";
+    text("FREE OR DISCOUNTED", 0, -110, 30, INK, 800, "center");
+    text("Founding", 0, 10, 104, INK, 900, "center"); text("pilot", 0, 120, 104, INK, 900, "center");
+  });
+  const s = pop(t, 29.0, 0.35);
+  if (s > 0) around(W / 2, 1150, s, 0, () => { text("WE SET IT UP · WE TRAIN YOUR STAFF", 0, 0, 30, "#d8d8d8", 700, "center", MONO); text("NO COMMISSION ON ORDERS", 0, 56, 30, "#d8d8d8", 700, "center", MONO); });
+}
+function sceneEnd(t) {
+  darkGround();
+  const a = pop(t, 31.3, 0.4);
+  around(W / 2, 760, a, 0, () => {
+    rr(-260, -90, 130, 130, 30); fill(GOLD); text("S", -195, 8, 92, INK, 900, "center");
+    text("SORA", 60, 22, 120, "#ffffff", 900, "center"); circle(225, 6, 13, GOLD);
+    text("QR TABLE ORDERING FOR SOUTH AFRICAN RESTAURANTS", 0, 120, 25, "#9aa0a8", 700, "center", MONO);
+  });
+  const b = pop(t, 32.0, 0.4), pulse = 1 + 0.025 * Math.sin(t * 6);
+  if (b > 0) around(W / 2, 1060, b * pulse, 0, () => {
+    ctx.shadowColor = "rgba(224,160,48,.55)"; ctx.shadowBlur = 60; rr(-370, -80, 740, 160, 80); fill(GOLD); ctx.shadowColor = "transparent";
+    text("Join the waitlist →", 0, 22, 62, INK, 900, "center");
+  });
+  if (t > 32.5) alpha(seg(t, 32.5, 32.9), () => text(SITE.toUpperCase(), W / 2, 1220, 40, "#ffffff", 700, "center", MONO));
+}
+
+// ---------- glitch cut: shifted blocks and colour split for a few frames ----------
+function glitch(strength, t) {
+  if (strength <= 0) return;
+  const snap = ctx.getImageData(0, 0, W, H);
+  seed = 1 + Math.floor(t * FPS) * 31;
+  const tmp = document.createElement("canvas"); tmp.width = W; tmp.height = H; tmp.getContext("2d").putImageData(snap, 0, 0);
+  for (let i = 0; i < 26 * strength; i++) {
+    const h = 20 + rnd() * 140, y = rnd() * H, w = 120 + rnd() * W, x = rnd() * (W - w), dx = (rnd() - 0.5) * 260 * strength;
+    ctx.drawImage(tmp, x, y, w, h, x + dx, y, w, h);
+    if (rnd() < 0.35) { ctx.fillStyle = rnd() < 0.5 ? "rgba(224,160,48,.35)" : "rgba(80,200,255,.25)"; ctx.fillRect(x + dx, y, w, h * 0.3); }
+  }
+  ctx.globalCompositeOperation = "screen"; ctx.globalAlpha = 0.5 * strength;
+  ctx.drawImage(tmp, 14 * strength, 0); ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over";
+}
+const GLITCHES = [[15.25, 15.85], [26.9, 27.35], [30.95, 31.4]];
+
+// ---------- captions: one short phrase at a time, white on a black box ----------
+const CAPTIONS = [[0.2, "MODERN SOLDIERS"], [1.6, "HAVE A NEW STRATEGY"], [3.0, "QR CODES"], [4.1, "ON THEIR TANKS"], [5.3, "ON EVERY PANEL"],
+  [6.6, "EVERY HATCH"], [7.7, "EVEN THE BARREL"], [8.6, "COUNTLESS QR CODES"], [10.2, "SO WHEN ENEMY DRONES"], [11.6, "SCAN THE QR CODE"],
+  [12.9, "IT TAKES THEM"], [14.0, "STRAIGHT TO"], [15.9, "SORA"], [17.4, "FOR RESTAURANTS"], [18.6, "ACROSS SOUTH AFRICA"],
+  [19.7, "GUESTS ORDER AT THE TABLE"], [21.5, "THE KITCHEN SEES IT"], [22.8, "WAITERS GET CALLED"], [24.0, "NO APP TO DOWNLOAD"],
+  [25.6, "NO COMMISSION"], [27.4, "FOUNDING PILOT"], [29.0, "ONLY 5 SPOTS"], [31.4, ""]];
+function captions(t) {
+  let i = CAPTIONS.findIndex(([at]) => at > t) - 1; if (i < 0) i = CAPTIONS.length - 1;
+  const [at, line] = CAPTIONS[i]; if (!line) return;
+  const p = pop(t, at, 0.18);
+  ctx.font = `900 54px ${F}`; const w = ctx.measureText(line).width + 56;
+  around(W / 2, 1520, 0.85 + 0.15 * p, 0, () => { rr(-w / 2, -50, w, 100, 14); fill("rgba(14,14,16,.92)"); text(line, 0, 20, 54, "#ffffff", 900, "center"); });
+}
+
+// ---------- one frame ----------
+function frame(t) {
+  ctx.clearRect(0, 0, W, H);
+  if (t < 11.6) sceneA(t);
+  else if (t < 15.55) sceneScan(t);
+  else if (t < 19.6) sceneMap(t);
+  else if (t < 27.1) sceneFeatures(t);
+  else if (t < 31.15) scenePilot(t);
+  else sceneEnd(t);
+  if (t >= 11.45 && t < 11.75) { ctx.fillStyle = `rgba(255,255,255,${1 - Math.abs(t - 11.6) / 0.15})`; ctx.fillRect(0, 0, W, H); }
+  for (const [a, b] of GLITCHES) if (t >= a && t < b) glitch(Math.sin(((t - a) / (b - a)) * Math.PI), t);
+  if (!params.has("nocaptions")) captions(t);
+}
+
+// ---------- voice-over: the lines in voice/, trimmed of silence and placed on the timeline ----------
+const RATE = 48000;
+const VOICE_DIR = /^[a-z-]+$/.test(params.get("voice") ?? "") ? params.get("voice") : "voice";
+async function loadVoice() {
+  const lines = await (await fetch(VOICE_DIR + "/lines.json")).json();
+  const ac = new OfflineAudioContext(1, RATE, RATE);
+  let prevEnd = 0;
+  for (const l of lines) {
+    const buf = await ac.decodeAudioData(await (await fetch(VOICE_DIR + "/" + l.file)).arrayBuffer());
+    const d = buf.getChannelData(0), thr = 0.01;
+    let a = 0, b = d.length - 1; while (a < b && Math.abs(d[a]) < thr) a++; while (b > a && Math.abs(d[b]) < thr) b--;
+    l.buf = buf; l.from = Math.max(0, a / buf.sampleRate - 0.02); l.len = (b - a) / buf.sampleRate + 0.06;
+    // a line never starts before the previous one ends
+    l.at = Math.max(l.start, prevEnd + 0.06); prevEnd = l.at + l.len;
+  }
+  return lines;
+}
+window.voiceInfo = async () => (await loadVoice()).map((l) => [l.line, +l.len.toFixed(2), l.start, +l.at.toFixed(2), +(l.at + l.len).toFixed(2), l.end]);
+async function mixVoice() {
+  const lines = await loadVoice();
+  const ac = new OfflineAudioContext(1, RATE * DURATION, RATE);
+  for (const l of lines) { const s = ac.createBufferSource(); s.buffer = l.buf; s.connect(ac.destination); s.start(l.at, l.from, l.len); }
+  return ac.startRendering();
+}
+
+// ---------- modes ----------
+const status = document.getElementById("status");
+await document.fonts.load(`900 54px Inter`); await document.fonts.load(`700 30px "JetBrains Mono"`);
+window.renderAt = (t) => { frame(t); return t; };
+if (params.has("play")) { const start = performance.now(); const loop = () => { frame(((performance.now() - start) / 1000) % DURATION); requestAnimationFrame(loop); }; loop(); }
+else if (params.has("render")) status.textContent = await encode();
+else frame(Number(params.get("t") ?? 9));
+
+async function encode() {
+  const cfg = { codec: "avc1.640028", width: W, height: H, bitrate: 8_000_000, framerate: FPS };
+  if (!(await VideoEncoder.isConfigSupported(cfg)).supported) return "this browser cannot encode H.264";
+  const { Muxer, ArrayBufferTarget } = await import("https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/+esm");
+  const voice = !params.has("novoice");
+  const acfg = { codec: "mp4a.40.2", sampleRate: RATE, numberOfChannels: 1, bitrate: 128000 };
+  if (voice && !(await AudioEncoder.isConfigSupported(acfg)).supported) return "this browser cannot encode AAC audio";
+  const target = new ArrayBufferTarget(), muxer = new Muxer({ target, video: { codec: "avc", width: W, height: H },
+    ...(voice ? { audio: { codec: "aac", numberOfChannels: 1, sampleRate: RATE } } : {}), fastStart: "in-memory" });
+  let failed = null;
+  const enc = new VideoEncoder({ output: (c, m) => muxer.addVideoChunk(c, m), error: (e) => (failed = e) });
+  enc.configure(cfg);
+  for (let i = 0; i < DURATION * FPS; i++) {
+    frame(i / FPS);
+    const vf = new VideoFrame(out, { timestamp: Math.round(i * 1e6 / FPS), duration: Math.round(1e6 / FPS) });
+    enc.encode(vf, { keyFrame: i % 60 === 0 }); vf.close();
+    while (enc.encodeQueueSize > 8) await new Promise((r) => setTimeout(r, 5));
+    if (failed) return `encoder error: ${failed}`;
+    if (i % 30 === 0) status.textContent = `encoding ${Math.round(i / (DURATION * FPS) * 100)}%`;
+  }
+  await enc.flush();
+  if (voice) {
+    status.textContent = "mixing the voice";
+    const pcm = (await mixVoice()).getChannelData(0);
+    const aenc = new AudioEncoder({ output: (c, m) => muxer.addAudioChunk(c, m), error: (e) => (failed = e) });
+    aenc.configure(acfg);
+    for (let i = 0; i < pcm.length; i += 1024) {
+      const data = pcm.slice(i, i + 1024);
+      const ad = new AudioData({ format: "f32-planar", sampleRate: RATE, numberOfFrames: data.length, numberOfChannels: 1, timestamp: Math.round(i * 1e6 / RATE), data });
+      aenc.encode(ad); ad.close();
+    }
+    await aenc.flush();
+    if (failed) return `audio encoder error: ${failed}`;
+  }
+  muxer.finalize();
+  const file = `sora-tank-reel${params.has("nocaptions") ? "-no-captions" : ""}${voice ? (VOICE_DIR === "voice" ? "-voice" : "-" + VOICE_DIR) : ""}`;
+  const res = await fetch(`/save?file=${file}`, { method: "POST", body: target.buffer });
+  window.renderDone = await res.text();
+  return window.renderDone;
+}
+</script>
+</body>
+</html>

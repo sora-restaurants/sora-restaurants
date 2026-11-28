@@ -1,0 +1,29 @@
+{
+  "business": "Sora (QR ordering SaaS, Pro plan). Unit = one paying restaurant for one month; 'per day' fields count restaurants because days_per_month = 1.",
+  "unit": "restaurant-month",
+  "price": 1200,
+  "variable": [
+    {"label": "On-site support visits, travel (estimate)", "cost": 150},
+    {"label": "Hosting and email share per restaurant (estimate)", "cost": 25},
+    {"label": "Subscription collection fee, debit order or card (estimate)", "cost": 15}
+  ],
+  "fixed_monthly": [
+    {"label": "Founder salaries, 3 x R25,000 (ESTIMATE: amount not given)", "cost": 75000},
+    {"label": "Employer UIF + SDL, ~2% of payroll (estimate)", "cost": 1500},
+    {"label": "Supabase Pro, USD 25 (estimate at ~R18.5/USD)", "cost": 465},
+    {"label": "Vercel Pro, 2 seats x USD 20 (estimate)", "cost": 740},
+    {"label": "Google Workspace, 3 users (estimate)", "cost": 400},
+    {"label": "Accountant / bookkeeping (estimate)", "cost": 1500},
+    {"label": "Phones and data for sales and support (estimate)", "cost": 600}
+  ],
+  "startup": [
+    {"label": "Company registration (CIPC) (estimate)", "cost": 175},
+    {"label": "Lawyer: shareholder agreement, customer terms, POPIA policy (estimate)", "cost": 15000},
+    {"label": "Two demo tablets (estimate)", "cost": 7000},
+    {"label": "80mm LAN receipt printer for demos (estimate)", "cost": 3500},
+    {"label": "QR table stands and print for 3 pilots (estimate)", "cost": 2000}
+  ],
+  "days_per_month": 1,
+  "plan_per_day": 10,
+  "ramp_per_day": [0, 0, 0, 3, 4, 5, 6, 7, 8, 9, 10, 10]
+}

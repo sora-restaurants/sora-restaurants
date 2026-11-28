@@ -1,0 +1,13 @@
+{
+  "id": "P016",
+  "buys": false,
+  "purchases_first_month": 0,
+  "reason_code": "trust",
+  "reason": "Head office has to approve any customer-facing system change, and Sora has no restaurant live yet, so I would be the guinea pig with no proof it works in a busy service. I would also still be ringing everything up on the POS, so my staff do double work for now.",
+  "objection": "Customers ordering from their phones and walking out is what I already fear, and a brand-new company with no live references is asking me to trust them with my tables and my head office relationship.",
+  "would_change_my_mind": "A head office sign-off plus a live restaurant of similar size that has run it for a few months and confirms the pay-now setting stopped walk-outs.",
+  "price_too_cheap": 150,
+  "price_cheap": 400,
+  "price_expensive": 900,
+  "price_too_expensive": 1500
+}

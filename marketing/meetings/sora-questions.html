@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en-ZA">
+<head>
+<meta charset="utf-8">
+<title>Sora: questions and answers</title>
+<style>
+  @page { size: A4; margin: 15mm 15mm 17mm; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 10pt/1.45 "Segoe UI", Arial, sans-serif; color: #111; }
+  h1 { font-size: 22pt; letter-spacing: -0.02em; margin: 0 0 2pt; }
+  h2 { font-size: 12.5pt; margin: 14pt 0 4pt; padding-bottom: 3pt; border-bottom: 1.5pt solid #111; break-after: avoid; }
+  .cover { border-bottom: 3pt solid #111; padding-bottom: 8pt; margin-bottom: 4pt; }
+  .muted { color: #555; }
+  .q { break-inside: avoid; padding: 6pt 0; border-bottom: 0.75pt solid #ccc; }
+  .q h3 { font-size: 10.5pt; margin: 0 0 2pt; }
+  .q p { margin: 0 0 3pt; }
+  .say { font-style: italic; border-left: 2.5pt solid #111; padding-left: 7pt; margin: 3pt 0; }
+  .tag { display: inline-block; font-size: 8pt; font-weight: 700; padding: 0 5pt; border: 1pt solid #111; border-radius: 2pt; margin-left: 4pt; vertical-align: 1pt; }
+  .tag.no { background: #111; color: #fff; }
+  .key { border: 1pt solid #111; padding: 6pt 9pt; margin: 6pt 0 2pt; }
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <p class="muted">SORA · Private, for the SORA team only</p>
+  <h1>Questions restaurants ask, and what to say</h1>
+  <p class="muted">Each answer says what Sora does today. "Not yet" means it isn't built: never promise it as available.</p>
+  <div class="key"><b>Labels:</b> <span class="tag">Today</span> works now · <span class="tag no">Not yet</span> not built · <span class="tag">Decide</span> a business decision you must make before the meeting</div>
+</div>
+
+<h2>Internet, power and going offline</h2>
+
+<div class="q"><h3>What happens if our Wi-Fi goes down? <span class="tag">Today</span></h3>
+<p>Guests order on their own phones, so they can switch to mobile data and carry on. The kitchen and bar screens need a connection: if a screen drops off, it reconnects by itself and reloads every open order, so nothing already sent is lost.</p>
+<p class="say">"Guests order on their own data, and the kitchen screen reconnects by itself and reloads the open orders. Keep a phone hotspot handy for the kitchen tablet as a backup."</p></div>
+
+<div class="q"><h3>Does Sora work fully offline? <span class="tag no">Not yet</span></h3>
+<p>No. Orders travel over the internet, so with no signal at all, nothing new can be sent. Staff take orders by hand, the way they do today, until the connection is back.</p>
+<p class="say">"It needs a connection to send orders. If everything is down, your waiters take orders the normal way. Nothing about your current setup goes away."</p></div>
+
+<div class="q"><h3>What about load-shedding? <span class="tag">Today</span></h3>
+<p>Phones and tablets run on battery. If the router loses power, guests use mobile data, and the kitchen tablet needs its own signal: a phone hotspot or a data SIM. A small UPS on the router also keeps the Wi-Fi up.</p>
+<p class="say">"Your devices run on battery. Put the router on a UPS or give the kitchen tablet its own data, and Sora keeps going through load-shedding."</p></div>
+
+<div class="q"><h3>What if the kitchen tablet breaks or goes flat? <span class="tag">Today</span></h3>
+<p>Orders are stored online, not on the tablet. Sign in to the kitchen screen on any other phone, tablet or laptop, and every open order is there.</p>
+<p class="say">"The orders live online, not on the tablet. Open the kitchen screen on any other device and you carry on."</p></div>
+
+<div class="q"><h3>What if a guest's order doesn't go through, or they tap Send twice? <span class="tag">Today</span></h3>
+<p>Every order carries a unique key, so a double tap or a retry after a dropped connection gives one ticket, never two. If it really didn't send, the guest's phone says so and they can try again.</p>
+<p class="say">"Tapping twice still gives one ticket. We built it so the kitchen never gets duplicates."</p></div>
+
+<div class="q"><h3>What if Sora itself goes down? <span class="tag">Today</span></h3>
+<p>Sora runs in the cloud, not on your premises. If it were ever unavailable, new QR orders can't be placed and staff take orders by hand until it's back. Orders already sent are saved.</p>
+<p class="say">"It runs in the cloud. If it ever has a problem, you're back to how you work today, and orders already placed are safe."</p></div>
+
+<h2>Paying</h2>
+
+<div class="q"><h3>How do guests pay? <span class="tag">Today</span></h3>
+<p>Each venue chooses: pay after the meal, pay when ordering, or let the guest choose. <b>Pay after the meal works today:</b> guests pay your normal way (card machine, till, cash), and Sora shows the waiter which tables still owe, so they can tap "Mark paid".</p>
+<p class="say">"Today your staff keep using your own card machines. Sora tracks which tables have paid, so none slip out."</p></div>
+
+<div class="q"><h3>Can guests pay by card in the app, or with Apple Pay or Google Pay? <span class="tag no">Not yet</span></h3>
+<p>Not yet. Pay-when-ordering is built into the flow, but no payment provider is connected, so it doesn't take real money. That needs a merchant account with a provider such as Yoco, PayFast or Peach Payments.</p>
+<p class="say">"In-app payment is our next step, once a payment provider is connected. Until then guests pay the normal way."</p></div>
+
+<div class="q"><h3>Does Sora touch our money or take a cut? <span class="tag">Today</span></h3>
+<p>No commission on orders. In pay-after mode, Sora never handles the money at all.</p></div>
+
+<div class="q"><h3>Can guests split the bill, or add a tip? <span class="tag no">Not yet</span></h3>
+<p>Neither is built. Guests split and tip at the card machine, the way they do now.</p></div>
+
+<h2>Your POS, set-up and devices</h2>
+
+<div class="q"><h3>Does it work with our POS? <span class="tag">Today</span> <span class="tag no">Not yet</span></h3>
+<p>It runs <b>next to</b> your POS; you don't replace anything. A <b>direct link</b> that sends Sora orders into your POS is planned, not built. Ask which POS they use: that decides which link gets built first.</p>
+<p class="say">"You keep your POS. Sora runs alongside it today. A direct link is planned, so tell me which POS you use."</p></div>
+
+<div class="q"><h3>Does it print kitchen tickets? <span class="tag no">Not yet</span></h3>
+<p>Orders show on a screen today. Sora already keeps a print queue, but the link to a kitchen printer isn't built.</p></div>
+
+<div class="q"><h3>What hardware do we need? <span class="tag">Today</span></h3>
+<p>Nothing special: a tablet, phone or laptop for each kitchen or bar screen, a waiter phone if you want waiter calls, and the QR codes on the tables. Guests use their own phones.</p></div>
+
+<div class="q"><h3>Who sets it up, and how long does it take? <span class="tag">Today</span> <span class="tag">Decide</span></h3>
+<p>We do: we load the menu, print and place the QR codes, set up the screens and train the staff on site. Agree a realistic timeframe with them before promising a date.</p></div>
+
+<h2>Guests and staff</h2>
+
+<div class="q"><h3>Will it replace our waiters? <span class="tag">Today</span></h3>
+<p>No. Waiters still serve every table. Sora takes the running back and forth off them, so they can look after guests.</p>
+<p class="say">"It's there to help your waiters, not replace them."</p></div>
+
+<div class="q"><h3>What about older guests, or anyone who wants a waiter? <span class="tag">Today</span></h3>
+<p>The QR is optional. Anyone can still order from a waiter.</p></div>
+
+<div class="q"><h3>Do guests need to download an app? <span class="tag">Today</span></h3>
+<p>No. The QR opens the menu in the phone's browser.</p></div>
+
+<div class="q"><h3>Can a guest call a waiter? <span class="tag">Today</span></h3>
+<p>Yes. One tap sends the table number to the waiter screen, and it stays there until someone answers it.</p></div>
+
+<div class="q"><h3>Can guests see where their order is? <span class="tag">Today</span></h3>
+<p>Yes. Their phone shows it moving through the kitchen, from sent to ready.</p></div>
+
+<div class="q"><h3>Is the menu in other languages? <span class="tag no">Not yet</span></h3>
+<p>Not today.</p></div>
+
+<div class="q"><h3>Is there a loyalty or rewards programme? <span class="tag no">Not yet</span></h3>
+<p>Not built.</p></div>
+
+<h2>Menu and running the venue</h2>
+
+<div class="q"><h3>Can we change the menu ourselves? <span class="tag">Today</span></h3>
+<p>Yes. Staff edit items and prices, and flip a dish to sold out, and it greys out on guests' phones straight away.</p></div>
+
+<div class="q"><h3>We have several venues. Does that work? <span class="tag">Today</span></h3>
+<p>Yes. Each venue gets its own menu, QR codes, kitchen screen and dashboard, and staff who cover more than one kitchen can switch between them.</p></div>
+
+<div class="q"><h3>What do we see as owners? <span class="tag">Today</span></h3>
+<p>A dashboard of QR orders: how many, their value, and when the busy hours were. It counts Sora orders only, not everything through your POS.</p></div>
+
+<div class="q"><h3>Can staff see another restaurant's orders? <span class="tag">Today</span></h3>
+<p>No. Each restaurant's staff only see their own orders. It's built into the database and tested.</p></div>
+
+<h2>Data and privacy</h2>
+
+<div class="q"><h3>Where is our data kept, and is it safe? <span class="tag">Today</span></h3>
+<p>Sora runs on Vercel and Supabase (cloud providers), which may process data outside South Africa. Staff sign in with their own accounts and only see their own restaurant.</p></div>
+
+<div class="q"><h3>Do you collect guests' personal details? <span class="tag">Today</span></h3>
+<p>Guests order without an account. If a guest asks for an emailed copy of the order, the email address is used only for that and deleted after 30 days.</p></div>
+
+<h2>Price and agreement</h2>
+
+<div class="q"><h3>What does it cost? <span class="tag">Decide</span></h3>
+<p>Each venue is quoted by its size: more tables means more QR codes to set up and maintain. Founding restaurants get a discounted introductory price. Have a rough range ready; give the exact quote once you've counted their tables.</p>
+<p class="say">"It depends on the size of the venue. I'll count your tables and give you an exact quote per venue, at the founding discount, with no commission on orders."</p></div>
+
+<div class="q"><h3>Is there a contract? Can we cancel? <span class="tag">Decide</span></h3>
+<p>Decide your terms before the meeting: how long the founding period runs, the notice period, and what happens to the price afterwards. Don't make terms up on the spot.</p></div>
+
+<div class="q"><h3>Who else uses Sora? <span class="tag">Today</span></h3>
+<p>No restaurants are live yet. That's why founding places are discounted, and why founding restaurants help shape what gets built.</p>
+<p class="say">"You'd be one of our first. You get the discount and a direct line to us."</p></div>
+
+</body>
+</html>

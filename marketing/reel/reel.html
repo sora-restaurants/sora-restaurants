@@ -1,0 +1,586 @@
+<!doctype html>
+<html lang="en-ZA">
+<head>
+<meta charset="utf-8">
+<title>Sora reel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,500;0,700;0,800;1,800&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; background: #05070d; color: #ddd; font: 14px system-ui; }
+  #out { display: block; height: 92vh; margin: 2vh auto 0; aspect-ratio: 9 / 16; }
+  #bar { text-align: center; padding: 6px; }
+</style>
+</head>
+<body>
+<canvas id="out" width="1080" height="1920"></canvas>
+<div id="bar">Open with ?t=12 for one frame, ?play for a preview, ?render to encode the video. <span id="status"></span></div>
+<script type="module">
+import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
+import qrcode from "https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/+esm";
+
+// ---------- constants and timing helpers ----------
+const W = 1080, H = 1920, FPS = 30, DURATION = 60;
+const SITE = "soraqr.co.za";
+const GOLD = "#d9952b", INK = "#141414", MUTED = "#6b6b6b", LINE = "#e6e6e6", GREEN = "#2f8f4e";
+const F = "Inter, system-ui, sans-serif";
+const sm = (x) => (x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x));
+const seg = (t, a, b) => sm((t - a) / (b - a));
+const vis = (t, a, b, f = 0.35) => Math.min(seg(t, a, a + f), 1 - seg(t, b - f, b));
+const backOut = (x) => { x = Math.min(1, Math.max(0, x)); const c = 1.70158; return 1 + (c + 1) * (x - 1) ** 3 + c * (x - 1) ** 2; };
+const pop = (t, a, d = 0.4) => (t < a ? 0 : backOut((t - a) / d));
+const lerp = (a, b, k) => a + (b - a) * k;
+
+// ---------- 3D: the miniature restaurant ----------
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(1);
+renderer.setSize(W, H, false);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color("#0a0f1e");
+const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 200);
+
+const canvasTex = (w, h, draw, repeat) => {
+  const c = document.createElement("canvas"); c.width = w; c.height = h;
+  draw(c.getContext("2d"), w, h);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8;
+  if (repeat) { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(...repeat); }
+  return t;
+};
+const mat = (color, extra = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.75, ...extra });
+const add = (geo, material, x, y, z, shadow = true) => {
+  const m = new THREE.Mesh(geo, material); m.position.set(x, y, z);
+  m.castShadow = shadow; m.receiveShadow = true; scene.add(m); return m;
+};
+
+// seeded randomness, so every frame and every render is the same
+let seed = 7;
+const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+
+const brick = canvasTex(512, 512, (g) => {
+  g.fillStyle = "#4a1d14"; g.fillRect(0, 0, 512, 512);
+  for (let r = 0; r < 16; r++) for (let c = -1; c < 8; c++) {
+    const x = c * 64 + (r % 2) * 32, y = r * 32, v = 0.85 + rnd() * 0.3;
+    g.fillStyle = `rgb(${(146 * v) | 0},${(62 * v) | 0},${(44 * v) | 0})`; g.fillRect(x + 3, y + 3, 58, 26);
+  }
+}, [3, 1.2]);
+const wood = canvasTex(512, 512, (g) => {
+  for (let i = 0; i < 16; i++) {
+    const v = 0.85 + rnd() * 0.25; g.fillStyle = `rgb(${(150 * v) | 0},${(92 * v) | 0},${(52 * v) | 0})`; g.fillRect(0, i * 32, 512, 32);
+    g.fillStyle = "rgba(40,20,8,.55)"; g.fillRect(0, i * 32, 512, 2); g.fillRect((rnd() * 512) | 0, i * 32, 2, 32);
+    for (let k = 0; k < 6; k++) { g.fillStyle = "rgba(60,30,12,.18)"; g.fillRect(rnd() * 512, i * 32 + rnd() * 30, 60 + rnd() * 120, 1.5); }
+  }
+}, [4, 3]);
+const glowTex = canvasTex(128, 128, (g) => {
+  const gr = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+  gr.addColorStop(0, "rgba(255,210,140,1)"); gr.addColorStop(0.35, "rgba(255,180,90,.45)"); gr.addColorStop(1, "rgba(255,160,60,0)");
+  g.fillStyle = gr; g.fillRect(0, 0, 128, 128);
+});
+const glow = (x, y, z, s, o = 0.5) => {
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, blending: THREE.AdditiveBlending, transparent: true, opacity: o, depthWrite: false }));
+  sp.position.set(x, y, z); sp.scale.set(s, s, 1); scene.add(sp); return sp;
+};
+
+// platform, floor and walls
+add(new THREE.BoxGeometry(14.6, 0.6, 12.6), mat("#2b1a10"), 0, -0.3, 0);
+add(new THREE.BoxGeometry(14, 0.06, 12), mat("#ffffff", { map: wood, roughness: 0.55 }), 0, 0.03, 0, false);
+add(new THREE.BoxGeometry(0.3, 4.6, 12.6), mat("#ffffff", { map: brick }), -7.15, 2.3, 0);
+const backWallTex = brick.clone(); backWallTex.repeat.set(3.4, 1.2); backWallTex.needsUpdate = true;
+add(new THREE.BoxGeometry(14.6, 4.6, 0.3), mat("#ffffff", { map: backWallTex }), 0, 2.3, -6.15);
+add(new THREE.BoxGeometry(0.34, 0.25, 12.64), mat("#20140e"), -7.15, 4.65, 0);
+add(new THREE.BoxGeometry(14.64, 0.25, 0.34), mat("#20140e"), 0, 4.65, -6.15);
+
+// windows with a night sky on the left wall
+const sky = canvasTex(256, 256, (g) => {
+  const gr = g.createLinearGradient(0, 0, 0, 256); gr.addColorStop(0, "#0b1a3d"); gr.addColorStop(1, "#1e3b7a");
+  g.fillStyle = gr; g.fillRect(0, 0, 256, 256);
+  for (let i = 0; i < 40; i++) { g.fillStyle = `rgba(255,255,255,${0.4 + rnd() * 0.6})`; g.fillRect(rnd() * 256, rnd() * 180, 2, 2); }
+  g.fillStyle = "#f4efe1"; g.fillRect(0, 124, 256, 8); g.fillRect(124, 0, 8, 256);
+  g.strokeStyle = "#f4efe1"; g.lineWidth = 16; g.strokeRect(0, 0, 256, 256);
+});
+for (const z of [-4.2, -1.2, 1.8, 4.6]) {
+  const w = new THREE.Mesh(new THREE.PlaneGeometry(1.7, 1.9), new THREE.MeshBasicMaterial({ map: sky }));
+  w.position.set(-6.99, 2.6, z); w.rotation.y = Math.PI / 2; scene.add(w);
+}
+// the SORA neon sign and menu boards on the back wall
+const neon = canvasTex(1024, 300, (g, w, h) => {
+  g.clearRect(0, 0, w, h); g.font = `800 210px ${F}`; g.textAlign = "center"; g.textBaseline = "middle";
+  g.shadowColor = "#ffb347"; g.shadowBlur = 40; g.fillStyle = "#ffd28a"; g.fillText("SORA.", w / 2, h / 2 + 10);
+  g.shadowBlur = 0; g.fillStyle = "#fff1d6"; g.fillText("SORA.", w / 2, h / 2 + 10);
+});
+const sign = new THREE.Mesh(new THREE.PlaneGeometry(3.4, 1.0), new THREE.MeshBasicMaterial({ map: neon, transparent: true }));
+sign.position.set(-2.6, 3.3, -5.98); scene.add(sign);
+glow(-2.6, 3.3, -5.7, 4.2, 0.35);
+const board = canvasTex(256, 160, (g) => {
+  g.fillStyle = "#121212"; g.fillRect(0, 0, 256, 160); g.strokeStyle = "#5a3a20"; g.lineWidth = 10; g.strokeRect(0, 0, 256, 160);
+  g.fillStyle = "#e9e2d0"; for (let i = 0; i < 6; i++) { g.fillRect(24, 26 + i * 20, 120 + rnd() * 60, 5); g.fillRect(200, 26 + i * 20, 30, 5); }
+});
+for (const x of [1.8, 3.4, 5.0]) { const b = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 0.88), new THREE.MeshBasicMaterial({ map: board })); b.position.set(x, 3.45, -5.98); scene.add(b); }
+
+// people
+const SKIN = ["#f1c9a5", "#c68e65", "#8d5a3b", "#5c3a24", "#e0b089", "#a86f4a"];
+const SHIRT = ["#c0563b", "#3a6ea5", "#e0a33a", "#5b8c5a", "#2f8f8a", "#d9d4c7", "#b84a62", "#7a8b99", "#c9733a"];
+const HAIR = ["#1d1410", "#3b2416", "#6b4423", "#121212", "#8a6a45"];
+const pick = (a) => a[(rnd() * a.length) | 0];
+function person({ standing = false, shirt = pick(SHIRT), apron = false, hat = false } = {}) {
+  const g = new THREE.Group();
+  const base = standing ? 0.8 : 0.58;
+  if (standing) for (const dx of [-0.1, 0.1]) {
+    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.8, 10), mat("#2a2d36")); leg.position.set(dx, 0.4, 0); leg.castShadow = true; g.add(leg);
+  }
+  const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.22, 0.42, 6, 14), mat(shirt)); body.position.y = base + 0.42; body.castShadow = true; g.add(body);
+  if (apron) { const a = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.5, 0.05), mat("#f2efe8")); a.position.set(0, base + 0.25, 0.21); g.add(a); }
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.18, 18, 14), mat(pick(SKIN))); head.position.y = base + 0.95; head.castShadow = true; g.add(head);
+  const hair = new THREE.Mesh(new THREE.SphereGeometry(0.19, 18, 10, 0, Math.PI * 2, 0, Math.PI / 2), mat(pick(HAIR)));
+  hair.position.y = base + 0.97; hair.rotation.x = -0.25; g.add(hair);
+  if (hat) { const h = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.15, 0.28, 16), mat("#ffffff")); h.position.y = base + 1.22; g.add(h); }
+  scene.add(g); return g;
+}
+const face = (obj, x, z) => { obj.rotation.y = Math.atan2(x - obj.position.x, z - obj.position.z); };
+
+// tables: label 7 is the guest who orders, label 4 calls the waiter
+const TABLES = [
+  { l: 1, booth: true, x: -5.9, z: -4.2 }, { l: 2, booth: true, x: -5.9, z: -1.2 }, { l: 3, booth: true, x: -5.9, z: 1.8 },
+  { l: 4, x: -2.8, z: -3.5 }, { l: 5, x: 0.4, z: -3.0 }, { l: 6, x: -3.0, z: 0.5 }, { l: 7, x: 0.1, z: 0.3 },
+  { l: 8, x: 3.1, z: -0.4 }, { l: 9, x: -2.1, z: 3.7 }, { l: 10, x: 1.7, z: 3.4 },
+];
+const tableMat = mat("#3a2414", { roughness: 0.5 }), plate = mat("#f6f2ea", { roughness: 0.3 }), chair = mat("#2b1c12");
+const booth = mat("#2c4fa3", { roughness: 0.6 });
+for (const t of TABLES) {
+  if (t.booth) {
+    add(new THREE.BoxGeometry(1.1, 0.08, 1.0), tableMat, t.x, 0.75, t.z); add(new THREE.BoxGeometry(0.12, 0.72, 0.12), tableMat, t.x, 0.37, t.z);
+    for (const dz of [-1, 1]) {
+      add(new THREE.BoxGeometry(1.1, 0.42, 0.5), booth, t.x, 0.21, t.z + dz * 0.92);
+      add(new THREE.BoxGeometry(1.1, 1.0, 0.16), booth, t.x, 0.75, t.z + dz * 1.2);
+      const p = person(); p.position.set(t.x, 0, t.z + dz * 0.85); face(p, t.x, t.z);
+    }
+  } else {
+    add(new THREE.CylinderGeometry(0.72, 0.72, 0.08, 36), tableMat, t.x, 0.75, t.z);
+    add(new THREE.CylinderGeometry(0.07, 0.07, 0.72, 10), tableMat, t.x, 0.37, t.z);
+    const alongX = t.l % 2 === 0;
+    for (const d of [-1, 1]) {
+      const px = t.x + (alongX ? d * 0.95 : 0), pz = t.z + (alongX ? 0 : d * 0.95);
+      const ch = add(new THREE.BoxGeometry(0.5, 0.08, 0.5), chair, px, 0.48, pz);
+      const back = add(new THREE.BoxGeometry(alongX ? 0.08 : 0.5, 0.6, alongX ? 0.5 : 0.08), chair, px + (alongX ? d * 0.25 : 0), 0.8, pz + (alongX ? 0 : d * 0.25));
+      void ch; void back;
+      const p = person(); p.position.set(px, 0, pz); face(p, t.x, t.z);
+      add(new THREE.CylinderGeometry(0.2, 0.18, 0.03, 24), plate, t.x + (px - t.x) * 0.45, 0.8, t.z + (pz - t.z) * 0.45);
+    }
+  }
+  add(new THREE.CylinderGeometry(0.05, 0.05, 0.16, 12), mat("#f3d9a0", { emissive: "#ffb347", emissiveIntensity: 1.2 }), t.x, 0.87, t.z, false);
+  glow(t.x, 1.0, t.z, 2.6, 0.42);
+}
+
+// bar with bartender, kitchen pass with chef and its tablet
+add(new THREE.BoxGeometry(5.2, 1.1, 0.8), mat("#2a1a10"), 3.6, 0.55, -5.1);
+add(new THREE.BoxGeometry(5.4, 0.08, 1.0), mat("#c9b79a", { roughness: 0.35 }), 3.6, 1.14, -5.1);
+add(new THREE.BoxGeometry(5.0, 0.06, 0.3), mat("#3a2414"), 3.6, 2.1, -5.95);
+for (let i = 0; i < 10; i++) add(new THREE.CylinderGeometry(0.06, 0.07, 0.34, 10), mat(pick(["#2f5d3a", "#7a2a1a", "#c9a040", "#3a3a5a"]), { roughness: 0.2 }), 1.4 + i * 0.48, 2.3, -5.95);
+const bartender = person({ standing: true, shirt: "#1f1f24", apron: true }); bartender.position.set(4.2, 0, -5.75);
+add(new THREE.BoxGeometry(0.9, 1.0, 5.0), mat("#2e2f33"), 6.25, 0.5, -1.2);
+add(new THREE.BoxGeometry(1.0, 0.07, 5.1), mat("#c7ccd3", { metalness: 0.6, roughness: 0.3 }), 6.25, 1.03, -1.2);
+for (const z of [-3, -2.2, 0.4]) add(new THREE.CylinderGeometry(0.2, 0.18, 0.04, 24), plate, 6.1, 1.08, z);
+const chef = person({ standing: true, shirt: "#f4f4f4", hat: true }); chef.position.set(6.75, 0, -1.2); face(chef, 0, -1.2);
+const kitchenScreen = canvasTex(320, 220, (g) => {
+  g.fillStyle = "#fff"; g.fillRect(0, 0, 320, 220); g.fillStyle = "#ececec"; g.fillRect(0, 0, 320, 34);
+  for (let c = 0; c < 3; c++) for (let r = 0; r < 2 + (c === 1); r++) { g.fillStyle = c === 0 && r === 0 ? "#f3c36b" : "#f1f1f1"; g.fillRect(10 + c * 103, 44 + r * 58, 92, 50); }
+});
+add(new THREE.BoxGeometry(0.06, 0.6, 0.06), mat("#222"), 6.0, 1.35, -1.2);
+const tablet = add(new THREE.BoxGeometry(1.1, 0.72, 0.05), mat("#111"), 6.0, 1.8, -1.2);
+tablet.rotation.y = -Math.PI / 4;
+const screen3d = new THREE.Mesh(new THREE.PlaneGeometry(1.0, 0.64), new THREE.MeshBasicMaterial({ map: kitchenScreen }));
+screen3d.position.set(0, 0, 0.03); tablet.add(screen3d);
+
+// outside: bushes and a street lamp
+for (const [x, z, r] of [[-8.4, 6.6, 1.1], [8.2, 6.4, 1.3], [8.4, -5.4, 1.0], [-8.6, -5.8, 0.9]]) add(new THREE.SphereGeometry(r, 24, 18), mat("#16393a", { roughness: 0.9 }), x, r * 0.55, z);
+add(new THREE.CylinderGeometry(0.06, 0.08, 3.2, 10), mat("#1c1c22"), -6.6, 1.6, 6.9);
+add(new THREE.SphereGeometry(0.22, 16, 12), mat("#fff3d0", { emissive: "#ffd58a", emissiveIntensity: 2 }), -6.6, 3.3, 6.9, false);
+glow(-6.6, 3.3, 6.9, 2.4, 0.6);
+
+// the waiter, who walks a loop and later answers table 4
+const waiter = person({ standing: true, shirt: "#1f1f24", apron: true });
+const WAIT_PATH = [[0, 2.5, -1.8], [1.5, 1.6, 1.8], [3, -1.2, 2.0], [4.5, -1.5, -1.2], [6, 1.8, -1.6], [7.5, 2.5, -1.8]];
+const CALL_PATH = [[24, 2.2, -1.6], [26.2, 2.2, -1.6], [27.4, -0.6, -2.0], [28.6, -1.9, -3.0], [60, -1.9, -3.0]];
+function waiterAt(t) {
+  const path = t < 24 ? WAIT_PATH : CALL_PATH;
+  const lt = t < 24 ? t % 7.5 : t;
+  let i = 0; while (i < path.length - 2 && lt > path[i + 1][0]) i++;
+  const [ta, xa, za] = path[i], [tb, xb, zb] = path[i + 1];
+  const k = sm((lt - ta) / (tb - ta));
+  const x = lerp(xa, xb, k), z = lerp(za, zb, k);
+  const moving = k > 0 && k < 1;
+  waiter.position.set(x, moving ? Math.abs(Math.sin(t * 9)) * 0.05 : 0, z);
+  if (moving) face(waiter, xb, zb); else if (t >= 28.6) face(waiter, -2.8, -3.5);
+}
+
+// numbered rings on the floor around every table, for the closing shot
+const ringMat = new THREE.MeshBasicMaterial({ color: GOLD, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false });
+const numberSprites = [];
+for (const t of TABLES) {
+  const ring = new THREE.Mesh(new THREE.RingGeometry(1.15, 1.25, 64), ringMat); ring.rotation.x = -Math.PI / 2; ring.position.set(t.x, 0.08, t.z); scene.add(ring);
+  const tex = canvasTex(128, 128, (g) => {
+    g.fillStyle = "#ffffff"; g.beginPath(); g.arc(64, 64, 54, 0, 7); g.fill();
+    g.fillStyle = INK; g.font = `800 64px ${F}`; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText(String(t.l), 64, 68);
+  });
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, opacity: 0, depthTest: false }));
+  sp.position.set(t.x, 2.3, t.z); sp.scale.set(0.7, 0.7, 1); scene.add(sp); numberSprites.push(sp);
+}
+
+// lights
+scene.add(new THREE.HemisphereLight("#7d8fd6", "#3a2412", 0.55));
+const key = new THREE.DirectionalLight("#ffe2b8", 1.5);
+key.position.set(6, 14, 8); key.castShadow = true; key.shadow.mapSize.set(2048, 2048);
+Object.assign(key.shadow.camera, { left: -12, right: 12, top: 12, bottom: -12 }); key.shadow.bias = -0.0005;
+scene.add(key);
+for (const [x, z] of [[-3, -2], [1, 2], [3, -3], [-4, 3]]) { const p = new THREE.PointLight("#ffb46b", 18, 9, 2); p.position.set(x, 3, z); scene.add(p); }
+
+// camera keys: [time, zoom, target x, y, z]
+const SHOTS = [
+  [0, 1.3, 0.3, 0.6, 0], [3.0, 1.38, 0.3, 0.6, 0], [5.4, 2.4, 0.1, 0.9, 0.3], [13.0, 2.4, 0.1, 0.9, 0.3],
+  [14.6, 2.0, 5.2, 1.2, -1.4], [24.0, 2.0, 5.2, 1.2, -1.4], [25.4, 1.8, -1.0, 0.9, -2.4], [29.0, 1.8, -1.0, 0.9, -2.4],
+  [30.4, 1.25, 0, 0.6, 0], [40.0, 1.3, 0, 0.6, 0], [53.0, 1.25, 0.2, 0.6, 0], [57.0, 1.18, 0.2, 0.6, 0], [60, 1.12, 0.2, 0.6, 0],
+];
+function cameraAt(t) {
+  let i = 0; while (i < SHOTS.length - 2 && t > SHOTS[i + 1][0]) i++;
+  const a = SHOTS[i], b = SHOTS[i + 1], k = sm((t - a[0]) / (b[0] - a[0]));
+  const zoom = lerp(a[1], b[1], k), target = new THREE.Vector3(lerp(a[2], b[2], k), lerp(a[3], b[3], k), lerp(a[4], b[4], k));
+  const sway = Math.sin(t * 0.25) * 0.06;
+  const dir = new THREE.Vector3(Math.cos(Math.PI / 4 + sway), 0.95, Math.sin(Math.PI / 4 + sway)).normalize();
+  camera.position.copy(target).addScaledVector(dir, 60); camera.lookAt(target);
+  const vh = 34 / zoom, vw = vh * (W / H);
+  Object.assign(camera, { left: -vw / 2, right: vw / 2, top: vh / 2, bottom: -vh / 2 }); camera.updateProjectionMatrix();
+}
+const toScreen = (x, y, z) => { const v = new THREE.Vector3(x, y, z).project(camera); return [(v.x + 1) / 2 * W, (1 - v.y) / 2 * H]; };
+
+// ---------- 2D overlay ----------
+const out = document.getElementById("out"), ctx = out.getContext("2d");
+const rr = (x, y, w, h, r) => { ctx.beginPath(); ctx.roundRect(x, y, w, h, r); };
+const font = (size, weight = 700, italic = false) => { ctx.font = `${italic ? "italic " : ""}${weight} ${size}px ${F}`; };
+const text = (s, x, y, size, color = INK, weight = 700, align = "left") => { font(size, weight); ctx.fillStyle = color; ctx.textAlign = align; ctx.textBaseline = "alphabetic"; ctx.fillText(s, x, y); };
+function wrap(s, maxW) { const words = s.split(" "), lines = []; let line = ""; for (const w of words) { const n = line ? `${line} ${w}` : w; if (ctx.measureText(n).width > maxW && line) { lines.push(line); line = w; } else line = n; } lines.push(line); return lines; }
+const withAlpha = (a, fn) => { if (a <= 0.001) return; ctx.save(); ctx.globalAlpha *= a; fn(); ctx.restore(); };
+const scaled = (cx, cy, s, fn) => { ctx.save(); ctx.translate(cx, cy); ctx.scale(s, s); ctx.translate(-cx, -cy); fn(); ctx.restore(); };
+function chip(x, y, label, bg, fg = "#fff", size = 22) { font(size, 700); const w = ctx.measureText(label).width + 30; rr(x, y, w, size + 18, 8); ctx.fillStyle = bg; ctx.fill(); text(label, x + 15, y + size + 4, size, fg, 700); return w; }
+
+const qr = qrcode(0, "M"); qr.addData(`https://${SITE}`); qr.make();
+function drawQr(x, y, size) {
+  const n = qr.getModuleCount(), m = size / n; ctx.fillStyle = INK;
+  for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (qr.isDark(r, c)) ctx.fillRect(x + c * m, y + r * m, Math.ceil(m), Math.ceil(m));
+}
+
+// phone: 560 x 1140, screen inset 22
+const PW = 560, PH = 1140, PI = 22, SW = PW - PI * 2, SH = PH - PI * 2;
+const phoneToScreen = (cx, cy, s, lx, ly) => [cx + (lx + PI - PW / 2) * s, cy + (ly + PI - PH / 2) * s];
+function phone(cx, cy, s, draw) {
+  ctx.save(); ctx.translate(cx, cy); ctx.scale(s, s); ctx.translate(-PW / 2, -PH / 2);
+  ctx.shadowColor = "rgba(0,0,0,.55)"; ctx.shadowBlur = 60; ctx.shadowOffsetY = 20;
+  rr(0, 0, PW, PH, 78); ctx.fillStyle = "#15161a"; ctx.fill(); ctx.shadowColor = "transparent";
+  rr(PI, PI, SW, SH, 58); ctx.save(); ctx.clip(); ctx.translate(PI, PI); ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, SW, SH); draw(); ctx.restore();
+  rr(PW / 2 - 70, PI + 14, 140, 36, 18); ctx.fillStyle = "#15161a"; ctx.fill();
+  ctx.restore();
+}
+const MENU = [["Boerewors roll", 85], ["Chips, large", 45], ["Malva pudding", 60], ["Rooibos iced tea", 35]];
+const rowY = (i) => 230 + i * 150;
+function menuScreen(t) {
+  const q = [(t > 8.6) + (t > 9.6), +(t > 10.6), 0, 0];
+  text("The Corner Table", 36, 120, 38, INK, 800); text("Table 7", SW - 36, 120, 28, MUTED, 500, "right");
+  ctx.fillStyle = LINE; ctx.fillRect(0, 150, SW, 2); text("Popular", 36, 205, 24, MUTED, 600);
+  MENU.forEach(([name, price], i) => {
+    const y = rowY(i); rr(24, y, SW - 48, 128, 20); ctx.strokeStyle = LINE; ctx.lineWidth = 2; ctx.stroke();
+    text(name, 52, y + 56, 30, INK, 700); text(`R${price}`, 52, y + 98, 26, MUTED, 500);
+    const bx = SW - 120, by = y + 32, bump = q[i] ? 1 + 0.25 * Math.max(0, 1 - (t - [8.6, 10.6][i === 0 ? (q[0] === 2 ? 0 : 0) : 1]) * 4) : 1;
+    scaled(bx + 32, by + 32, i === 0 && t > 9.6 && t < 9.9 ? 1.2 : 1, () => {
+      rr(bx, by, 64, 64, 14);
+      if (q[i]) { ctx.fillStyle = INK; ctx.fill(); text(String(q[i]), bx + 32, by + 44, 30, "#fff", 800, "center"); }
+      else { ctx.strokeStyle = INK; ctx.lineWidth = 3; ctx.stroke(); text("+", bx + 32, by + 46, 38, INK, 600, "center"); }
+    });
+    void bump;
+  });
+  const total = q.reduce((s, n, i) => s + n * MENU[i][1], 0);
+  const press = t > 11.85 && t < 12.15 ? 0.96 : 1;
+  scaled(SW / 2, 960, press, () => { rr(24, 905, SW - 48, 110, 20); ctx.fillStyle = INK; ctx.fill(); text("Send order", 56, 972, 30, "#fff", 700); text(`R${total}`, SW - 56, 972, 30, "#fff", 700, "right"); });
+}
+function scanScreen(t) {
+  ctx.fillStyle = "#101114"; ctx.fillRect(0, 0, SW, SH);
+  text("Point your camera at the code", SW / 2, 170, 26, "#cfcfcf", 600, "center");
+  const s = 330, x = (SW - s) / 2, y = 300; rr(x - 30, y - 30, s + 60, s + 150, 24); ctx.fillStyle = "#fff"; ctx.fill();
+  drawQr(x, y, s); text("Table 7 · Scan to order", SW / 2, y + s + 80, 26, INK, 700, "center");
+  ctx.strokeStyle = GOLD; ctx.lineWidth = 8; const m = 60;
+  for (const [cx, cy, dx, dy] of [[x - 50, y - 50, 1, 1], [x + s + 50, y - 50, -1, 1], [x - 50, y + s + 150, 1, -1], [x + s + 50, y + s + 150, -1, -1]]) {
+    ctx.beginPath(); ctx.moveTo(cx, cy + dy * m); ctx.lineTo(cx, cy); ctx.lineTo(cx + dx * m, cy); ctx.stroke();
+  }
+  const ly = y - 20 + ((t * 0.9) % 1) * (s + 40); ctx.fillStyle = "rgba(217,149,43,.9)"; ctx.fillRect(x - 40, ly, s + 80, 5);
+  if (t > 6.3) withAlpha(seg(t, 6.3, 6.6), () => { rr(60, 860, SW - 120, 96, 48); ctx.fillStyle = "#fff"; ctx.fill(); text("Open menu · The Corner Table", SW / 2, 920, 26, INK, 700, "center"); });
+}
+const STEPS = ["Sent", "Cooking", "Ready"];
+function trackerScreen(step, big = true) {
+  const done = step >= 2;
+  ctx.fillStyle = done ? GREEN : INK; ctx.beginPath(); ctx.arc(SW / 2, 330, 100, 0, 7); ctx.fill();
+  ctx.strokeStyle = "#fff"; ctx.lineWidth = 16; ctx.lineCap = "round"; ctx.lineJoin = "round";
+  ctx.beginPath(); ctx.moveTo(SW / 2 - 42, 334); ctx.lineTo(SW / 2 - 10, 366); ctx.lineTo(SW / 2 + 46, 302); ctx.stroke();
+  text(done ? "Your order is ready" : step === 1 ? "The kitchen is cooking" : "Order sent", SW / 2, 520, 40, INK, 800, "center");
+  text(done ? "A waiter is bringing it over" : "Table 7 · R215", SW / 2, 570, 28, MUTED, 500, "center");
+  STEPS.forEach((s, i) => { const on = i <= step, x = 40 + i * 152; rr(x, 640, 140, 56, 12); ctx.fillStyle = on ? (done ? GREEN : INK) : "#f0f0f0"; ctx.fill(); text(s, x + 70, 677, 24, on ? "#fff" : MUTED, 700, "center"); });
+  void big;
+}
+function callScreen(t) {
+  text("The Corner Table", 36, 120, 38, INK, 800); text("Table 4", SW - 36, 120, 28, MUTED, 500, "right");
+  ctx.fillStyle = LINE; ctx.fillRect(0, 150, SW, 2);
+  const called = t > 25.85;
+  rr(36, 260, SW - 72, 420, 28); ctx.strokeStyle = LINE; ctx.lineWidth = 3; ctx.stroke();
+  text(called ? "A waiter is on the way" : "Need help at the table?", SW / 2, 360, 32, INK, 800, "center");
+  text(called ? "Table 4 · just now" : "Tap once. No waving.", SW / 2, 408, 26, MUTED, 500, "center");
+  scaled(SW / 2, 560, t > 25.75 && t < 26.0 ? 0.95 : 1, () => { rr(76, 505, SW - 152, 110, 20); ctx.fillStyle = called ? GREEN : INK; ctx.fill(); text(called ? "Waiter called ✓" : "Call a waiter", SW / 2, 572, 32, "#fff", 700, "center"); });
+}
+
+// kitchen tablet: 960 x 640, centred at (540, 800)
+const TX = 60, TY = 480, TW = 960, THt = 640, COLX = (c) => TX + 32 + c * 304, TICK_W = 288, TICK_H = 128;
+function ticket(x, y, table, items, state, age) {
+  rr(x, y, TICK_W, TICK_H, 16); ctx.fillStyle = "#fff"; ctx.fill(); ctx.strokeStyle = state === "New" ? GOLD : LINE; ctx.lineWidth = state === "New" ? 4 : 2; ctx.stroke();
+  text(table, x + 20, y + 44, 28, INK, 800); text(age, x + TICK_W - 20, y + 44, 20, MUTED, 500, "right");
+  text(items, x + 20, y + 84, 20, MUTED, 500);
+  const bg = state === "New" ? GOLD : state === "Ready" ? GREEN : INK; chip(x + 20, y + TICK_H - 34 - 6, state, bg, state === "New" ? INK : "#fff", 16);
+}
+function kitchen(t) {
+  ctx.save(); ctx.shadowColor = "rgba(0,0,0,.55)"; ctx.shadowBlur = 60; ctx.shadowOffsetY = 20;
+  rr(TX - 24, TY - 24, TW + 48, THt + 48, 44); ctx.fillStyle = "#15161a"; ctx.fill(); ctx.restore();
+  rr(TX, TY, TW, THt, 24); ctx.save(); ctx.clip(); ctx.fillStyle = "#f6f6f6"; ctx.fillRect(TX, TY, TW, THt);
+  ctx.fillStyle = "#fff"; ctx.fillRect(TX, TY, TW, 80); ctx.fillStyle = LINE; ctx.fillRect(TX, TY + 80, TW, 2);
+  text("Kitchen", TX + 32, TY + 52, 32, INK, 800); text("The Corner Table", TX + 170, TY + 52, 24, MUTED, 500);
+  chip(TX + TW - 120, TY + 20, "● Live", INK, "#fff", 20);
+  ["New", "Cooking", "Ready"].forEach((c, i) => text(c, COLX(i), TY + 128, 22, MUTED, 700));
+  // table 7's weight in each column, for the move animation
+  const toCook = seg(t, 19.85, 20.3), toReady = seg(t, 21.65, 22.1);
+  const w = [1 - toCook, toCook - toReady, toReady];
+  const slot = (c, n) => TY + 150 + (n + w[c]) * (TICK_H + 16);
+  ticket(COLX(0), slot(0, 0), "Table 3", "1 × Bunny chow · 2 × Lager", "New", "2 min");
+  ticket(COLX(1), slot(1, 0), "Table 12", "2 × Lamb chops · Pap", "Cooking", "6 min");
+  ticket(COLX(1), slot(1, 1), "Table 9", "1 × Rump steak, medium", "Cooking", "8 min");
+  ticket(COLX(2), slot(2, 0), "Table 5", "Malva pudding · 2 × Coffee", "Ready", "12 min");
+  if (t > 14.6) {
+    const drop = pop(t, 14.6, 0.5), x = lerp(lerp(COLX(0), COLX(1), toCook), COLX(2), toReady), y = TY + 150 - (1 - drop) * 160;
+    const state = toReady > 0.5 ? "Ready" : toCook > 0.5 ? "Cooking" : "New";
+    withAlpha(Math.min(1, (t - 14.6) * 4), () => ticket(x, y, "Table 7", "2 × Boerewors roll · Chips", state, "now"));
+  }
+  ctx.restore();
+}
+const t7Center = (t) => { const toCook = seg(t, 19.85, 20.3), toReady = seg(t, 21.65, 22.1); return [lerp(lerp(COLX(0), COLX(1), toCook), COLX(2), toReady) + TICK_W / 2, TY + 150 + TICK_H / 2]; };
+
+// cards
+function card(cx, cy, w, h, draw) {
+  ctx.save(); ctx.shadowColor = "rgba(0,0,0,.5)"; ctx.shadowBlur = 50; ctx.shadowOffsetY = 16;
+  rr(cx - w / 2, cy - h / 2, w, h, 32); ctx.fillStyle = "#fff"; ctx.fill(); ctx.restore();
+  ctx.save(); ctx.translate(cx - w / 2, cy - h / 2); draw(w, h); ctx.restore();
+}
+function toggle(x, y, on) { rr(x, y, 96, 54, 27); ctx.fillStyle = on ? INK : "#d9d9d9"; ctx.fill(); ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(x + (on ? 69 : 27), y + 27, 21, 0, 7); ctx.fill(); }
+function paymentCard(t) {
+  const k = seg(t, 30.9, 31.2);
+  card(540, 800, 860, 560, (w) => {
+    text("Payment policy", 48, 84, 40, INK, 800); text("You choose the rule for your restaurant", 48, 128, 26, MUTED, 500);
+    ctx.fillStyle = LINE; ctx.fillRect(48, 168, w - 96, 2);
+    text("Pay when ordering", 48, 240, 32, INK, 700); text("The kitchen starts once it is paid", 48, 282, 24, MUTED, 500); toggle(w - 144, 222, k > 0.5);
+    ctx.fillStyle = LINE; ctx.fillRect(48, 330, w - 96, 2);
+    text("Pay after the meal", 48, 400, 32, INK, 700); text("Unpaid tables stay on the waiter's list", 48, 442, 24, MUTED, 500); toggle(w - 144, 382, k <= 0.5);
+    withAlpha(seg(t, 31.5, 31.9), () => { chip(48, 480, "Walk-outs: no more free meals", GREEN, "#fff", 22); });
+  });
+}
+function dashboard(t) {
+  const k = seg(t, 35.6, 37.8);
+  card(540, 800, 900, 720, (w) => {
+    text("Owner dashboard", 48, 84, 40, INK, 800); text("Tonight", w - 48, 84, 26, MUTED, 600, "right");
+    ctx.fillStyle = LINE; ctx.fillRect(48, 118, w - 96, 2);
+    [["QR orders", String(Math.round(86 * k))], ["Order value", `R${Math.round(18430 * k).toLocaleString("en-ZA").replace(/,/g, " ")}`], ["Average", `R${Math.round(214 * k)}`]]
+      .forEach(([l, v], i) => { text(v, 48 + i * 280, 200, 52, INK, 800); text(l, 48 + i * 280, 240, 24, MUTED, 500); });
+    const bars = [18, 30, 52, 76, 100, 88, 60, 34];
+    bars.forEach((b, i) => { const h = 300 * b / 100 * seg(t, 35.8 + i * 0.12, 36.6 + i * 0.12); rr(48 + i * 100, 610 - h, 72, h, 8); ctx.fillStyle = i === 4 ? GOLD : INK; ctx.fill(); });
+    text("17:00", 48, 650, 20, MUTED, 500); text("Now", w - 48, 650, 20, MUTED, 500, "right");
+    text("Sample data", w / 2, 690, 18, "#9a9a9a", 500, "center");
+  });
+}
+const QA = [
+  ["Will it work with my POS?", "It runs next to your POS. Nothing to replace."],
+  ["What if the Wi-Fi drops?", "The kitchen screen reconnects by itself."],
+  ["My older guests want a waiter.", "Waiters still serve. The QR is optional."],
+];
+function bubbles(t) {
+  QA.forEach(([q, a], i) => {
+    const appear = pop(t, 40.6 + i * 1.6, 0.45), flip = seg(t, 47.4 + i * 1.2, 47.9 + i * 1.2);
+    if (appear <= 0) return;
+    const cx = 540 + (i === 1 ? 70 : -50), cy = 440 + i * 300, sx = Math.abs(Math.cos(flip * Math.PI)) * appear, answer = flip > 0.5;
+    ctx.save(); ctx.translate(cx, cy); ctx.scale(sx, appear); ctx.translate(-cx, -cy);
+    ctx.shadowColor = "rgba(0,0,0,.45)"; ctx.shadowBlur = 40; ctx.shadowOffsetY = 12;
+    rr(cx - 420, cy - 85, 840, 170, 85); ctx.fillStyle = "#fff"; ctx.fill(); ctx.shadowColor = "transparent";
+    ctx.fillStyle = answer ? GREEN : GOLD; ctx.beginPath(); ctx.arc(cx - 330, cy, 44, 0, 7); ctx.fill();
+    text(answer ? "✓" : "?", cx - 330, cy + 17, 50, "#fff", 800, "center");
+    font(32, 700); const lines = wrap(answer ? a : q, 600);
+    lines.forEach((l, j) => text(l, cx - 260, cy + 12 + (j - (lines.length - 1) / 2) * 42, 32, INK, answer ? 600 : 700));
+    ctx.restore();
+  });
+}
+function founding(t) {
+  const a = pop(t, 54.2, 0.5);
+  withAlpha(vis(t, 54.2, 57.2, 0.3), () => scaled(540, 640, a, () => {
+    rr(170, 430, 740, 480, 40); ctx.fillStyle = "rgba(8,10,18,.88)"; ctx.fill(); ctx.strokeStyle = GOLD; ctx.lineWidth = 2; ctx.stroke();
+    text("5", 540, 720, 300, GOLD, 800, "center");
+    text("founding restaurants", 540, 800, 56, "#fff", 800, "center");
+    text("Free or discounted pilot", 540, 860, 34, "#d8d8d8", 600, "center");
+  }));
+}
+function endCard(t) {
+  withAlpha(seg(t, 57.2, 57.7), () => {
+    ctx.fillStyle = "rgba(6,8,14,.86)"; ctx.fillRect(0, 0, W, H);
+    font(150, 800); ctx.fillStyle = "#fff"; ctx.textAlign = "center"; ctx.letterSpacing = "20px"; ctx.fillText("SORA", 550, 640); ctx.letterSpacing = "0px";
+    ctx.fillStyle = GOLD; ctx.beginPath(); ctx.arc(760, 628, 16, 0, 7); ctx.fill();
+    text("QR table ordering for", 540, 760, 44, "#fff", 700, "center");
+    text("South African restaurants", 540, 816, 44, "#fff", 700, "center");
+    text("Free or discounted pilot", 540, 920, 34, "#cfcfcf", 500, "center");
+    text("We set it up and train your staff", 540, 970, 34, "#cfcfcf", 500, "center");
+    text("No commission on orders", 540, 1020, 34, "#cfcfcf", 500, "center");
+    scaled(540, 1150, 1 + 0.03 * Math.sin(t * 6), () => { rr(240, 1095, 600, 110, 16); ctx.fillStyle = GOLD; ctx.fill(); text("Join the waitlist", 540, 1163, 40, INK, 800, "center"); });
+    text(SITE, 540, 1270, 30, "#ffffff", 600, "center");
+    text("Link in bio", 540, 1320, 28, GOLD, 700, "center");
+  });
+}
+
+// captions: line 2 in gold italic, words appear one by one
+const CAPTIONS = [
+  [0.3, 3.0, "Friday night.", "Three tables waving."], [3.2, 7.0, "What if they could", "order from the table?"],
+  [7.2, 13.2, "Scan, pick, send.", "No app to download."], [13.4, 19.0, "It lands on the", "kitchen screen. Instantly."],
+  [19.2, 24.0, "The guest watches", "it cook."], [24.2, 29.0, "Need a waiter?", "One tap."],
+  [29.2, 35.0, "Pay now or after.", "You choose. Fewer walk-outs."], [35.2, 40.0, "Your Friday night,", "from your phone."],
+  [40.2, 47.0, "Owners asked us.", "Fair questions."], [47.2, 53.0, "We built it for", "real restaurants."],
+  [53.2, 57.0, "We're choosing", "5 founding restaurants."],
+];
+function captions(t) {
+  for (const [a, b, l1, l2] of CAPTIONS) {
+    if (t < a || t > b) continue;
+    const fade = 1 - seg(t, b - 0.25, b);
+    [[l1, 1490, false, a], [l2, 1572, true, a + 0.4]].forEach(([line, y, gold, start]) => {
+      font(68, 800, gold); const words = line.split(" "), widths = words.map((w) => ctx.measureText(`${w} `).width);
+      let x = (W - widths.reduce((s, w) => s + w, 0) + ctx.measureText(" ").width) / 2;
+      words.forEach((w, i) => {
+        const k = seg(t, start + i * 0.09, start + i * 0.09 + 0.22);
+        withAlpha(k * fade, () => {
+          font(68, 800, gold); ctx.fillStyle = gold ? GOLD : "#fff"; ctx.textAlign = "left";
+          ctx.shadowColor = "rgba(0,0,0,.65)"; ctx.shadowBlur = 18; ctx.fillText(w, x, y + (1 - k) * 22);
+        });
+        x += widths[i];
+      });
+    });
+  }
+}
+function pill(t) {
+  withAlpha(1 - seg(t, 56.8, 57.2), () => {
+    font(26, 800); const label = "SORA  ·  QR TABLE ORDERING", w = ctx.measureText(label).width + 64;
+    rr((W - w) / 2, 120, w, 62, 31); ctx.fillStyle = "rgba(14,18,32,.88)"; ctx.fill(); ctx.strokeStyle = GOLD; ctx.lineWidth = 2; ctx.stroke();
+    text(label, W / 2, 161, 26, GOLD, 800, "center");
+  });
+}
+function hand(x, y, pressed) {
+  ctx.save(); ctx.font = `110px "Segoe UI Emoji", "Apple Color Emoji", sans-serif`; ctx.textAlign = "center"; ctx.textBaseline = "top";
+  ctx.translate(x, y); ctx.scale(pressed ? 0.88 : 1, pressed ? 0.88 : 1); ctx.shadowColor = "rgba(0,0,0,.4)"; ctx.shadowBlur = 16; ctx.fillText("👆", 0, -8); ctx.restore();
+}
+// taps: [time, x, y]; the hand glides to each tap over the 0.55 s before it
+function taps(t, list, from, to) {
+  if (t < from || t > to) return;
+  let i = list.findIndex(([tt]) => tt > t - 0.25); if (i < 0) i = list.length - 1;
+  const [tt, x, y] = list[i], [, px, py] = list[Math.max(0, i - 1)];
+  const k = i === 0 ? 1 : seg(t, tt - 0.55, tt);
+  withAlpha(vis(t, from, to, 0.25), () => hand(lerp(px, x, k), lerp(py, y, k), Math.abs(t - tt) < 0.12));
+}
+
+// ---------- one frame ----------
+function frame(t) {
+  cameraAt(t); waiterAt(t);
+  const ringK = vis(t, 53.2, 60.5, 0.6); ringMat.opacity = 0.85 * ringK; numberSprites.forEach((s) => (s.material.opacity = ringK));
+  renderer.render(scene, camera);
+  ctx.clearRect(0, 0, W, H); ctx.drawImage(renderer.domElement, 0, 0);
+
+  // dim the room while a screen is in front, as the reference does
+  const dim = Math.max(0.55 * vis(t, 3.6, 13.4), 0.5 * vis(t, 13.6, 24.1), 0.3 * vis(t, 24.4, 29), 0.55 * vis(t, 29.4, 40), 0.45 * vis(t, 40.3, 53));
+  ctx.fillStyle = `rgba(4,6,12,${dim})`; ctx.fillRect(0, 0, W, H);
+  const vg = ctx.createRadialGradient(W / 2, H / 2, H * 0.3, W / 2, H / 2, H * 0.75); vg.addColorStop(0, "rgba(0,0,0,0)"); vg.addColorStop(1, "rgba(0,0,0,.55)");
+  ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
+
+  // "Waiter!" over three tables
+  [[5, 0.4], [9, 0.9], [2, 1.4]].forEach(([l, at]) => {
+    const tb = TABLES.find((x) => x.l === l), a = pop(t, at, 0.4) * (1 - seg(t, 2.8, 3.2));
+    if (a <= 0) return; const [x, y] = toScreen(tb.x, 2.1, tb.z);
+    scaled(x, y, a, () => { rr(x - 105, y - 70, 210, 76, 38); ctx.fillStyle = "#fff"; ctx.fill(); ctx.beginPath(); ctx.moveTo(x - 14, y + 4); ctx.lineTo(x, y + 26); ctx.lineTo(x + 14, y + 4); ctx.fill(); text("Waiter!", x, y - 20, 30, INK, 800, "center"); });
+  });
+  // the waiter's call badge
+  if (t > 26 && t < 29.2) { const [x, y] = toScreen(waiter.position.x, 2.4, waiter.position.z), p = 1 + 0.08 * Math.sin(t * 10);
+    withAlpha(vis(t, 26, 29.2, 0.3), () => scaled(x, y, pop(t, 26, 0.4) * p, () => { rr(x - 110, y - 64, 220, 70, 35); ctx.fillStyle = GOLD; ctx.fill(); text("Table 4 🔔", x, y - 17, 30, INK, 800, "center"); })); }
+
+  // phone A: scan, menu, sent
+  const pa = vis(t, 3.6, 13.4, 0.45);
+  if (pa > 0) { const cy = 820 + (1 - pa) * 1200;
+    phone(540, cy, 0.92, () => (t < 7 ? scanScreen(t) : t < 12.4 ? menuScreen(t) : trackerScreen(0)));
+    taps(t, [[8.6, ...phoneToScreen(540, 820, 0.92, SW - 88, rowY(0) + 64)], [9.6, ...phoneToScreen(540, 820, 0.92, SW - 88, rowY(0) + 64)],
+      [10.6, ...phoneToScreen(540, 820, 0.92, SW - 88, rowY(1) + 64)], [11.9, ...phoneToScreen(540, 820, 0.92, SW / 2, 960)]], 7.8, 12.3); }
+  // kitchen tablet
+  const ka = vis(t, 13.6, 24.1, 0.45);
+  if (ka > 0) { ctx.save(); ctx.translate(0, -110); withAlpha(ka, () => scaled(540, 800, 0.9 + 0.1 * ka, () => kitchen(t)));
+    taps(t, [[19.8, ...t7Center(19.7)], [21.6, ...t7Center(21.5)]], 19.1, 22.4); ctx.restore(); }
+  // small tracker on the guest's phone
+  const pb = vis(t, 19.3, 24.1, 0.4);
+  if (pb > 0) withAlpha(pb, () => phone(540, 1190 + (1 - pb) * 300, 0.3, () => trackerScreen(t > 21.7 ? 2 : t > 19.9 ? 1 : 0)));
+  // call a waiter
+  const pc = vis(t, 24.4, 28.9, 0.4);
+  if (pc > 0) { phone(300 - (1 - pc) * 700, 860, 0.62, () => callScreen(t)); taps(t, [[25.8, ...phoneToScreen(300, 860, 0.62, SW / 2, 560)]], 25.0, 26.6); }
+  // payment policy, dashboard, questions, founding, end
+  const tc = vis(t, 29.4, 34.9, 0.4); if (tc > 0) { withAlpha(tc, () => scaled(540, 800, 0.9 + 0.1 * tc, () => paymentCard(t))); taps(t, [[31.0, 540 - 430 + 860 - 96, 800 - 280 + 222 + 27]], 30.3, 31.7); }
+  const da = vis(t, 35.3, 39.9, 0.4); if (da > 0) withAlpha(da, () => scaled(540, 800, 0.9 + 0.1 * da, () => dashboard(t)));
+  if (t > 40.3 && t < 53.2) withAlpha(1 - seg(t, 52.8, 53.2), () => bubbles(t));
+  founding(t);
+  pill(t);
+  if (params.has("captions")) captions(t); // off by default: Troy adds his own
+  if (t > 57.2) endCard(t);
+}
+
+// ---------- modes: one frame, live preview, or encode ----------
+const status = document.getElementById("status");
+const params = new URLSearchParams(location.search);
+await document.fonts.load(`800 60px Inter`); await document.fonts.load(`italic 800 60px Inter`); await document.fonts.load(`500 20px Inter`);
+window.renderAt = (t) => { frame(t); return t; };
+if (params.has("play")) {
+  const start = performance.now(); const loop = () => { frame(((performance.now() - start) / 1000) % DURATION); requestAnimationFrame(loop); }; loop();
+} else if (params.has("render")) {
+  status.textContent = await encode();
+} else {
+  frame(Number(params.get("t") ?? 8));
+}
+
+async function encode() {
+  const mp4 = { codec: "avc1.640028", width: W, height: H, bitrate: 10_000_000, framerate: FPS };
+  const useMp4 = (await VideoEncoder.isConfigSupported(mp4)).supported;
+  const lib = useMp4 ? await import("https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/+esm") : await import("https://cdn.jsdelivr.net/npm/webm-muxer@5.0.3/+esm");
+  const target = new lib.ArrayBufferTarget();
+  const muxer = useMp4
+    ? new lib.Muxer({ target, video: { codec: "avc", width: W, height: H }, fastStart: "in-memory" })
+    : new lib.Muxer({ target, video: { codec: "V_VP9", width: W, height: H } });
+  let failed = null;
+  const enc = new VideoEncoder({ output: (chunk, meta) => muxer.addVideoChunk(chunk, meta), error: (e) => (failed = e) });
+  enc.configure(useMp4 ? mp4 : { codec: "vp09.00.40.08", width: W, height: H, bitrate: 10_000_000, framerate: FPS });
+  const total = DURATION * FPS;
+  for (let i = 0; i < total; i++) {
+    frame(i / FPS);
+    const vf = new VideoFrame(out, { timestamp: Math.round(i * 1e6 / FPS), duration: Math.round(1e6 / FPS) });
+    enc.encode(vf, { keyFrame: i % 60 === 0 }); vf.close();
+    while (enc.encodeQueueSize > 8) await new Promise((r) => setTimeout(r, 5));
+    if (failed) return `encoder error: ${failed}`;
+    if (i % 30 === 0) status.textContent = `encoding ${Math.round(i / total * 100)}%`;
+  }
+  await enc.flush(); muxer.finalize();
+  const res = await fetch(`/save?name=${useMp4 ? "mp4" : "webm"}`, { method: "POST", body: target.buffer });
+  window.renderDone = `${await res.text()} (${(target.buffer.byteLength / 1e6).toFixed(1)} MB)`;
+  return window.renderDone;
+}
+</script>
+</body>
+</html>

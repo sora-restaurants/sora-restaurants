@@ -1,0 +1,13 @@
+{
+  "id": "P015",
+  "buys": false,
+  "purchases_first_month": 0,
+  "reason_code": "trust",
+  "reason": "I already trust my POS company and would rather wait for them to add QR ordering than bring in another system. Right now my staff would still ring every order up on the POS, so I would be running two systems at once.",
+  "objection": "My POS company or head office may already offer this, and a start-up with no restaurants live yet is asking me to be its guinea pig.",
+  "would_change_my_mind": "My POS vendor confirms it will not add QR ordering soon, or a comparable restaurant I know runs Sora for a month and shows it removes work for my staff.",
+  "price_too_cheap": 150,
+  "price_cheap": 400,
+  "price_expensive": 800,
+  "price_too_expensive": 1200
+}

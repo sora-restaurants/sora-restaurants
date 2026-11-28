@@ -1,0 +1,13 @@
+{
+  "id": "P007",
+  "buys": false,
+  "purchases_first_month": 0,
+  "reason_code": "trust",
+  "reason": "R699 a month is not the problem. A brand-new company with no restaurant live yet, asking me to be a pilot while my waiters still ring everything up on the POS, means I would pay for a second order system and still type the orders in twice on the busiest nights.",
+  "objection": "Will it work with my POS, or will my staff have to type orders in twice? Until the POS link exists I am not solving my slow-service problem, I am adding work.",
+  "would_change_my_mind": "A working direct link to my POS, or two or three live restaurants of my kind that show orders going straight to the kitchen screen without double entry.",
+  "price_too_cheap": 150,
+  "price_cheap": 399,
+  "price_expensive": 799,
+  "price_too_expensive": 1100
+}

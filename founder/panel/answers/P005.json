@@ -1,0 +1,13 @@
+{
+  "id": "P005",
+  "buys": false,
+  "purchases_first_month": 0,
+  "reason_code": "trust",
+  "reason": "Nobody I know has run this, and it isn't live in any restaurant yet, so I'd be the test on my Friday and Saturday rush. R699 a month is a fixed cost I'd have to justify every month, and I don't yet see where it saves me money.",
+  "objection": "Setting it up and training my staff takes time I don't have, and I've got no proof it holds up when the kitchen is slammed on a Saturday.",
+  "would_change_my_mind": "A live reference restaurant like mine showing a month of real numbers, with setup and staff training done for me and a pilot I can stop without a penalty.",
+  "price_too_cheap": 199,
+  "price_cheap": 450,
+  "price_expensive": 650,
+  "price_too_expensive": 800
+}

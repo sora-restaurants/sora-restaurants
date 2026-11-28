@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en-ZA">
+<head><meta charset="utf-8"><title>Reel voice-over</title>
+<style>html,body{margin:0;background:#05070d;color:#ddd;font:14px system-ui}#out{display:block;height:88vh;margin:2vh auto 0;aspect-ratio:9/16}#bar{text-align:center;padding:6px}</style></head>
+<body>
+<canvas id="out" width="1080" height="1920"></canvas>
+<div id="bar">?render re-encodes source.mp4 with the voice from voice/ and saves the MP4 and a voice-only WAV. <span id="status"></span></div>
+<video id="src" src="source.mp4" muted playsinline style="display:none"></video>
+<script type="module">
+// Puts the voice lines in voice/ onto the silent reel: each line starts at its caption, never before the previous
+// line ends. The video is redrawn frame by frame from source.mp4 and re-encoded with the voice as AAC.
+const W = 1080, H = 1920, FPS = 30, RATE = 48000;
+const out = document.getElementById("out"), ctx = out.getContext("2d"), v = document.getElementById("src"), status = document.getElementById("status");
+if (v.readyState < 1) await new Promise((r) => (v.onloadedmetadata = r));
+const DURATION = v.duration;
+
+async function loadVoice() {
+  const lines = await (await fetch("voice/lines.json")).json();
+  const ac = new OfflineAudioContext(1, RATE, RATE);
+  let prevEnd = 0;
+  for (const l of lines) {
+    const buf = await ac.decodeAudioData(await (await fetch("voice/" + l.file)).arrayBuffer());
+    const d = buf.getChannelData(0), thr = 0.01;
+    let a = 0, b = d.length - 1; while (a < b && Math.abs(d[a]) < thr) a++; while (b > a && Math.abs(d[b]) < thr) b--;
+    l.buf = buf; l.from = Math.max(0, a / buf.sampleRate - 0.02); l.len = (b - a) / buf.sampleRate + 0.06;
+    l.at = Math.max(l.start, prevEnd + 0.05); prevEnd = l.at + l.len;
+  }
+  return lines;
+}
+const LINES = await loadVoice();
+// [line, starts, ends, caption ends] so overruns are visible before rendering
+window.voiceInfo = () => LINES.map((l) => [l.line.slice(0, 28), +l.at.toFixed(2), +(l.at + l.len).toFixed(2), l.end]);
+async function mixVoice() {
+  const ac = new OfflineAudioContext(1, Math.ceil(RATE * DURATION), RATE);
+  for (const l of LINES) { const s = ac.createBufferSource(); s.buffer = l.buf; s.connect(ac.destination); s.start(l.at, l.from, l.len); }
+  return ac.startRendering();
+}
+function wav(pcm) {
+  const b = new DataView(new ArrayBuffer(44 + pcm.length * 2)), str = (o, s) => [...s].forEach((c, i) => b.setUint8(o + i, c.charCodeAt(0)));
+  str(0, "RIFF"); b.setUint32(4, 36 + pcm.length * 2, true); str(8, "WAVEfmt "); b.setUint32(16, 16, true); b.setUint16(20, 1, true); b.setUint16(22, 1, true);
+  b.setUint32(24, RATE, true); b.setUint32(28, RATE * 2, true); b.setUint16(32, 2, true); b.setUint16(34, 16, true); str(36, "data"); b.setUint32(40, pcm.length * 2, true);
+  pcm.forEach((x, i) => b.setInt16(44 + i * 2, Math.max(-1, Math.min(1, x)) * 0x7fff, true));
+  return b.buffer;
+}
+const seek = (t) => new Promise((r) => { v.onseeked = r; v.currentTime = t; });
+
+async function encode() {
+  const { Muxer, ArrayBufferTarget } = await import("https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/+esm");
+  const cfg = { codec: "avc1.640028", width: W, height: H, bitrate: 8_000_000, framerate: FPS }, acfg = { codec: "mp4a.40.2", sampleRate: RATE, numberOfChannels: 1, bitrate: 128000 };
+  const target = new ArrayBufferTarget(), muxer = new Muxer({ target, video: { codec: "avc", width: W, height: H }, audio: { codec: "aac", numberOfChannels: 1, sampleRate: RATE }, fastStart: "in-memory" });
+  let failed = null;
+  const enc = new VideoEncoder({ output: (c, m) => muxer.addVideoChunk(c, m), error: (e) => (failed = e) });
+  enc.configure(cfg);
+  const N = Math.floor(DURATION * FPS);
+  for (let i = 0; i < N; i++) {
+    await seek(Math.min(i / FPS + 0.001, DURATION - 0.01)); ctx.drawImage(v, 0, 0, W, H);
+    const vf = new VideoFrame(out, { timestamp: Math.round(i * 1e6 / FPS), duration: Math.round(1e6 / FPS) });
+    enc.encode(vf, { keyFrame: i % 60 === 0 }); vf.close();
+    while (enc.encodeQueueSize > 8) await new Promise((r) => setTimeout(r, 5));
+    if (failed) return `encoder error: ${failed}`;
+    if (i % 30 === 0) status.textContent = `encoding ${Math.round(i / N * 100)}%`;
+  }
+  await enc.flush();
+  const pcm = (await mixVoice()).getChannelData(0);
+  const aenc = new AudioEncoder({ output: (c, m) => muxer.addAudioChunk(c, m), error: (e) => (failed = e) });
+  aenc.configure(acfg);
+  for (let i = 0; i < pcm.length; i += 1024) { const data = pcm.slice(i, i + 1024); const ad = new AudioData({ format: "f32-planar", sampleRate: RATE, numberOfFrames: data.length, numberOfChannels: 1, timestamp: Math.round(i * 1e6 / RATE), data }); aenc.encode(ad); ad.close(); }
+  await aenc.flush();
+  if (failed) return `audio encoder error: ${failed}`;
+  muxer.finalize();
+  await fetch("/save?file=soraqr-reel-voice-only&name=wav", { method: "POST", body: wav(pcm) });
+  window.renderDone = await (await fetch("/save?file=soraqr-reel-with-voice", { method: "POST", body: target.buffer })).text();
+  return window.renderDone;
+}
+if (new URLSearchParams(location.search).has("render")) status.textContent = await encode();
+else { await seek(1); ctx.drawImage(v, 0, 0, W, H); }
+</script>
+</body>
+</html>

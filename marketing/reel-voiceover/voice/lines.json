@@ -1,0 +1,44 @@
+[
+  {
+    "file": "line-0.mp3",
+    "start": 0.15,
+    "end": 1.9,
+    "line": "Still waiting just to order?"
+  },
+  {
+    "file": "line-1.mp3",
+    "start": 2.05,
+    "end": 3.45,
+    "line": "There's a better way."
+  },
+  {
+    "file": "line-2.mp3",
+    "start": 3.6,
+    "end": 7.5,
+    "line": "With Sora Q R, your guests simply scan the code on their table."
+  },
+  {
+    "file": "line-3.mp3",
+    "start": 7.75,
+    "end": 11.6,
+    "line": "They order straight from their phone. No app, and no waiting for a waiter."
+  },
+  {
+    "file": "line-4.mp3",
+    "start": 11.9,
+    "end": 15.8,
+    "line": "The order appears on your kitchen screen instantly, and staff tap it to ready."
+  },
+  {
+    "file": "line-5.mp3",
+    "start": 16.1,
+    "end": 19.9,
+    "line": "Guests track their order live, and can call a waiter with one tap."
+  },
+  {
+    "file": "line-6.mp3",
+    "start": 20.1,
+    "end": 24.2,
+    "line": "Book your demo today at sora Q R dot co dot Z A."
+  }
+]

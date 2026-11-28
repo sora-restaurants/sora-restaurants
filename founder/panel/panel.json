@@ -1,0 +1,103 @@
+{
+ "n": 20,
+ "seed": 184747,
+ "customer": {
+  "business": "Sora: QR table ordering for South African restaurants, works alongside the existing POS",
+  "target": "Owners or managers of sit-down restaurants in South Africa who decide on software spend",
+  "where": "South African cities and towns (Gauteng, Western Cape, KZN)",
+  "age": [
+   28,
+   62
+  ],
+  "segments": [
+   {
+    "name": "Independent owner-operator (one sit-down restaurant, 40-120 seats)",
+    "share": 0.45,
+    "income": [
+     250000,
+     900000
+    ]
+   },
+   {
+    "name": "Franchisee of a national chain (e.g. one family-restaurant branch)",
+    "share": 0.25,
+    "income": [
+     600000,
+     2000000
+    ]
+   },
+   {
+    "name": "Small local group (2-5 restaurants or cafes)",
+    "share": 0.15,
+    "income": [
+     1200000,
+     5000000
+    ]
+   },
+   {
+    "name": "Upmarket destination venue (wine farm, tourist area)",
+    "share": 0.15,
+    "income": [
+     500000,
+     2500000
+    ]
+   }
+  ],
+  "behaviours": [
+   {
+    "name": "Cost-cutter",
+    "share": 0.22,
+    "how": "Questions every monthly subscription; margins are thin and load-shedding and food costs already squeeze them."
+   },
+   {
+    "name": "Loyal to their POS",
+    "share": 0.18,
+    "how": "Trusts their POS vendor and would rather wait for the POS company to add a feature than add another system."
+   },
+   {
+    "name": "Staff-shortage pain",
+    "share": 0.16,
+    "how": "Struggles to hire and keep waiters; busy nights mean slow service and lost tables."
+   },
+   {
+    "name": "Tech-curious",
+    "share": 0.12,
+    "how": "Already tried a QR menu or online ordering and likes trying new tools."
+   },
+   {
+    "name": "Old-school hospitality",
+    "share": 0.12,
+    "how": "Believes guests want a waiter, not a phone; worries tech feels impersonal."
+   },
+   {
+    "name": "Needs proof first",
+    "share": 0.12,
+    "how": "Wants to see it working at a restaurant they know, or a free trial, before paying."
+   },
+   {
+    "name": "Franchise rules bound",
+    "share": 0.08,
+    "how": "Needs head office approval for any customer-facing system or menu change."
+   }
+  ],
+  "objections": [
+   "Another monthly subscription when margins are already tight",
+   "Will it work with my POS, or will my staff have to type orders in twice?",
+   "My older customers want a waiter and a paper menu",
+   "What happens when the signal or Wi-Fi drops during a busy service, or during load-shedding?",
+   "Who are you? A new company with no restaurants using it yet",
+   "Customers might order and leave without paying",
+   "Head office or my POS company may already offer this",
+   "Setting it up and training staff takes time I don't have"
+  ],
+  "habits": [
+   "you do the books yourself on Monday mornings",
+   "your busiest service is Friday and Saturday night",
+   "you lost two waiters to other jobs this year",
+   "you run a generator or inverter for load-shedding",
+   "your POS company's sales rep visits twice a year",
+   "most of your regulars are over 45"
+  ]
+ },
+ "pitch": "Sora, a South African start-up: diners scan a QR code at the table, browse your menu on their phone and order; orders appear instantly on a kitchen screen.\nWorks on the phones and tablets you already have, alongside your existing POS (staff still ring orders up on the POS for now; direct POS links are planned).\nIncludes a \"call waiter\" button, live order tracking for diners, pay-now or pay-after-the-meal (you choose, to stop walk-outs), sold-out switch and a simple owner dashboard.\nPro plan with QR ordering: R699 a month, no commission on orders. We set it up and train your staff on site. Online card payment providers charge their own fees.\nCancel any month. New company: no restaurants live yet; we are looking for our first pilot restaurants."
+}

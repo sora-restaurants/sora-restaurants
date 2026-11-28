@@ -1,0 +1,770 @@
+<!doctype html>
+<html lang="en-ZA">
+<head>
+<meta charset="utf-8">
+<title>EquiGrowth introduction film</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,500;0,600;0,700;0,800;1,300&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; background: #05070d; color: #ddd; font: 14px system-ui; }
+  #out { display: block; width: 96vw; max-height: 88vh; margin: 2vh auto 0; aspect-ratio: 16 / 9; object-fit: contain; }
+  #bar { text-align: center; padding: 6px; }
+</style>
+</head>
+<body>
+<canvas id="out" width="1920" height="1080"></canvas>
+<div id="bar">?t=12 one frame · ?play self-playing preview with voice (click once) · ?render encode MP4 + captions · &amp;nocaptions <span id="status"></span></div>
+<script type="module">
+// EquiGrowth introduction film, 1920 x 1080. Flat cartoon, follows Ayanda (customer) and Thandi (appointed consultant).
+// Every frame is a pure function of time once the voice is loaded: scenes start at their first voice line, and
+// all reveals are keyed to the line that talks about them (A(id) = when line id starts, E(id) = when it ends).
+const W = 1920, H = 1080, FPS = 25;
+const SITE = "myequigrowth.com";
+const DISCLOSURE = "MyEquiGrowth (Pty) Ltd is a juristic representative of Sibiya Brokers, FSP 46798.";
+const NAVY = "#0e1626", NAVY2 = "#16213a", CARD = "#1b2945", GOLD = "#e0a72e", GOLD_D = "#b9761c", INK = "#141a26", GREEN = "#2f8f4e", PAPER = "#fbfaf6";
+const F = "Poppins, system-ui, sans-serif";
+const params = new URLSearchParams(location.search);
+const sm = (x) => (x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x));
+const seg = (t, a, b) => sm((t - a) / (b - a));
+const backOut = (x) => { x = Math.min(1, Math.max(0, x)); const c = 1.7; return 1 + (c + 1) * (x - 1) ** 3 + c * (x - 1) ** 2; };
+const pop = (t, a, d = 0.35) => (t < a ? 0 : backOut((t - a) / d));
+const lerp = (a, b, k) => a + (b - a) * k;
+
+const out = document.getElementById("out"), ctx = out.getContext("2d");
+const rr = (x, y, w, h, r) => { ctx.beginPath(); ctx.roundRect(x, y, w, h, r); };
+const fill = (c) => { ctx.fillStyle = c; ctx.fill(); };
+const stroke = (c, w) => { ctx.strokeStyle = c; ctx.lineWidth = w; ctx.stroke(); };
+const circle = (x, y, r, c) => { ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); fill(c); };
+const ell = (x, y, rx, ry, c, rot = 0) => { ctx.beginPath(); ctx.ellipse(x, y, rx, ry, rot, 0, Math.PI * 2); fill(c); };
+const line = (x1, y1, x2, y2, c, w) => { ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.lineCap = "round"; stroke(c, w); };
+const text = (s, x, y, size, color, weight = 700, align = "left", style = "") => { ctx.font = `${style} ${weight} ${size}px ${F}`; ctx.fillStyle = color; ctx.textAlign = align; ctx.textBaseline = "alphabetic"; ctx.fillText(s, x, y); };
+const alpha = (a, fn) => { if (a <= 0.001) return; ctx.save(); ctx.globalAlpha *= Math.min(1, a); fn(); ctx.restore(); };
+const around = (x, y, s, r, fn) => { if (s <= 0.001) return; ctx.save(); ctx.translate(x, y); ctx.rotate(r); ctx.scale(s, s); fn(); ctx.restore(); };
+const goldGrad = (x0, x1) => { const g = ctx.createLinearGradient(x0, 0, x1, 0); g.addColorStop(0, "#c47a1c"); g.addColorStop(0.35, "#b36d1a"); g.addColorStop(0.75, "#f2c63a"); g.addColorStop(1, "#d39b22"); return g; };
+
+// ---------- timeline from the voice ----------
+let LINES = [], BY = {}, SCENE_AT = [], DURATION = 900;
+const A = (id) => BY[id].at, E = (id) => BY[id].at + BY[id].len;
+const talkOf = (t, ids) => (ids.some((id) => t >= A(id) && t <= E(id)) ? 0.3 + 0.7 * Math.abs(Math.sin(t * 13) * Math.sin(t * 7.3)) : 0);
+
+// ---------- the client's logo, redrawn from their file (made for a dark background) ----------
+function logo(x, y, s, tagline = true, build = 1) {
+  around(x, y, s, 0, () => {
+    ctx.translate(-1000, -325);
+    [[97, 313], [184, 259], [270, 206]].forEach(([bx, top], i) => { const k = seg(build, i * 0.15, i * 0.15 + 0.35), h = (510 - top) * k; ctx.fillStyle = goldGrad(bx, bx + 32); ctx.fillRect(bx, 510 - h, 32, h); });
+    alpha(seg(build, 0.3, 0.7), () => {
+      ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 9; ctx.lineJoin = "round"; ctx.beginPath(); ctx.moveTo(300, 556); ctx.lineTo(25, 556); ctx.lineTo(25, 300); ctx.lineTo(345, 102); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(374, 86); ctx.lineTo(312, 98); ctx.lineTo(344, 140); ctx.closePath(); fill("#ffffff");
+    });
+    alpha(seg(build, 0.45, 0.85), () => {
+      ctx.font = `700 228px ${F}`; ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+      ctx.fillStyle = "#ffffff"; ctx.fillText("EQUI", 352, 408);
+      const gx = 352 + ctx.measureText("EQUI").width + 40; ctx.fillStyle = goldGrad(gx, 1955); ctx.fillText("GROWTH", gx, 408);
+      if (tagline) text("Empowering Your Financial Journey", 356, 538, 96, "rgba(255,255,255,.85)", 300, "left", "italic");
+    });
+  });
+}
+
+// ---------- characters ----------
+// Front-facing person, feet at (x, y), about 640 px tall at s = 1. seated hides the legs (a table covers them).
+const AYANDA = { skin: "#8a5a3c", hair: "afro", hairC: "#1f1410", top: "#e3a33b", bottom: "#3b4a6b", ear: GOLD };
+const THANDI = { skin: "#9a6646", hair: "bun", hairC: "#2a1a14", top: "#1f3b63", bottom: "#1f3b63", blazer: true, ear: GOLD, badge: true };
+const MOTHER = { skin: "#7b4d33", hair: "doek", hairC: "#2f8f4e", top: "#6a4c93", bottom: "#4a3a2a" };
+const SIPHO = { skin: "#6f4630", hair: "short", hairC: "#151010", top: "#2e7d6b", bottom: "#2b2f3a", badge: true };
+const LWAZI = { skin: "#a87553", hair: "short", hairC: "#201510", top: "#5a6b8a", bottom: "#2b2f3a", badge: true };
+const TECH = { skin: "#7a4e36", hair: "cap", hairC: "#e07a2e", top: "#e07a2e", bottom: "#2b3a55" };
+function person(x, y, s, o, t, { talk = 0, armR = 0, armL = 0, seated = false, holdR = null, holdL = null, blinkSeed = 0 } = {}) {
+  around(x, y, s, 0, () => {
+    if (!seated) { rr(-62, -230, 52, 230, 20); fill(o.bottom); rr(10, -230, 52, 230, 20); fill(o.bottom); ell(-38, -6, 40, 16, "#1b1b20"); ell(38, -6, 40, 16, "#1b1b20"); }
+    // arms behind the torso edges
+    const arm = (side, ang, hold) => { ctx.save(); ctx.translate(side * 92, -420); ctx.rotate(side * (ang - 0.12)); rr(-26, 0, 52, 210, 26); fill(o.top); /* positive ang swings the hand up across the chest */ circle(0, 214, 28, o.skin); if (hold) { ctx.translate(0, 214); hold(); } ctx.restore(); };
+    arm(-1, armL, holdL); arm(1, armR, holdR);
+    rr(-100, -450, 200, 260, [70, 70, 20, 20]); fill(o.top);
+    if (o.blazer) { ctx.beginPath(); ctx.moveTo(-40, -450); ctx.lineTo(0, -360); ctx.lineTo(40, -450); fill("#f6efe3"); }
+    if (o.badge) { rr(36, -400, 44, 30, 6); fill("#ffffff"); rr(36, -400, 44, 9, [6, 6, 0, 0]); fill(GOLD); }
+    rr(-28, -490, 56, 60, 20); fill(o.skin);
+    // head
+    const hy = -560;
+    if (o.hair === "afro") circle(0, hy - 18, 92, o.hairC);
+    if (o.hair === "bun") { circle(0, hy - 92, 36, o.hairC); ell(0, hy - 10, 82, 88, o.hairC); }
+    ell(0, hy, 70, 80, o.skin);
+    if (o.hair === "bun" || o.hair === "short") { ctx.beginPath(); ctx.ellipse(0, hy - 30, 74, 58, 0, Math.PI, 0); fill(o.hairC); }
+    if (o.hair === "afro") { ctx.beginPath(); ctx.ellipse(0, hy - 40, 76, 46, 0, Math.PI, 0); fill(o.hairC); }
+    if (o.hair === "doek") { ctx.beginPath(); ctx.ellipse(0, hy - 38, 86, 70, 0, Math.PI, 0); fill(o.hairC); circle(56, hy - 96, 30, o.hairC); }
+    if (o.hair === "cap") { ctx.beginPath(); ctx.ellipse(0, hy - 36, 76, 52, 0, Math.PI, 0); fill(o.hairC); rr(-10, hy - 44, 110, 18, 9); fill(o.hairC); }
+    const blink = ((t + blinkSeed) % 4.1) < 0.12 ? 0.15 : 1;
+    for (const dx of [-26, 26]) { ell(dx, hy + 2, 8, 10 * blink, "#1c120e"); if (blink > 0.5) circle(dx + 3, hy - 2, 3, "#fff"); }
+    ctx.beginPath(); ctx.moveTo(-40, hy - 22); ctx.quadraticCurveTo(-26, hy - 30, -12, hy - 22); ctx.moveTo(12, hy - 22); ctx.quadraticCurveTo(26, hy - 30, 40, hy - 22); ctx.lineCap = "round"; stroke(o.hairC === "#2f8f4e" ? "#3a2418" : o.hairC, 5);
+    const m = 3 + 16 * talk;
+    if (talk > 0) { ell(0, hy + 42, 20, m, "#5a1d1d"); } else { ctx.beginPath(); ctx.arc(0, hy + 32, 22, 0.25, Math.PI - 0.25); ctx.lineCap = "round"; stroke("#5a1d1d", 5); }
+    ell(-44, hy + 26, 12, 7, "rgba(220,90,80,.22)"); ell(44, hy + 26, 12, 7, "rgba(220,90,80,.22)");
+    if (o.ear) { circle(-70, hy + 24, 7, o.ear); circle(70, hy + 24, 7, o.ear); }
+  });
+}
+// props held in a hand (drawn at the hand)
+const holdPhone = (screen) => () => { ctx.rotate(0.15); rr(-34, -62, 68, 124, 12); fill("#11151c"); rr(-29, -54, 58, 108, 8); fill(screen ?? "#9fd3f0"); };
+const holdFolder = () => { ctx.rotate(-0.1); rr(-70, -10, 140, 110, 8); fill(GOLD); rr(-70, -22, 60, 20, [6, 6, 0, 0]); fill(GOLD_D); };
+const holdPaper = () => { ctx.rotate(0.1); rr(-55, -10, 110, 140, 6); fill(PAPER); for (let i = 0; i < 5; i++) { ctx.fillStyle = "#c9ccd4"; ctx.fillRect(-40, 14 + i * 20, 80 - (i % 2) * 20, 6); } };
+const holdPen = () => { ctx.rotate(-0.6); rr(-4, -50, 8, 70, 3); fill(INK); };
+
+// ---------- places ----------
+function kitchen(t) {
+  ctx.fillStyle = "#f1e4c9"; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = "#e9d8b8"; ctx.fillRect(0, 0, W, 90);
+  // window with a Highveld afternoon, upper cabinets, kettle, a calendar and a family photo on the fridge
+  rr(140, 150, 420, 330, 16); fill("#8a5a35"); rr(160, 170, 380, 290, 10); fill("#a8d6f0"); circle(470, 240, 40, "#ffe29a");
+  ctx.fillStyle = "#c9a26a"; ctx.fillRect(160, 380, 380, 80); ctx.fillStyle = "#8a5a35"; ctx.fillRect(345, 170, 10, 290); ctx.fillRect(160, 310, 380, 10);
+  for (let i = 0; i < 4; i++) { rr(700 + i * 210, 120, 190, 220, 10); fill("#d98e5a"); circle(700 + i * 210 + 165, 230, 7, "#8a5a35"); }
+  ctx.fillStyle = "#cfc2a8"; ctx.fillRect(640, 560, 900, 20);
+  rr(1600, 150, 260, 620, 18); fill("#e8ecef"); line(1630, 420, 1830, 420, "#c5ccd2", 4); rr(1650, 210, 110, 80, 6); fill("#ffffff"); circle(1680, 260, 12, "#8a5a3c"); circle(1715, 262, 9, "#7b4d33"); circle(1740, 260, 12, "#9a6646");
+  rr(1120, 400, 70, 80, 14); fill("#c0392b"); rr(1110, 470, 90, 12, 6); fill("#7f2a21");
+  ctx.fillStyle = "#b98d5e"; ctx.fillRect(0, 780, W, 300);
+}
+function kitchenTable(x, w) { rr(x, 760, w, 34, 10); fill("#7a4a2a"); rr(x + 20, 794, w - 40, 300, 0); fill("#6b4024"); }
+function office(t) {
+  ctx.fillStyle = "#e9edf2"; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = "#dfe5ec"; for (let x = 0; x < W; x += 120) ctx.fillRect(x, 0, 3, 760);
+  // EquiGrowth on the wall, a plant, a shelf of files
+  rr(720, 110, 480, 200, 20); fill(NAVY); logo(960, 210, 0.2, true, 1);
+  rr(1450, 180, 340, 18, 6); fill("#9aa7b2"); [0, 1, 2, 3, 4, 5].forEach((i) => { rr(1470 + i * 50, 70, 40, 110, 4); fill(["#3a6ea5", GOLD, "#5a8f6b", "#c45b6b", "#3a6ea5", "#8a6bb8"][i]); });
+  rr(110, 560, 130, 200, 16); fill("#b35a3a"); for (const [dx, r] of [[-40, -0.5], [0, 0], [40, 0.5], [-20, -0.2], [20, 0.25]]) ell(175 + dx, 480, 26, 90, "#3f7a52", r);
+  ctx.fillStyle = "#a9b3bd"; ctx.fillRect(0, 760, W, 320);
+}
+function desk(x, w) { rr(x, 700, w, 40, 10); fill("#5b6b7f"); rr(x + 30, 740, w - 60, 360, 0); fill("#4b5a6d"); }
+function navyGround(t) {
+  const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, NAVY2); g.addColorStop(1, NAVY); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = "rgba(224,167,46,.045)"; for (let i = 0; i < 11; i++) { const x = ((i * 210 + t * 18) % (W + 300)) - 150; ctx.fillRect(x, 0, 60, H); }
+}
+// ---------- UI pieces ----------
+function chip(s, x, y, p, bg = NAVY, fg = GOLD, size = 34) {
+  around(x, y, p, 0, () => { ctx.font = `800 ${size}px ${F}`; const w = ctx.measureText(s).width + size * 1.6; rr(-w / 2, -size * 1.25, w, size * 2.5, size * 1.25); fill(bg); text(s, 0, size * 0.36, size, fg, 800, "center"); });
+}
+function card(cx, cy, w, h, p, fn, bg = CARD, border = "rgba(224,167,46,.55)") {
+  around(cx, cy, p, 0, () => { rr(-w / 2, -h / 2, w, h, 30); fill(bg); if (border) stroke(border, 3); fn(); });
+}
+function doc(x, y, w, h, title, p = 1) {
+  around(x, y, p, 0, () => {
+    ctx.shadowColor = "rgba(0,0,0,.18)"; ctx.shadowBlur = 30; ctx.shadowOffsetY = 10; rr(-w / 2, -h / 2, w, h, 14); fill(PAPER); ctx.shadowColor = "transparent";
+    rr(-w / 2, -h / 2, w, 70, [14, 14, 0, 0]); fill(NAVY); text(title, -w / 2 + 30, -h / 2 + 46, 30, "#ffffff", 700);
+  });
+}
+const tickMark = (x, y, s = 1, c = GREEN) => around(x, y, s, 0, () => { circle(0, 0, 30, c); ctx.beginPath(); ctx.moveTo(-14, 0); ctx.lineTo(-4, 11); ctx.lineTo(15, -12); ctx.lineCap = "round"; ctx.lineJoin = "round"; stroke("#fff", 7); });
+function packageTag(t, a) { alpha(a, () => { rr(1480, 26, 410, 64, 32); fill(GOLD); text("Customer package: R430 per month", 1685, 68, 25, INK, 800, "center"); }); }
+function proposalTag(a) { alpha(a, () => text("Revised consultant model · proposal subject to FSP, insurer and legal approval", 40, 66, 22, "rgba(255,255,255,.55)", 500)); }
+function pillarBanner(t, id, name) { const p = pop(t, A(id), 0.4) * (1 - seg(t, E(id) + 0.3, E(id) + 0.7)); chip(name, W / 2, 80, p, NAVY, GOLD, 42); }
+
+// =====================================================================================
+// scenes (each: [first line id, draw(t)])
+// =====================================================================================
+function sHome(t) {
+  kitchen(t);
+  const z = lerp(1.08, 1, seg(t, 0, 6));
+  around(W / 2, H / 2, z, 0, () => {
+    ctx.translate(-W / 2, -H / 2);
+    const write = seg(t, A("h4"), A("h4") + 2);
+    person(760, 1000, 0.9, AYANDA, t, { seated: true, talk: 0, armR: 0.5 + 0.1 * Math.sin(t * 2), holdR: holdPhone(write > 0 ? "#ffffff" : "#9fd3f0") });
+    person(1170, 1000, 0.85, MOTHER, t, { seated: true, armL: 0.35, blinkSeed: 1.3 });
+    kitchenTable(420, 1100);
+    // the folder and documents going into it
+    rr(860, 700, 230, 60, 8); fill(GOLD); rr(860, 690, 90, 20, [6, 6, 0, 0]); fill(GOLD_D); text("FAMILY DOCUMENTS", 975, 740, 20, INK, 800, "center");
+    for (let i = 0; i < 3; i++) { const k = seg(t, A("h4") + 2 + i * 0.9, A("h4") + 2.8 + i * 0.9); if (k <= 0) { rr(560 + i * 40, 720 - i * 6, 150, 40, 4); fill(PAPER); stroke("#d8d3c4", 2); continue; } if (k < 1) { rr(lerp(560 + i * 40, 900, k), lerp(720 - i * 6, 660, Math.sin(k * Math.PI)) , 150, 40, 4); fill(PAPER); } }
+    rr(990, 735, 90, 18, 4); fill("#e9e2d0"); circle(560, 745, 26, "#ffffff"); circle(560, 745, 18, "#7a4a2a");
+  });
+  // the saved contact on her phone, shown large
+  const ph = pop(t, A("h4") + 1.6, 0.4) * (1 - seg(t, E("h4") + 0.5, E("h4") + 1));
+  around(400, 360, ph, -0.05, () => { rr(-150, -230, 300, 460, 34); fill("#11151c"); rr(-136, -212, 272, 424, 24); fill("#ffffff"); text("New contact", 0, -150, 30, INK, 800, "center"); rr(-110, -110, 220, 60, 12); fill("#eef0f4"); text("Policy & claims line", 0, -70, 24, INK, 600, "center"); rr(-110, -30, 220, 60, 12); fill("#eef0f4"); text("Consultant: Thandi", 0, 10, 24, INK, 600, "center"); rr(-90, 70, 180, 64, 32); fill(GREEN); text("Saved ✓", 0, 113, 28, "#fff", 800, "center"); });
+  // the opening questions float softly above the table
+  [["h1", "Who would they call?", 520, 300], ["h2", "Where is the policy?", 1400, 260]].forEach(([id, s, x, y]) => alpha(seg(t, A(id), A(id) + 0.6) * (1 - seg(t, A("h4"), A("h4") + 0.6)), () => { rr(x - 250, y - 55, 500, 100, 50); fill("rgba(14,22,38,.85)"); text(s, x, y + 14, 36, "#ffffff", 700, "center"); }));
+}
+function sLogo(t) {
+  navyGround(t);
+  const k = seg(t, A("h6"), A("h6") + 0.8);
+  logo(W / 2, lerp(520, 250, k), lerp(0.6, 0.38, k), true, seg(t, A("h5"), A("h5") + 1.6));
+  // the two people we follow
+  [[620, AYANDA, "Ayanda", "Exploring cover for her family", 0.15], [1300, THANDI, "Thandi", "Appointed consultant", 0.45]].forEach(([x, who, name, role, f], i) => {
+    const p = pop(t, A("h6") + f * BY.h6.len, 0.45);
+    card(x, 690, 520, 520, p, () => {
+      ctx.save(); rr(-260, -260, 520, 520, 30); ctx.clip(); person(0, 330, 0.62, who, t, { armR: i ? 0.3 : 0, blinkSeed: i }); ctx.restore();
+      rr(-260, 130, 520, 130, [0, 0, 30, 30]); fill(NAVY); text(name, 0, 186, 44, "#ffffff", 800, "center"); text(role, 0, 232, 26, GOLD, 600, "center");
+    });
+  });
+}
+function sCompany(t) {
+  navyGround(t);
+  // c1: the brand, then the company behind it
+  const b = pop(t, A("c1"), 0.4), sh = seg(t, A("c2") - 0.3, A("c2") + 0.5);
+  around(W / 2, lerp(380, 150, sh), lerp(1, 0.6, sh), 0, () => {
+    logo(0, -40, 0.42, false, 1);
+    alpha(seg(t, A("c1") + 1.6, A("c1") + 2.2), () => { text("is the public brand of", 0, 120, 34, "rgba(255,255,255,.7)", 500, "center"); text("MyEquiGrowth (Pty) Ltd", 0, 190, 56, GOLD, 800, "center"); });
+  });
+  // c2: founded 2024, Black empowerment, relationships
+  const r = seg(t, A("c2"), A("c2") + 0.5) * (1 - seg(t, A("c3") - 0.2, A("c3") + 0.3));
+  alpha(r, () => {
+    chip("Established 2024 · Black empowerment company", W / 2, 360, pop(t, A("c2")), CARD, "#ffffff", 34);
+    const nodes = [["Clients", 560, 700], ["Business partners", 960, 560], ["Its own team", 1360, 700]];
+    nodes.forEach(([n, x, y], i) => { const p = pop(t, A("c2") + 0.35 * BY.c2.len + i * 0.6); if (i) { const [, px, py] = nodes[i - 1]; alpha(p, () => line(px, py, x, y, "rgba(224,167,46,.6)", 5)); } chip(n, x, y, p, GOLD, INK, 36); });
+    alpha(pop(t, A("c2") + 0.35 * BY.c2.len + 1.8), () => line(560, 700, 1360, 700, "rgba(224,167,46,.6)", 5));
+    alpha(seg(t, A("c2") + 0.2 * BY.c2.len, A("c2") + 0.2 * BY.c2.len + 0.5), () => text("built on relationships", W / 2, 840, 40, "rgba(255,255,255,.75)", 500, "center", "italic"));
+  });
+  // c3: the wider ambition sits apart; this film is funeral cover
+  const c = seg(t, A("c3"), A("c3") + 0.5) * (1 - seg(t, A("c4") - 0.2, A("c4") + 0.3));
+  alpha(c, () => {
+    card(620, 600, 640, 360, 1, () => { text("Wider ambition", 0, -90, 40, "rgba(255,255,255,.6)", 700, "center"); text("Wealth-building solutions", 0, -20, 32, "rgba(255,255,255,.45)", 500, "center"); text("with partners, over time", 0, 24, 32, "rgba(255,255,255,.45)", 500, "center"); text("A separate story", 0, 110, 28, "rgba(255,255,255,.4)", 600, "center", "italic"); }, "rgba(27,41,69,.6)", "rgba(255,255,255,.15)");
+    const f = pop(t, A("c3") + 0.55 * BY.c3.len);
+    card(1300, 600, 640, 360, f, () => { text("This film", 0, -90, 40, GOLD, 800, "center"); text("Funeral cover", 0, -10, 64, "#ffffff", 800, "center"); text("and the people who service it", 0, 60, 30, "rgba(255,255,255,.8)", 500, "center"); }, CARD, GOLD);
+  });
+  // c4: the five pillars
+  const PIL = [["Stewardship", "hand"], ["Integrity", "check"], ["A cohesive team", "team"], ["Continuous improvement", "up"], ["Quality service & support", "star"]];
+  PIL.forEach(([n, ic], i) => card(260 + i * 350, 620, 310, 380, pop(t, A("c4") + 0.3 + i * 0.45), () => {
+    circle(0, -70, 80, GOLD); pillarIcon(ic); text(`${i + 1}`, -120, -140, 34, GOLD, 800, "center");
+    const words = n.split(" "), half = Math.ceil(words.length / 2);
+    text(words.slice(0, half).join(" "), 0, 70, 30, "#ffffff", 800, "center"); text(words.slice(half).join(" "), 0, 110, 30, "#ffffff", 800, "center");
+  }));
+  alpha(seg(t, A("c4"), A("c4") + 0.5), () => text("THE FIVE PILLARS", W / 2, 330, 40, GOLD, 800, "center"));
+}
+function pillarIcon(k) {
+  ctx.save(); ctx.translate(0, -70);
+  if (k === "hand") { ell(0, 10, 38, 26, INK); rr(-34, -30, 14, 40, 7); fill(INK); rr(-14, -40, 14, 50, 7); fill(INK); rr(6, -36, 14, 46, 7); fill(INK); rr(26, -26, 12, 36, 6); fill(INK); }
+  if (k === "check") { ctx.beginPath(); ctx.moveTo(-30, 0); ctx.lineTo(-8, 24); ctx.lineTo(34, -26); ctx.lineCap = "round"; ctx.lineJoin = "round"; stroke(INK, 14); }
+  if (k === "team") { for (const dx of [-30, 0, 30]) { circle(dx, -14, 14, INK); rr(dx - 16, 4, 32, 30, 12); fill(INK); } }
+  if (k === "up") { ctx.beginPath(); ctx.moveTo(-34, 24); ctx.lineTo(-8, -4); ctx.lineTo(8, 10); ctx.lineTo(34, -24); ctx.lineCap = "round"; ctx.lineJoin = "round"; stroke(INK, 12); ctx.beginPath(); ctx.moveTo(36, -30); ctx.lineTo(14, -28); ctx.lineTo(34, -8); ctx.closePath(); fill(INK); }
+  if (k === "star") { ctx.beginPath(); for (let i = 0; i < 10; i++) { const r = i % 2 ? 16 : 38, a = -Math.PI / 2 + i * Math.PI / 5; ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r); } ctx.closePath(); fill(INK); }
+  ctx.restore();
+}
+function sPillars(t) {
+  office(t);
+  const stand = seg(t, A("p5") + 0.4, A("p5") + 1.4);
+  const colleague = seg(t, A("p3") + 0.2, A("p3") + 1.8) * (1 - seg(t, E("p3") + 0.2, E("p3") + 1.4));
+  // Thandi behind the desk, Ayanda across from her; a colleague walks in for p3
+  person(1180, 900, 0.85, THANDI, t, { seated: true, talk: talkOf(t, []) || (t > A("p2") && t < E("p2") ? 0.4 : 0), armR: t > A("p1") && t < E("p1") ? 0.7 : t > A("p2") && t < E("p2") ? 0.55 : 0.2, holdR: t > A("p1") && t < E("p1") ? holdPen : t > A("p2") && t < E("p2") ? holdPaper : null, blinkSeed: 2 });
+  if (colleague > 0) person(lerp(2150, 1520, colleague), 1050, 0.85, LWAZI, t, { armL: 0.6, holdL: holdPaper, blinkSeed: 0.7 });
+  person(lerp(700, 640, stand), lerp(900, 1000, stand), 0.85, AYANDA, t, { seated: stand < 0.5, armR: stand > 0.5 ? 0.4 : 0.15, holdR: stand > 0.5 ? holdFolder : null, blinkSeed: 0.4 });
+  desk(380, 1160);
+  rr(860, 640, 220, 60, 8); fill("#2a2f3a"); rr(870, 560, 200, 90, 8); fill("#2a2f3a"); rr(880, 570, 180, 70, 4); fill("#9fd3f0");
+  // p1: a follow-up note, ticked off
+  const p1 = pop(t, A("p1") + 0.25 * BY.p1.len) * (1 - seg(t, A("p2") - 0.3, A("p2")));
+  around(1500, 420, p1, 0.04, () => { rr(-170, -150, 340, 300, 10); fill("#fff6c7"); text("Follow up", -140, -95, 34, INK, 800); ["Ayanda's question", "Check with office", "Call her back"].forEach((s, i) => { text(s, -110, -30 + i * 60, 26, INK, 600); if (t > A("p1") + (0.5 + i * 0.15) * BY.p1.len) tickMark(-140, -38 + i * 60, 0.5); }); });
+  // p2: the detail checked against the document
+  const p2 = pop(t, A("p2") + 0.3 * BY.p2.len) * (1 - seg(t, A("p3") - 0.3, A("p3")));
+  around(1500, 420, p2, 0, () => { doc(0, 0, 360, 320, "Policy detail", 1); for (let i = 0; i < 5; i++) { ctx.fillStyle = i === 2 ? "rgba(224,167,46,.5)" : "#d5d8de"; ctx.fillRect(-150, -60 + i * 40, 300, 18); } ctx.beginPath(); ctx.arc(70, 30, 60, 0, Math.PI * 2); stroke(INK, 10); line(112, 72, 160, 120, INK, 14); if (t > A("p2") + 0.7 * BY.p2.len) chip("Checked ✓", 0, 190, 1, GREEN, "#fff", 28); });
+  // p3: one clear answer
+  const p3 = pop(t, A("p3") + 0.75 * BY.p3.len) * (1 - seg(t, A("p4") - 0.3, A("p4")));
+  chip("One clear answer ✓", 640, 300, p3, GREEN, "#fff", 34);
+  // p4: feedback becomes a clearer explanation
+  const p4 = pop(t, A("p4") + 0.2) * (1 - seg(t, A("p5") - 0.3, A("p5")));
+  around(1500, 400, p4, 0, () => {
+    rr(-300, -200, 600, 400, 14); fill("#ffffff"); stroke("#c9ced6", 4);
+    ["Confusing?", "Too long", "What's a schedule?"].forEach((s, i) => { const k = seg(t, A("p4") + 0.4 + i * 0.4, A("p4") + 0.8 + i * 0.4) * (1 - seg(t, A("p4") + 0.6 * BY.p4.len, A("p4") + 0.6 * BY.p4.len + 0.5)); alpha(k, () => { rr(-270 + i * 190, -150 + (i % 2) * 70, 170, 110, 6); fill(["#ffd76e", "#ffb3a8", "#a8e0ff"][i]); text(s, -185 + i * 190, -88 + (i % 2) * 70, 20, INK, 700, "center"); }); });
+    alpha(seg(t, A("p4") + 0.6 * BY.p4.len, A("p4") + 0.6 * BY.p4.len + 0.5), () => { text("Clearer explanation", 0, -60, 40, INK, 800, "center"); ["Who is covered", "What it costs", "How to claim"].forEach((s, i) => { tickMark(-170, 10 + i * 60, 0.55); text(s, -130, 20 + i * 60, 30, INK, 600); }); });
+  });
+  // p5: she knows whom to contact
+  const p5 = pop(t, A("p5") + 0.55 * BY.p5.len);
+  around(1500, 420, p5, 0, () => { rr(-230, -110, 460, 220, 20); fill("#ffffff"); stroke(GOLD, 4); text("Your contact", 0, -50, 30, GOLD_D, 800, "center"); text("Thandi · EquiGrowth", 0, 10, 38, INK, 800, "center"); text("Saved in Ayanda's phone", 0, 60, 24, "#666", 600, "center"); });
+  [["p1", "Stewardship"], ["p2", "Integrity"], ["p3", "A cohesive team"], ["p4", "Continuous improvement"], ["p5", "Quality service & support"]].forEach(([id, n]) => pillarBanner(t, id, n));
+}
+function sRoles(t) {
+  navyGround(t);
+  // a stack of four layers, built one per line
+  const L = [["r2", "The brand Ayanda sees", "EquiGrowth", 200], ["r2", "The company behind it", "MyEquiGrowth (Pty) Ltd", 380], ["r3", "Financial services provider", "Sibiya Brokers · FSP 46798", 560], ["r5", "Underwriter (the insurer)", "RMA", 740]];
+  L.forEach(([id, role, name, y], i) => {
+    const at = i === 1 ? A(id) + 0.45 * BY[id].len : i === 3 ? A(id) + 0.6 * BY[id].len : A(id) + 0.2;
+    const p = pop(t, at, 0.4);
+    around(700, y, p, 0, () => {
+      rr(-520, -72, 1040, 144, 26); fill(i === 2 ? "#22335a" : CARD); stroke(i === 2 && t > A("r3") ? GOLD : "rgba(224,167,46,.45)", i === 2 ? 4 : 3);
+      text(role.toUpperCase(), -480, -16, 22, GOLD, 700); text(name, -480, 40, i === 2 ? 50 : 46, "#ffffff", 800);
+      if (i > 0) { line(-430, -72, -430, -110, "rgba(224,167,46,.6)", 5); }
+    });
+  });
+  // r3/r4: the relationship, written out
+  alpha(seg(t, A("r3") + 0.3 * BY.r3.len, A("r3") + 0.3 * BY.r3.len + 0.5) * (1 - seg(t, A("r5"), A("r5") + 0.4)), () => { card(1530, 470, 620, 330, 1, () => { text("MyEquiGrowth is a", 0, -90, 32, "#ffffff", 600, "center"); text("juristic representative", 0, -40, 42, GOLD, 800, "center"); text("of Sibiya Brokers", 0, 10, 32, "#ffffff", 600, "center"); text("FSP 46798", 0, 90, 64, "#ffffff", 800, "center"); }); });
+  alpha(seg(t, A("r4b"), A("r4b") + 0.5) * (1 - seg(t, A("r5"), A("r5") + 0.4)), () => chip("Check it: FSCA public register", 1530, 720, 1, GOLD, INK, 30));
+  // r5: partners
+  alpha(seg(t, A("r5") + 0.3 * BY.r5.len, A("r5") + 0.3 * BY.r5.len + 0.5) * (1 - seg(t, A("r7") - 0.2, A("r7") + 0.3)), () => card(1530, 380, 560, 180, 1, () => { text("ALSO NAMED AS A PARTNER", 0, -24, 22, GOLD, 700, "center"); text("Mthembe Group", 0, 40, 46, "#ffffff", 800, "center"); }));
+  // r6: what an underwriter is
+  alpha(seg(t, A("r6"), A("r6") + 0.5) * (1 - seg(t, A("r7") - 0.2, A("r7") + 0.3)), () => card(1530, 700, 600, 280, 1, () => { text("Underwriter = the insurer", 0, -60, 38, GOLD, 800, "center"); text("It carries the covered risk,", 0, 10, 32, "#ffffff", 600, "center"); text("under the terms of the policy.", 0, 56, 32, "#ffffff", 600, "center"); }));
+  // r7: three questions point at three layers
+  const Q = [["Who am I dealing with?", 290], ["Under whose authorisation?", 560], ["Which insurer stands behind it?", 740]];
+  Q.forEach(([q, y], i) => { const p = pop(t, A("r7") + (0.22 + i * 0.25) * BY.r7.len); if (p <= 0) return; alpha(1 - seg(t, A("r8") + 0.4 * BY.r8.len, A("r8") + 0.4 * BY.r8.len + 0.4), () => { line(1230, y, 1290, y, GOLD, 5); chip(q, 1580, y, p, GOLD, INK, 30); }); });
+  // r8: the answers belong in her documents
+  const d = pop(t, A("r8") + 0.4 * BY.r8.len);
+  around(1560, 520, d, 0, () => { doc(0, 0, 460, 520, "My policy documents", 1); ["Brand & company", "FSP & number", "Insurer"].forEach((s, i) => { tickMark(-170, -120 + i * 110, 0.7); text(s, -130, -108 + i * 110, 30, INK, 700); }); });
+  alpha(seg(t, A("r1"), A("r1") + 0.5) * (1 - seg(t, A("r2"), A("r2") + 0.3)), () => text("Who stands behind the cover?", W / 2, 500, 72, "#ffffff", 800, "center"));
+}
+function sPackage(t) {
+  office(t);
+  person(1240, 900, 0.85, THANDI, t, { seated: true, armR: 0.3, blinkSeed: 2 });
+  person(680, 900, 0.85, AYANDA, t, { seated: true, armL: 0.1, blinkSeed: 0.4 });
+  desk(380, 1160);
+  // the one price
+  const p = pop(t, A("k1") + 0.55 * BY.k1.len, 0.5);
+  around(W / 2, 440, p, Math.sin(t * 1.5) * 0.02, () => {
+    line(0, -330, 0, -170, "#9aa7b2", 4);
+    ctx.shadowColor = "rgba(224,167,46,.5)"; ctx.shadowBlur = 40; rr(-260, -170, 520, 260, 30); fill(GOLD); ctx.shadowColor = "transparent";
+    circle(0, -140, 14, "#fff"); text("One funeral cover package", 0, -80, 30, INK, 700, "center"); text("R430", 0, 30, 120, INK, 800, "center"); text("per month", 0, 74, 30, INK, 700, "center");
+  });
+  // k2: three different consultant levels, one customer price
+  [["Level 1", 380], ["Level 4", 960], ["Level 9", 1540]].forEach(([lv, x], i) => { const q = pop(t, A("k2") + 0.45 * BY.k2.len + i * 0.4); chip(`Consultant ${lv} → R430`, x, 790, q, NAVY, "#ffffff", 30); });
+}
+function sSchedule(t) {
+  ctx.fillStyle = "#d9cdb5"; ctx.fillRect(0, 0, W, H); ctx.fillStyle = "rgba(0,0,0,.04)"; for (let y = 0; y < H; y += 46) ctx.fillRect(0, y, W, 2);
+  packageTag(t, 1);
+  // the policy schedule on the desk
+  around(620, 560, 1, -0.02, () => {
+    doc(0, 0, 820, 860, "Policy schedule", 1);
+    const rows = [["k4", "Insured people", "Listed on the schedule"], ["k5", "Cover per insured life", "Amount set out per person"], ["k6", "Cover start date", "As stated in the policy"], ["k6", "Waiting periods & exclusions", "See policy terms"], ["k7", "Claims contact", "On the schedule"]];
+    rows.forEach(([id, a, b], i) => {
+      const y = -300 + i * 130, on = t > A(id) + 0.3 * BY[id].len;
+      if (on) { rr(-380, y - 40, 760, 110, 10); fill("rgba(224,167,46,.22)"); }
+      text(a, -350, y, 28, INK, 800); text(b, -350, y + 44, 26, "#555", 500);
+      if (on) tickMark(330, y + 14, 0.7, GOLD_D);
+    });
+  });
+  // the four questions, lit one at a time
+  const Q = [["k4", "Who can be included?"], ["k5", "How much cover per person?"], ["k6", "When does cover start? Waiting periods?"], ["k7", "What to keep, and who to call to claim?"]];
+  alpha(seg(t, A("k3"), A("k3") + 0.6), () => text("Questions a family should ask", 1500, 190, 38, INK, 800, "center"));
+  Q.forEach(([id, q], i) => {
+    const p = pop(t, A("k3") + 0.3 + i * 0.35), on = t >= A(id) && t < (Q[i + 1] ? A(Q[i + 1][0]) : A("k8"));
+    around(1500, 270 + i * 140, p, 0, () => { rr(-380, -58, 760, 116, 24); fill(on ? NAVY : "#f3efe6"); stroke(on ? GOLD : "#cbbf9f", 3); circle(-320, 0, 34, GOLD); text(String(i + 1), -320, 13, 36, INK, 800, "center"); ctx.font = `700 26px ${F}`; text(q, -270, 10, 26, on ? "#ffffff" : INK, 700); });
+  });
+  // k7: the claims contact goes into her phone
+  const ph = pop(t, A("k7") + 0.6 * BY.k7.len) * (1 - seg(t, A("k8"), A("k8") + 0.4));
+  around(1040, 640, ph, 0.08, () => { rr(-90, -160, 180, 320, 24); fill("#11151c"); rr(-80, -148, 160, 296, 16); fill("#ffffff"); text("Claims", 0, -40, 28, INK, 800, "center"); text("contact", 0, -6, 28, INK, 800, "center"); chip("Saved ✓", 0, 80, 1, GREEN, "#fff", 22); });
+  // k8/k9: confirm in writing
+  const st = pop(t, A("k8") + 0.4 * BY.k8.len, 0.3);
+  around(1600, 880, st, -0.06, () => { rr(-300, -60, 600, 120, 16); stroke("#c0392b", 8); text("CONFIRM IN WRITING", 0, 18, 44, "#c0392b", 800, "center"); });
+  const nt = pop(t, A("k9") + 0.3 * BY.k9.len);
+  around(1130, 870, nt, 0.05, () => { rr(-160, -120, 320, 240, 8); fill("#fff6c7"); text("To confirm:", -130, -60, 28, INK, 800); text("_____________", -130, 0, 28, INK, 500); text("Thandi to follow up", -130, 70, 24, INK, 600); tickMark(110, 60, 0.5); });
+}
+function sBenefits(t) {
+  navyGround(t);
+  alpha(seg(t, A("b1"), A("b1") + 0.5), () => text("MEMBER BENEFITS DESCRIBED IN THE PRESENTATION", W / 2, 150, 40, GOLD, 800, "center"));
+  const tiles = [["Grocery & pharmacy", "coupons", "cart"], ["Selected retail &", "airtime vouchers", "voucher"], ["Travel & lifestyle", "discounts", "plane"], ["Home assistance", "service", "house"]];
+  tiles.forEach(([a, b, k], i) => card(300 + i * 440, 520, 400, 460, pop(t, A("b2") + (0.08 + i * 0.22) * BY.b2.len), () => {
+    circle(0, -70, 110, "#fff6df"); benefitIcon(k); text(a, 0, 110, 32, "#ffffff", 800, "center"); text(b, 0, 154, 30, GOLD, 700, "center");
+    if (t > A("b3") + 0.5 * BY.b3.len) alpha(seg(t, A("b3") + 0.5 * BY.b3.len, A("b3") + 0.5 * BY.b3.len + 0.4), () => chip("Check your schedule", 0, -200, 1, GOLD, INK, 22));
+  }));
+  alpha(seg(t, A("b3"), A("b3") + 0.5), () => text("Which benefits apply is set out in each member's benefit schedule.", W / 2, 880, 30, "rgba(255,255,255,.75)", 500, "center"));
+}
+function benefitIcon(k) {
+  ctx.save(); ctx.translate(0, -70);
+  if (k === "cart") { ctx.beginPath(); ctx.moveTo(-70, -40); ctx.lineTo(-44, -40); ctx.lineTo(-18, 34); ctx.lineTo(60, 34); ctx.lineTo(76, -16); ctx.lineTo(-34, -16); ctx.lineJoin = "round"; stroke(INK, 11); circle(-8, 60, 12, INK); circle(52, 60, 12, INK); }
+  if (k === "voucher") { rr(-80, -46, 160, 92, 12); fill(INK); ctx.setLineDash([9, 7]); line(26, -42, 26, 42, GOLD, 4); ctx.setLineDash([]); text("%", -26, 20, 54, GOLD, 800, "center"); }
+  if (k === "plane") { ctx.rotate(-0.5); rr(-70, -10, 140, 22, 11); fill(INK); ctx.beginPath(); ctx.moveTo(-10, 0); ctx.lineTo(20, -60); ctx.lineTo(36, -60); ctx.lineTo(26, 0); ctx.closePath(); fill(INK); ctx.beginPath(); ctx.moveTo(-10, 10); ctx.lineTo(20, 70); ctx.lineTo(36, 70); ctx.lineTo(26, 10); ctx.closePath(); fill(INK); rr(-70, -34, 18, 36, 6); fill(INK); }
+  if (k === "house") { ctx.beginPath(); ctx.moveTo(-70, 0); ctx.lineTo(0, -60); ctx.lineTo(70, 0); ctx.closePath(); fill(INK); rr(-50, 0, 100, 60, 4); fill(INK); rr(-14, 18, 28, 42, 3); fill("#fff6df"); }
+  ctx.restore();
+}
+function sShop(t) {
+  ctx.fillStyle = "#f6efe2"; ctx.fillRect(0, 0, W, H);
+  for (let r = 0; r < 3; r++) { ctx.fillStyle = "#c7a37a"; ctx.fillRect(60, 260 + r * 200, 1800, 20); for (let i = 0; i < 17; i++) { const col = ["#d9534f", "#5cb85c", "#f0ad4e", "#5bc0de", "#8a6bb8"][(i + r * 2) % 5]; rr(80 + i * 105, 260 + r * 200 - 120 + (i % 2) * 18, 80, 120 - (i % 2) * 18, 10); fill(col); } }
+  ctx.fillStyle = "#6b4a33"; ctx.fillRect(0, 820, W, 260); rr(-20, 800, 1100, 40, 0); fill("#8a6345");
+  rr(160, 640, 260, 160, 14); fill("#2b313b"); rr(180, 660, 220, 80, 8); fill("#7fd1a0"); text("TILL", 290, 715, 40, "#1e3b2a", 800, "center");
+  person(1260, 1080, 1, AYANDA, t, { armR: 0.9, holdR: holdPhone("#ffffff"), blinkSeed: 0.4 });
+  // the voucher check, large
+  const v = pop(t, A("b4") + 0.25 * BY.b4.len);
+  around(760, 420, v, -0.04, () => {
+    rr(-200, -300, 400, 600, 40); fill("#11151c"); rr(-184, -282, 368, 564, 28); fill("#ffffff");
+    rr(-150, -240, 300, 80, 14); fill(GOLD); text("MEMBER BENEFITS", 0, -190, 26, INK, 800, "center");
+    rr(-150, -130, 300, 200, 16); fill("#fff6df"); ctx.setLineDash([10, 8]); stroke(GOLD_D, 3); ctx.setLineDash([]); text("Grocery voucher", 0, -70, 30, INK, 800, "center");
+    const chk = (s, y, at) => { if (t > at) { tickMark(-110, y - 10, 0.55); } text(s, -70, y, 26, INK, 600); };
+    chk("Eligible", 0, A("b4") + 0.45 * BY.b4.len); chk("Still valid", 50, A("b4") + 0.55 * BY.b4.len);
+    if (t > A("b4") + 0.8 * BY.b4.len) chip("Used at the till ✓", 0, 190, pop(t, A("b4") + 0.8 * BY.b4.len), GREEN, "#fff", 26);
+  });
+  chip("Grocery voucher", W / 2, 90, pop(t, A("b4")), NAVY, GOLD, 40);
+}
+function sAssist(t) {
+  ctx.fillStyle = "#e4ecf2"; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = "#cfdbe4"; for (let y = 0; y < 800; y += 80) ctx.fillRect(0, y, W, 3);
+  ctx.fillStyle = "#9aa7b2"; ctx.fillRect(0, 800, W, 280);
+  const arrive = seg(t, A("b5") + 0.65 * BY.b5.len, A("b5") + 0.65 * BY.b5.len + 2.2), fixed = seg(t, A("b6") + 0.2, A("b6") + 1.2);
+  ctx.fillStyle = "#6c7a86"; ctx.fillRect(220, 0, 40, 440); ctx.fillRect(220, 420, 300, 40); circle(520, 440, 34, "#55636e");
+  for (let i = 0; i < 9; i++) { const ph = (t * 1.6 + i / 9) % 1; ell(550 + Math.sin(i * 7) * 30, 480 + ph * 340, 10, 18, `rgba(70,150,220,${(1 - ph) * (1 - fixed)})`); }
+  ell(580, 850, 280 * (1 - 0.6 * fixed), 34, "rgba(70,150,220,.45)");
+  person(1000, 1060, 0.95, AYANDA, t, { armR: 1.6, holdR: holdPhone("#2f8f4e"), blinkSeed: 0.4 });
+  if (arrive > 0) { const x = lerp(2150, 1500, arrive), bob = Math.abs(Math.sin(t * 8)) * 10 * (arrive < 1 ? 1 : 0); person(x, 1060 - bob, 0.95, TECH, t, { armL: 0.2, holdL: () => { rr(-60, 0, 120, 70, 8); fill("#c0392b"); rr(-30, -14, 60, 16, 6); fill("#7f2a21"); } }); }
+  chip("Home assistance", W / 2, 90, pop(t, A("b5")), NAVY, GOLD, 40);
+  alpha(seg(t, A("b5") + 0.3 * BY.b5.len, A("b5") + 0.3 * BY.b5.len + 0.4) * (1 - seg(t, A("b6"), A("b6") + 0.4)), () => chip("Arranging a qualified professional…", 1400, 260, 1, "#ffffff", INK, 30));
+  // b6: arranging help is not the same as paying the whole bill
+  const s = seg(t, A("b6") + 0.15 * BY.b6.len, A("b6") + 0.15 * BY.b6.len + 0.5);
+  alpha(s, () => {
+    card(1180, 300, 520, 220, 1, () => { text("The service", 0, -40, 30, GOLD, 800, "center"); text("arranges the professional", 0, 20, 34, "#ffffff", 700, "center"); }, NAVY);
+    card(1720, 300, 380, 220, 1, () => { text("The bill", 0, -40, 30, GOLD, 800, "center"); text("per benefit terms", 0, 20, 32, "#ffffff", 700, "center"); }, NAVY);
+    alpha(seg(t, A("b6") + 0.5 * BY.b6.len, A("b6") + 0.5 * BY.b6.len + 0.4), () => text("≠", 1470, 330, 90, GOLD, 800, "center"));
+  });
+}
+function sDistinction(t) {
+  navyGround(t);
+  // b7: cashback details in writing
+  const c = pop(t, A("b7") + 0.15 * BY.b7.len) * (1 - seg(t, A("b8") - 0.2, A("b8") + 0.3));
+  around(W / 2, 520, c, 0, () => {
+    rr(-560, -260, 1120, 520, 40); fill(CARD); stroke(GOLD, 3);
+    text("Cashback benefit", 0, -170, 56, "#ffffff", 800, "center");
+    ["The amount", "What qualifies", "When it pays"].forEach((s, i) => { const k = t > A("b7") + (0.4 + i * 0.12) * BY.b7.len; text("?", -330, -50 + i * 90, 50, k ? GOLD : "#55607a", 800, "center"); text(s, -280, -36 + i * 90, 40, "#ffffff", 700); });
+    alpha(seg(t, A("b7") + 0.8 * BY.b7.len, A("b7") + 0.8 * BY.b7.len + 0.4), () => chip("See it in writing for your package", 0, 210, 1, GOLD, INK, 30));
+  });
+  // b8/b9: two separate things
+  const d = seg(t, A("b8") + 0.2 * BY.b8.len, A("b8") + 0.2 * BY.b8.len + 0.5);
+  alpha(d, () => {
+    card(560, 520, 700, 560, pop(t, A("b8") + 0.2 * BY.b8.len), () => {
+      text("THE FAMILY", 0, -200, 36, GOLD, 800, "center"); person(-150, 170, 0.45, AYANDA, t, {}); person(20, 170, 0.42, MOTHER, t, { blinkSeed: 1 });
+      text("The policy", 130, -60, 34, "#ffffff", 700); text("+ member benefits", 130, -10, 30, "rgba(255,255,255,.8)", 600); text("that apply to it", 130, 30, 30, "rgba(255,255,255,.8)", 600);
+    });
+    card(1360, 520, 700, 560, pop(t, A("b8") + 0.6 * BY.b8.len), () => {
+      text("THE CONSULTANT", 0, -200, 36, GOLD, 800, "center"); person(-180, 170, 0.45, THANDI, t, { blinkSeed: 2 });
+      text("A separate role,", -40, -60, 34, "#ffffff", 700); text("with its own", -40, -10, 30, "rgba(255,255,255,.8)", 600); text("compensation", -40, 30, 30, "rgba(255,255,255,.8)", 600);
+    });
+    alpha(seg(t, A("b9") + 0.2, A("b9") + 0.7), () => chip("No recruiting needed to keep cover or benefits", W / 2, 880, 1, GOLD, INK, 32));
+  });
+}
+function sJoin(t) {
+  ctx.fillStyle = "#efe2c8"; ctx.fillRect(0, 0, W, H); ctx.fillStyle = "#b98d5e"; ctx.fillRect(0, 900, W, 180);
+  const steps = [["j1", 0.2], ["j2", 0.15], ["j2", 0.5], ["j3", 0.1], ["j3", 0.55]];
+  const at = (i) => A(steps[i][0]) + steps[i][1] * BY[steps[i][0]].len;
+  // laptop with the sign-up form, fictional details only
+  around(800, 520, pop(t, A("j1"), 0.4), 0, () => {
+    rr(-560, -380, 1120, 720, 30); fill("#2a2f3a"); rr(-530, -350, 1060, 660, 12); fill("#f5f6f8");
+    rr(-530, -350, 1060, 64, [12, 12, 0, 0]); fill("#e2e5ea"); rr(-420, -334, 640, 34, 17); fill("#ffffff"); text(SITE, -400, -308, 22, "#555", 600);
+    if (t < at(1)) { logo(-210, -120, 0.2, false, 1); rr(-130, 40, 260, 80, 40); fill(GOLD); text("Sign up", 0, 92, 34, INK, 800, "center"); if (t > at(0)) { const k = seg(t, at(0), at(0) + 0.6); circle(lerp(300, 30, k), lerp(240, 90, k), 14, "rgba(0,0,0,.5)"); } return; }
+    text("Sign up", -470, -230, 44, INK, 800);
+    const F_ = [["Full name", "Ayanda Example"], ["Mobile number", "000 000 0000"], ["Email address", "ayanda@example.com"]];
+    F_.forEach(([lab, val], i) => { const y = -170 + i * 100; text(lab, -470, y, 22, "#666", 600); rr(-470, y + 12, 600, 56, 10); fill("#ffffff"); stroke("#cfd3da", 2); const k = seg(t, at(1) + i * 0.9, at(1) + i * 0.9 + 0.9); ctx.save(); ctx.beginPath(); ctx.rect(-460, y + 12, 580 * k, 56); ctx.clip(); text(val, -450, y + 50, 26, INK, 600); ctx.restore(); if (t > at(3) + i * 0.4) tickMark(170, y + 40, 0.5); });
+    const sub = pop(t, at(3) + 1.6);
+    if (sub > 0) around(-170, 230, sub, 0, () => { rr(-130, -40, 260, 80, 40); fill(GREEN); text("Submit ✓", 0, 12, 32, "#fff", 800, "center"); });
+    if (t > at(4)) alpha(seg(t, at(4), at(4) + 0.5), () => { rr(200, -250, 300, 440, 16); fill("#ffffff"); stroke(GOLD, 3); text("My profile", 350, -190, 30, INK, 800, "center"); ["Contact details ✓", "Address", "Bank details"].forEach((s, i) => { text(s, 230, -120 + i * 70, 24, INK, 600); }); const k = seg(t, at(4) + 0.6, at(4) + 2); rr(230, 110, 240 * k, 14, 7); fill(GREEN); });
+  });
+  alpha(seg(t, A("j2"), A("j2") + 0.5), () => text("Fictional details shown", 1600, 960, 24, "rgba(0,0,0,.5)", 600, "center"));
+  // j4: the office can help
+  const o = pop(t, A("j4") + 0.3) * (1 - seg(t, A("j5"), A("j5") + 0.4));
+  chip("Unclear? The EquiGrowth office can help", 1520, 200, o, NAVY, GOLD, 30);
+  // j5: into the family folder
+  const f = pop(t, A("j5") + 0.2, 0.45);
+  around(1560, 520, f, 0, () => { rr(-220, -170, 440, 340, 16); fill(GOLD); rr(-220, -200, 180, 40, [10, 10, 0, 0]); fill(GOLD_D); text("FAMILY DOCUMENTS", 0, -100, 30, INK, 800, "center"); ["Policy schedule", "Benefit schedule", "Contact details"].forEach((s, i) => { rr(-180, -60 + i * 70, 360, 56, 8); fill(PAPER); text(s, -150, -22 + i * 70, 26, INK, 600); }); });
+  alpha(seg(t, A("j5") + 0.5 * BY.j5.len, A("j5") + 0.5 * BY.j5.len + 0.5), () => chip("Her customer story is complete", 1560, 860, 1, GREEN, "#fff", 30));
+}
+function sConsultant(t) {
+  office(t);
+  proposalTag(1);
+  person(560, 1060, 1.05, THANDI, t, { armR: t > A("o2") ? 0.9 : 0.2, holdR: t > A("o2") ? holdPaper : null, blinkSeed: 2 });
+  chip("Thandi · appointed consultant", 440, 200, pop(t, A("o1") + 0.4), NAVY, GOLD, 32);
+  // o2: appointment confirmed by the FSP
+  const a = pop(t, A("o2") + 0.45 * BY.o2.len) * (1 - seg(t, A("o3") - 0.2, A("o3") + 0.3));
+  around(1360, 500, a, 0.02, () => { doc(0, 0, 640, 560, "Appointment", 1); text("Authorised activities confirmed", -270, -150, 30, INK, 800); text("by the financial services provider", -270, -105, 28, "#555", 600); ["Explain the policy", "Arrange cover", "Service policyholders"].forEach((s, i) => { tickMark(-240, -20 + i * 80, 0.6); text(s, -200, -8 + i * 80, 30, INK, 600); }); });
+  // o3: no purchase, no unlock fee
+  const n = seg(t, A("o3"), A("o3") + 0.4) * (1 - seg(t, A("o3b") - 0.2, A("o3b") + 0.3));
+  alpha(n, () => [["No package purchase required to apply", 380], ["No payment to unlock a level", 640]].forEach(([s, y], i) => card(1360, y, 860, 180, pop(t, A("o3") + (0.1 + i * 0.4) * BY.o3.len), () => { circle(-350, 0, 46, "#c0392b"); line(-372, -22, -328, 22, "#fff", 9); line(-328, -22, -372, 22, "#fff", 9); text(s, -280, 12, 32, "#ffffff", 700); })));
+  // o3b: responsibilities
+  const r = seg(t, A("o3b"), A("o3b") + 0.4);
+  alpha(r, () => card(1360, 520, 860, 520, 1, () => { text("HER RESPONSIBILITIES", 0, -180, 34, GOLD, 800, "center"); ["Explain the policy accurately", "Service the families she signs", "Keep their records in order"].forEach((s, i) => { const k = pop(t, A("o3b") + (0.35 + i * 0.18) * BY.o3b.len); around(-330, -70 + i * 110, k, 0, () => tickMark(0, 0, 0.8)); alpha(k, () => text(s, -280, -58 + i * 110, 34, "#ffffff", 700)); }); }));
+}
+function sFlow(t) {
+  navyGround(t);
+  proposalTag(1); packageTag(t, 1);
+  // o4: the 13 milestones as a ladder, counted in policies she personally sells and services
+  const lad = seg(t, A("o4"), A("o4") + 0.5) * (1 - seg(t, A("o5") - 0.2, A("o5") + 0.3));
+  alpha(lad, () => {
+    text("13 portfolio milestones", W / 2, 200, 56, "#ffffff", 800, "center");
+    text("counted in active, paid policies she personally sells and services", W / 2, 260, 30, GOLD, 600, "center");
+    for (let i = 0; i < 13; i++) { const p = pop(t, A("o4") + 0.4 * BY.o4.len + i * 0.12); around(240 + i * 112, 820 - i * 34, p, 0, () => { rr(-50, -30, 100, 60 + i * 34, 10); fill(i % 2 ? "#22335a" : CARD); stroke("rgba(224,167,46,.5)", 2); text(String(i + 1), 0, 12, 28, GOLD, 800, "center"); }); }
+  });
+  // o5: one policy -> one paid month -> R80 to the pool
+  const fl = seg(t, A("o5"), A("o5") + 0.4) * (1 - seg(t, A("o6") - 0.2, A("o6") + 0.3));
+  alpha(fl, () => {
+    const st = [["One policy", "doc", 0.15], ["One qualifying monthly payment", "coin", 0.35], ["R80 to the compensation pool", "jar", 0.62]];
+    st.forEach(([s, k, f], i) => { const p = pop(t, A("o5") + f * BY.o5.len, 0.45); around(380 + i * 580, 520, p, 0, () => { circle(0, -40, 150, CARD); flowIcon(k, t); text(s, 0, 190, 32, "#ffffff", 700, "center"); }); if (i) alpha(p, () => { line(380 + (i - 1) * 580 + 180, 480, 380 + i * 580 - 180, 480, GOLD, 8); ctx.beginPath(); ctx.moveTo(380 + i * 580 - 170, 480); ctx.lineTo(380 + i * 580 - 200, 460); ctx.lineTo(380 + i * 580 - 200, 500); fill(GOLD); }); });
+    const drop = seg(t, A("o5") + 0.7 * BY.o5.len, A("o5") + 0.7 * BY.o5.len + 0.8);
+    if (drop > 0 && drop < 1) around(1540, lerp(260, 470, drop), 1, 0, () => { circle(0, 0, 40, GOLD); text("R80", 0, 10, 26, INK, 800, "center"); });
+  });
+  // o6: a family on one policy counts once
+  const fam = seg(t, A("o6"), A("o6") + 0.4) * (1 - seg(t, A("o7") - 0.2, A("o7") + 0.3));
+  alpha(fam, () => {
+    card(720, 540, 880, 560, 1, () => { text("Ayanda's family", 0, -210, 40, GOLD, 800, "center"); [[-300, AYANDA], [-150, MOTHER], [0, { ...AYANDA, top: "#5a8f6b", hair: "short", hairC: "#1f1410" }], [150, { ...MOTHER, top: "#c45b6b", hair: "afro", hairC: "#1f1410" }], [300, { ...AYANDA, top: "#3f9aa8" }]].forEach(([x, o], i) => person(x, 230, i > 1 ? 0.42 : 0.5, o, t, { blinkSeed: i })); });
+    const eq = pop(t, A("o6") + 0.45 * BY.o6.len);
+    text("=", 1260, 570, 120, GOLD, 800, "center");
+    around(1560, 540, eq, 0, () => { doc(0, 0, 360, 440, "Policy", 1); text("1", 0, 80, 180, INK, 800, "center"); text("in Thandi's portfolio", 0, 170, 24, "#555", 600, "center"); });
+  });
+  // o7: the rule, in words
+  const rule = seg(t, A("o7"), A("o7") + 0.5);
+  alpha(rule, () => card(W / 2, 540, 1400, 520, 1, () => {
+    text("Each qualifying active policy paid that month", 0, -150, 40, "#ffffff", 700, "center");
+    text("R80", 0, 0, 150, GOLD, 800, "center"); text("allocated to the monthly compensation pool", 0, 70, 36, "#ffffff", 600, "center");
+    alpha(seg(t, A("o7") + 0.55 * BY.o7.len, A("o7") + 0.55 * BY.o7.len + 0.5), () => chip("Individual pay follows the agreed remuneration terms", 0, 180, 1, NAVY, GOLD, 28));
+  }));
+}
+function flowIcon(k, t) {
+  ctx.save(); ctx.translate(0, -40);
+  if (k === "doc") { rr(-60, -80, 120, 160, 8); fill(PAPER); for (let i = 0; i < 4; i++) { ctx.fillStyle = "#c9ccd4"; ctx.fillRect(-40, -46 + i * 30, 80, 10); } }
+  if (k === "coin") { circle(0, 0, 80, GOLD); circle(0, 0, 64, "#f2c63a"); text("R430", 0, 14, 38, INK, 800, "center"); text("paid", 0, 50, 22, INK, 700, "center"); }
+  if (k === "jar") { rr(-70, -60, 140, 150, 30); fill("rgba(255,255,255,.15)"); stroke("#ffffff", 5); rr(-50, -84, 100, 26, 8); fill("#9aa7b2"); const lvl = 0.35 + 0.1 * Math.sin(t); rr(-64, 84 - 140 * lvl, 128, 140 * lvl, 24); fill(GOLD); text("pool", 0, 40, 26, INK, 800, "center"); }
+  ctx.restore();
+}
+const LEVELS = [[1, 2], [2, 4], [3, 8], [4, 16], [5, 32], [6, 64], [7, 128], [8, 256], [9, 512], [10, 1024], [11, 2048], [12, 4096], [13, 8192]];
+const rand = (n) => "R" + n.toLocaleString("en-US");
+function sLevels(t) {
+  navyGround(t);
+  proposalTag(1); packageTag(t, 1);
+  // groups: levels 1–3 (l2–l3), 4–8 (l4), 9–13 (l5); then the full chart (l6 on)
+  const full = seg(t, A("l6"), A("l6") + 0.8);
+  const groupAt = (lv) => (lv <= 1 ? A("l2") + 0.2 : lv <= 3 ? A("l3") + (lv - 2) * 0.5 * BY.l3.len : lv <= 8 ? A("l4") + 0.45 * BY.l4.len + (lv - 4) * 0.35 : A("l5") + 0.2 * BY.l5.len + (lv - 9) * 0.35);
+  // table geometry: big while groups reveal, compact for the full chart
+  const x0 = lerp(260, 300, full), top = lerp(170, 130, full), rowH = lerp(120, 56, full), fs = lerp(48, 30, full);
+  alpha(seg(t, A("l1"), A("l1") + 0.5), () => {
+    rr(x0, top, 1320, 70, [18, 18, 0, 0]); fill("#22335a");
+    text("Level", x0 + 40, top + 47, 28, "#ffffff", 700); text("Active, paid policies sold & serviced", x0 + 230, top + 47, 28, "#ffffff", 700); text("Monthly pool", x0 + 1290, top + 47, 28, GOLD, 800, "right");
+  });
+  // while grouping, scroll so the active group is in view
+  const groupShift = full >= 1 ? 0 : t < A("l4") ? 0 : t < A("l5") ? -3 * rowH * seg(t, A("l4"), A("l4") + 0.6) : -3 * rowH - 5 * rowH * seg(t, A("l5"), A("l5") + 0.6);
+  ctx.save(); ctx.beginPath(); ctx.rect(x0 - 20, top + 70, 1360, H - top - 200); ctx.clip();
+  LEVELS.forEach(([lv, n], i) => {
+    const p = seg(t, groupAt(lv), groupAt(lv) + 0.4); if (p <= 0) return;
+    const y = top + 70 + i * rowH + groupShift * (1 - full);
+    alpha(p, () => {
+      rr(x0, y, 1320, rowH - 4, 0); fill(i % 2 ? "#1b2945" : "#1f2f50");
+      text(String(lv), x0 + 70, y + rowH * 0.66, fs, GOLD, 800, "center");
+      text(n.toLocaleString("en-US"), x0 + 640, y + rowH * 0.66, fs, "#ffffff", 700, "right");
+      text(rand(n * 80), x0 + 1290, y + rowH * 0.66, fs, "#ffffff", 800, "right");
+    });
+  });
+  ctx.restore();
+  // l2: the sum on the first row
+  alpha(seg(t, A("l2") + 0.45 * BY.l2.len, A("l2") + 0.45 * BY.l2.len + 0.4) * (1 - seg(t, A("l3"), A("l3") + 0.4)), () => chip("2 × R80 = R160", 1720, 300, 1, GOLD, INK, 36));
+  alpha(seg(t, A("l4"), A("l4") + 0.4) * (1 - seg(t, A("l6"), A("l6") + 0.4)), () => chip("×2 each milestone", 1720, 300, 1, NAVY, GOLD, 32));
+  // l7–l10: three things to read the chart by
+  const notes = [["l7", "Snapshots of portfolio size: rows don't stack"], ["l8", "Every qualifying policy adds R80, between milestones too"], ["l9", "Upper rows are arithmetic examples, not predictions"]];
+  notes.forEach(([id, s], i) => { const p = pop(t, A(id) + 0.2); around(1765, 330 + i * 190, p, 0, () => { rr(-140, -80, 280, 160, 20); fill(CARD); stroke(GOLD, 3); circle(-110, -54, 26, GOLD); text(String(i + 1), -110, -44, 28, INK, 800, "center"); const w = s.split(": ").length > 1 ? s.split(": ") : s.split(", "); wrap(s, 0, -20, 250, 22, "#ffffff"); }); });
+  if (t > A("l10")) { const k = 0.5 + 0.5 * Math.sin((t - A("l10")) * 5); alpha(seg(t, A("l10"), A("l10") + 0.4), () => { rr(1476 - 6 * k, 20 - 6 * k, 418 + 12 * k, 76 + 12 * k, 38 + 6 * k); stroke(GOLD, 4); }); }
+}
+function wrap(s, x, y, maxW, size, color, weight = 600, lh = 1.3) {
+  ctx.font = `${weight} ${size}px ${F}`; const words = s.split(" "); let lineS = "", yy = y;
+  for (const w of words) { const test = lineS ? lineS + " " + w : w; if (ctx.measureText(test).width > maxW && lineS) { text(lineS, x, yy, size, color, weight, "center"); lineS = w; yy += size * lh; } else lineS = test; }
+  if (lineS) text(lineS, x, yy, size, color, weight, "center");
+}
+function statementRow(label, value, y, p, strong = false, color = INK) { alpha(p, () => { text(label, -400, y, strong ? 34 : 30, color, strong ? 800 : 600); text(value, 400, y, strong ? 40 : 32, color, 800, "right"); }); }
+function sStatement(t) {
+  ctx.fillStyle = "#d9cdb5"; ctx.fillRect(0, 0, W, H);
+  proposalTag(1); packageTag(t, 1);
+  // Thandi's example statement
+  const st = pop(t, A("m2") + 0.6 * BY.m2.len, 0.45);
+  const shrink = seg(t, A("m7") - 0.2, A("m7") + 0.6);
+  around(lerp(700, 560, shrink), 560, st * lerp(1, 0.82, shrink), -0.01, () => {
+    doc(0, 0, 900, 880, "Example monthly statement · Thandi", 1);
+    statementRow("Qualifying paid policies", "10", -270, seg(t, A("m2") + 0.7 * BY.m2.len, A("m2") + 0.9 * BY.m2.len), true);
+    statementRow("Customer payments  10 × R430", "R4,300", -160, seg(t, A("m3") + 0.3 * BY.m3.len, A("m3") + 0.6 * BY.m3.len));
+    statementRow("Compensation pool  10 × R80", "R800", -80, seg(t, A("m4") + 0.3 * BY.m4.len, A("m4") + 0.6 * BY.m4.len), true, GOLD_D);
+    statementRow("Outside the allocation", "R3,500", 0, seg(t, A("m5") + 0.15 * BY.m5.len, A("m5") + 0.4 * BY.m5.len));
+    alpha(seg(t, A("m5b") + 0.3 * BY.m5b.len, A("m5b") + 0.6 * BY.m5b.len), () => text("Funds the obligations behind the package · not profit", -400, 44, 22, "#7a6a5a", 600));
+    // the progress bar towards 16
+    const pb = seg(t, A("m6"), A("m6") + 0.5);
+    alpha(pb, () => {
+      text("Portfolio progress", -400, 150, 28, INK, 800);
+      rr(-400, 180, 800, 50, 25); fill("#e5e1d6");
+      for (let i = 0; i < 16; i++) { const on = i < 10; rr(-396 + i * 50, 184, 42, 42, 10); fill(on ? (i >= 8 ? GREEN : GOLD) : "#cfc8b8"); }
+      line(-400 + 8 * 50 - 4, 168, -400 + 8 * 50 - 4, 244, INK, 4); text("8", -404 + 8 * 50, 272, 24, INK, 800, "center"); text("16", 396, 272, 24, INK, 800, "right");
+      if (t > A("m6") + 0.6 * BY.m6.len) text("Policies 9 and 10 count too", 0, 330, 28, GREEN, 800, "center");
+    });
+  });
+  // m7: Sipho's own statement
+  const sp = pop(t, A("m7") + 0.3 * BY.m7.len, 0.45);
+  around(1450, 470, sp * 0.82, 0.01, () => {
+    doc(0, 0, 640, 560, "Example statement · Sipho", 1);
+    person(-210, 230, 0.32, SIPHO, t, {});
+    statementRow("", "", 0, 0);
+    text("Qualifying paid policies", -90, -120, 28, INK, 600); text("6", 270, -120, 36, INK, 800, "right");
+    text("Pool  6 × R80", -90, -40, 30, GOLD_D, 800); text("R480", 270, -40, 40, GOLD_D, 800, "right");
+  });
+  // m8: introduced, but no credit
+  const nc = seg(t, A("m8") + 0.3 * BY.m8.len, A("m8") + 0.3 * BY.m8.len + 0.5);
+  alpha(nc, () => { ctx.setLineDash([14, 10]); line(900, 760, 1200, 760, "#7a6a5a", 5); ctx.setLineDash([]); chip("Introduced Sipho → no portfolio credit", 1450, 880, 1, "#c0392b", "#fff", 28); });
+  alpha(seg(t, A("m8b"), A("m8b") + 0.5) * (1 - seg(t, A("m9"), A("m9") + 0.4)), () => chip("Figures come only from families each consultant serves", W / 2, 160, 1, NAVY, GOLD, 30));
+  // m9: back to Ayanda, still R430
+  const ay = pop(t, A("m9") + 0.2, 0.45);
+  around(W / 2, 560, ay, 0, () => { rr(-460, -330, 920, 660, 40); fill(NAVY); ctx.save(); rr(-460, -330, 920, 660, 40); ctx.clip(); person(-180, 380, 0.75, AYANDA, t, { armR: 0.3, holdR: holdFolder }); ctx.restore(); text("Ayanda still pays", 150, -60, 40, "#ffffff", 700, "center"); text("R430", 150, 70, 130, GOLD, 800, "center"); text("per month", 150, 120, 30, "#ffffff", 600, "center"); });
+}
+function sService(t) {
+  const home = t >= A("s3") - 0.6;
+  if (!home) {
+    office(t);
+    person(1180, 900, 0.85, THANDI, t, { seated: true, armR: 0.5, holdR: t < A("s2") + 0.33 * BY.s2.len ? holdPaper : null, blinkSeed: 2 });
+    person(680, 900, 0.85, AYANDA, t, { seated: true, blinkSeed: 0.4 });
+    desk(380, 1160);
+    chip("After the policy is issued", W / 2, 90, pop(t, A("s1") + 0.3), NAVY, GOLD, 38);
+    [["Find a document", 0.05], ["Check an admin query", 0.33], ["Claims → the correct claims contact", 0.62]].forEach(([s, f], i) => { const p = pop(t, A("s2") + f * BY.s2.len); around(1500, 260 + i * 130, p, 0, () => { rr(-330, -50, 660, 100, 24); fill("#ffffff"); stroke(GOLD, 3); tickMark(-280, 0, 0.6); text(s, -240, 12, 28, INK, 700); }); });
+    return;
+  }
+  kitchen(t);
+  person(760, 1000, 0.9, AYANDA, t, { seated: true, armR: 0.6, holdR: holdPhone("#ffffff"), blinkSeed: 0.4 });
+  person(1170, 1000, 0.85, MOTHER, t, { seated: true, armL: 0.35, blinkSeed: 1.3 });
+  kitchenTable(420, 1100);
+  // the open folder
+  around(960, 700, 0.8 * pop(t, A("s3") + 0.3 * BY.s3.len, 0.45), 0, () => { rr(-330, -150, 660, 300, 16); fill(GOLD); ["Policy schedule", "Claims contact", "Benefit schedule"].forEach((s, i) => { rr(-300 + i * 210, -120, 190, 240, 8); fill(PAPER); text(s.split(" ")[0], -205 + i * 210, -60, 24, INK, 800, "center"); text(s.split(" ")[1], -205 + i * 210, -28, 24, INK, 600, "center"); if (t > A("s3") + (0.5 + i * 0.12) * BY.s3.len) tickMark(-205 + i * 210, 50, 0.7); }); });
+  alpha(seg(t, A("s4") + 0.4 * BY.s4.len, A("s4") + 0.4 * BY.s4.len + 0.5), () => chip("The family knows who to call ✓", W / 2, 200, 1, GREEN, "#fff", 40));
+}
+function sMonths(t) {
+  navyGround(t);
+  proposalTag(1); packageTag(t, 1);
+  alpha(seg(t, A("s5"), A("s5") + 0.5), () => text("Calculated month by month", W / 2, 190, 52, "#ffffff", 800, "center"));
+  [["One month", 16, 0.4], ["The next month", 15, 0.7]].forEach(([m, n, f], i) => card(600 + i * 720, 520, 620, 420, pop(t, A("s5") + f * BY.s5.len), () => {
+    text(m.toUpperCase(), 0, -140, 30, GOLD, 800, "center");
+    for (let k = 0; k < 16; k++) { rr(-240 + (k % 8) * 62, -90 + Math.floor(k / 8) * 62, 50, 50, 10); fill(k < n ? GOLD : "rgba(255,255,255,.12)"); }
+    text(`${n} × R80`, 0, 110, 40, "#ffffff", 700, "center"); text(rand(n * 80), 0, 175, 64, GOLD, 800, "center");
+  }));
+  // s6/s7: the family's cover is a separate question
+  alpha(seg(t, A("s6"), A("s6") + 0.5), () => card(W / 2, 880, 1300, 130, 1, () => { text("A missed payment's effect on a family's cover follows the policy terms, separately.", 0, 10, 30, "#ffffff", 600, "center"); }, NAVY));
+  alpha(seg(t, A("s7") + 0.3, A("s7") + 0.8), () => chip("Unpaid that month → no R80 that month", W / 2, 300, 1, "#ffffff", INK, 30));
+}
+function sClose(t) {
+  navyGround(t);
+  const both = t >= A("x4") - 0.3;
+  if (!both) {
+    alpha(seg(t, A("x1"), A("x1") + 0.5), () => text("Your next step", W / 2, 170, 60, "#ffffff", 800, "center"));
+    card(560, 560, 760, 620, pop(t, A("x2") + 0.1), () => {
+      text("FOR FAMILIES", 0, -250, 34, GOLD, 800, "center"); person(-240, 280, 0.5, AYANDA, t, {});
+      ["Visit " + SITE, "or speak to an appointed", "representative. Review:", "· who is covered", "· the benefits", "· the policy terms", "· how to claim"].forEach((s, i) => text(s, -90, -160 + i * 54, i === 0 ? 32 : 28, i === 0 ? GOLD : "#ffffff", i === 0 ? 800 : 600));
+    });
+    card(1360, 560, 760, 620, pop(t, A("x3") + 0.1), () => {
+      text("FOR PROSPECTIVE CONSULTANTS", 0, -250, 34, GOLD, 800, "center"); person(-240, 280, 0.5, THANDI, t, { blinkSeed: 2 });
+      ["Ask EquiGrowth for:", "· the appointment process", "· service responsibilities", "· written remuneration", "  terms"].forEach((s, i) => text(s, -90, -160 + i * 54, i === 0 ? 32 : 28, i === 0 ? GOLD : "#ffffff", i === 0 ? 800 : 600));
+    });
+    alpha(seg(t, A("x3b"), A("x3b") + 0.5), () => chip("Get the details in writing · keep them in the folder", W / 2, 940, 1, GOLD, INK, 30));
+    return;
+  }
+  office(t);
+  person(760, 1060, 1, AYANDA, t, { armR: 0.3, holdR: holdFolder, blinkSeed: 0.4 });
+  person(1160, 1060, 1, THANDI, t, { armL: 0.3, holdL: holdPaper, blinkSeed: 2 });
+  alpha(seg(t, A("x4") + 0.1, A("x4") + 0.6), () => { rr(150, 330, 420, 130, 24); fill("#ffffff"); stroke(GOLD, 3); text("Knows what's in place", 360, 390, 28, INK, 800, "center"); text("and who to call", 360, 430, 26, INK, 600, "center"); });
+  alpha(seg(t, A("x4") + 0.5 * BY.x4.len, A("x4") + 0.5 * BY.x4.len + 0.5), () => { rr(1350, 330, 440, 130, 24); fill("#ffffff"); stroke(GOLD, 3); text("Knows her families, policies", 1570, 390, 26, INK, 800, "center"); text("and monthly figures", 1570, 430, 26, INK, 600, "center"); });
+  alpha(seg(t, A("x5") + 0.3, A("x5") + 0.8), () => chip("One package · consultants who look after their own policyholders", W / 2, 90, 1, NAVY, GOLD, 32));
+}
+function sEnd(t) {
+  navyGround(t);
+  logo(W / 2, 290, 0.52, true, seg(t, A("x6") - 0.3, A("x6") + 1.2));
+  const b = pop(t, A("x6") + 1.2, 0.4);
+  around(W / 2, 600, b, 0, () => { ctx.shadowColor = "rgba(224,167,46,.5)"; ctx.shadowBlur = 50; rr(-380, -70, 760, 140, 70); fill(GOLD); ctx.shadowColor = "transparent"; text(SITE, 0, 22, 60, INK, 800, "center"); });
+  // underwriting line and disclosure stay up to the end, large enough to read
+  alpha(seg(t, A("x6") + 0.8, A("x6") + 1.4), () => {
+    rr(240, 760, 1440, 210, 24); fill("rgba(255,255,255,.07)");
+    text("Underwriter: RMA, as named in EquiGrowth's partnership information.", W / 2, 830, 30, "#e8e8e8", 500, "center");
+    text(DISCLOSURE, W / 2, 890, 34, "#ffffff", 600, "center");
+    text("Terms and conditions apply.", W / 2, 940, 26, "rgba(255,255,255,.6)", 500, "center");
+  });
+}
+
+const SCENES = [["h1", sHome], ["h5", sLogo], ["c1", sCompany], ["p1", sPillars], ["r1", sRoles], ["k1", sPackage], ["k3", sSchedule], ["b1", sBenefits], ["b4", sShop], ["b5", sAssist], ["b7", sDistinction],
+  ["j1", sJoin], ["o1", sConsultant], ["o4", sFlow], ["l1", sLevels], ["m1", sStatement], ["s1", sService], ["s5", sMonths], ["x1", sClose], ["x6", sEnd]];
+const SCENE_FIRST = new Set(SCENES.map(([id]) => id));
+const HOLD = 10;
+
+// ---------- voice ----------
+const RATE = 48000;
+async function loadVoice() {
+  const lines = await (await fetch("voice-film/lines.json")).json();
+  const ac = new OfflineAudioContext(1, RATE, RATE);
+  let prevEnd = 0;
+  await Promise.all(lines.map(async (l) => { l.buf = await ac.decodeAudioData(await (await fetch("voice-film/" + l.file)).arrayBuffer()); }));
+  lines.forEach((l, i) => {
+    const d = l.buf.getChannelData(0), thr = 0.01;
+    let a = 0, b = d.length - 1; while (a < b && Math.abs(d[a]) < thr) a++; while (b > a && Math.abs(d[b]) < thr) b--;
+    l.from = Math.max(0, a / l.buf.sampleRate - 0.02); l.len = (b - a) / l.buf.sampleRate + 0.06;
+    // room to breathe at the opening, a longer pause where a scene changes, a short one inside a scene
+    l.at = i === 0 ? 3.2 : prevEnd + (SCENE_FIRST.has(l.id) ? 1.5 : 0.5);
+    if (l.id === "x6") l.at += 1.2;
+    prevEnd = l.at + l.len;
+  });
+  return lines;
+}
+// captions: each line split at sentence and clause ends, timed by length across the spoken line
+let CAPS = [];
+function buildCaptions() {
+  CAPS = [];
+  for (const l of LINES) {
+    const parts = l.caption.match(/[^.?:,]+[.?:,]?/g).map((s) => s.trim()).filter(Boolean);
+    const merged = []; for (const p of parts) { const last = merged[merged.length - 1]; if (last && (last + " " + p).length < 62 && !/[.?]$/.test(last)) merged[merged.length - 1] = last + " " + p; else merged.push(p); }
+    const total = merged.reduce((n, s) => n + s.length, 0); let at = l.at;
+    for (const s of merged) { const d = (s.length / total) * l.len; CAPS.push([at, at + d, s.replace(/,$/, "")]); at += d; }
+  }
+}
+function captions(t) {
+  const c = CAPS.find(([a, b]) => t >= a && t < b + 0.25); if (!c) return;
+  ctx.font = `700 36px ${F}`; const w = ctx.measureText(c[2]).width + 48;
+  alpha(seg(t, c[0], c[0] + 0.1), () => { rr(W / 2 - w / 2, 1004 - 38, w, 72, 14); fill("rgba(10,14,22,.88)"); text(c[2], W / 2, 1015, 36, "#ffffff", 700, "center"); });
+}
+const fmt = (s) => { const ms = Math.round(s * 1000), h = Math.floor(ms / 3600000), m = Math.floor(ms / 60000) % 60, sec = Math.floor(ms / 1000) % 60; return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")},${String(ms % 1000).padStart(3, "0")}`; };
+const srt = () => CAPS.map(([a, b, s], i) => `${i + 1}\n${fmt(a)} --> ${fmt(b + 0.2)}\n${s}\n`).join("\n");
+
+// ---------- one frame ----------
+function frame(t) {
+  ctx.clearRect(0, 0, W, H);
+  let i = SCENE_AT.findIndex((s) => s > t) - 1; if (i < 0) i = SCENE_AT.length - 1;
+  SCENES[i][1](t);
+  if (!params.has("nocaptions") && i < SCENES.length - 1) captions(t);
+  const u = t - SCENE_AT[i];
+  if (i > 0 && u < 0.45) { const x = (u / 0.45) * (W + 900) - 450; ctx.fillStyle = GOLD; ctx.beginPath(); ctx.moveTo(x - 200, 0); ctx.lineTo(x + 300, 0); ctx.lineTo(x - 100, H); ctx.lineTo(x - 600, H); ctx.fill(); }
+  if (t < 1.2) { ctx.fillStyle = `rgba(0,0,0,${1 - t / 1.2})`; ctx.fillRect(0, 0, W, H); }
+}
+async function mixVoice() {
+  const ac = new OfflineAudioContext(1, Math.ceil(RATE * DURATION), RATE);
+  for (const l of LINES) { const s = ac.createBufferSource(); s.buffer = l.buf; s.connect(ac.destination); s.start(l.at, l.from, l.len); }
+  return ac.startRendering();
+}
+
+// ---------- modes ----------
+const status = document.getElementById("status");
+await Promise.all(["700 60px", "800 60px", "600 30px", "500 30px", "italic 300 60px"].map((f) => document.fonts.load(`${f} Poppins`)));
+LINES = await loadVoice(); LINES.forEach((l) => (BY[l.id] = l));
+SCENE_AT = SCENES.map(([id], i) => (i === 0 ? 0 : A(id) - 0.9));
+DURATION = Math.ceil(E("x6") + HOLD);
+buildCaptions();
+window.timeline = () => ({ DURATION, scenes: SCENES.map(([id], i) => [id, +SCENE_AT[i].toFixed(1)]) });
+window.renderAt = (t) => { frame(t); return t; };
+window.srt = srt;
+if (params.has("play")) {
+  // self-playing preview: the voice plays in sync (browsers need one click to allow sound)
+  status.textContent = "click the video to play with sound";
+  out.addEventListener("click", async () => {
+    const pcm = await mixVoice(), ac = new AudioContext(), src = ac.createBufferSource(); src.buffer = pcm; src.connect(ac.destination);
+    const t0 = ac.currentTime + 0.1; src.start(t0); const loop = () => { const t = ac.currentTime - t0; frame(Math.max(0, Math.min(t, DURATION - 0.01))); if (t < DURATION) requestAnimationFrame(loop); }; loop();
+  }, { once: true });
+  frame(0.01);
+} else if (params.has("render")) status.textContent = await encode();
+else frame(Number(params.get("t") ?? 5));
+
+async function encode() {
+  const cfg = { codec: "avc1.640028", width: W, height: H, bitrate: 3_500_000, framerate: FPS };
+  if (!(await VideoEncoder.isConfigSupported(cfg)).supported) return "this browser cannot encode H.264";
+  const { Muxer, ArrayBufferTarget } = await import("https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/+esm");
+  const acfg = { codec: "mp4a.40.2", sampleRate: RATE, numberOfChannels: 1, bitrate: 128000 };
+  if (!(await AudioEncoder.isConfigSupported(acfg)).supported) return "this browser cannot encode AAC audio";
+  const target = new ArrayBufferTarget(), muxer = new Muxer({ target, video: { codec: "avc", width: W, height: H }, audio: { codec: "aac", numberOfChannels: 1, sampleRate: RATE }, fastStart: "in-memory" });
+  let failed = null;
+  const enc = new VideoEncoder({ output: (c, m) => muxer.addVideoChunk(c, m), error: (e) => (failed = e) });
+  enc.configure(cfg);
+  const N = Math.round(DURATION * FPS);
+  for (let i = 0; i < N; i++) {
+    frame(i / FPS);
+    const vf = new VideoFrame(out, { timestamp: Math.round(i * 1e6 / FPS), duration: Math.round(1e6 / FPS) });
+    enc.encode(vf, { keyFrame: i % 50 === 0 }); vf.close();
+    while (enc.encodeQueueSize > 8) await new Promise((r) => setTimeout(r, 5));
+    if (failed) return `encoder error: ${failed}`;
+    if (i % 25 === 0) status.textContent = `encoding ${Math.round(i / N * 100)}%`;
+  }
+  await enc.flush();
+  status.textContent = "mixing the voice";
+  const pcm = (await mixVoice()).getChannelData(0);
+  const aenc = new AudioEncoder({ output: (c, m) => muxer.addAudioChunk(c, m), error: (e) => (failed = e) });
+  aenc.configure(acfg);
+  for (let i = 0; i < pcm.length; i += 1024) {
+    const data = pcm.slice(i, i + 1024);
+    const ad = new AudioData({ format: "f32-planar", sampleRate: RATE, numberOfFrames: data.length, numberOfChannels: 1, timestamp: Math.round(i * 1e6 / RATE), data });
+    aenc.encode(ad); ad.close();
+  }
+  await aenc.flush();
+  if (failed) return `audio encoder error: ${failed}`;
+  muxer.finalize();
+  const name = `equigrowth-introduction${params.has("nocaptions") ? "-no-captions" : ""}`;
+  await fetch(`/save?file=${name}&name=srt`, { method: "POST", body: srt() });
+  const res = await fetch(`/save?file=${name}`, { method: "POST", body: target.buffer });
+  window.renderDone = await res.text();
+  return window.renderDone;
+}
+</script>
+</body>
+</html>

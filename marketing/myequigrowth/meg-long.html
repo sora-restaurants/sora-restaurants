@@ -1,0 +1,403 @@
+<!doctype html>
+<html lang="en-ZA">
+<head>
+<meta charset="utf-8">
+<title>MyEquiGrowth presentation video</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,500;0,600;0,700;0,800;1,300&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; background: #05070d; color: #ddd; font: 14px system-ui; }
+  #out { display: block; width: 96vw; max-height: 88vh; margin: 2vh auto 0; aspect-ratio: 16 / 9; object-fit: contain; }
+  #bar { text-align: center; padding: 6px; }
+</style>
+</head>
+<body>
+<canvas id="out" width="1920" height="1080"></canvas>
+<div id="bar">?t=12 one frame · ?play preview · ?render encode · &amp;nocaptions · &amp;novoice <span id="status"></span></div>
+<script type="module">
+// MyEquiGrowth presentation video: landscape 1920 x 1080, about 2 min, flat cartoon in the style of meg-reel.html.
+// One scene per voice line in voice-long/; scene times follow the measured voice, so frame(t) stays a pure function
+// of time once the voice is loaded. Facts: the client's deck (plan table, rewards, sign-up). No referral payouts.
+const W = 1920, H = 1080, FPS = 30, GAP = 2.6, HOLD = 8;
+const SITE = "myequigrowth.com";
+const DISCLOSURE = "MyEquiGrowth (Pty) Ltd is a juristic representative of Sibiya Brokers (FSP 46798).";
+const NAVY = "#0e1626", NAVY2 = "#16213a", CARD = "#1b2945", GOLD = "#e0a72e", GOLD_D = "#b9761c", INK = "#141a26", GREEN = "#2f8f4e";
+const F = "Poppins, system-ui, sans-serif";
+const params = new URLSearchParams(location.search);
+const sm = (x) => (x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x));
+const seg = (t, a, b) => sm((t - a) / (b - a));
+const backOut = (x) => { x = Math.min(1, Math.max(0, x)); const c = 1.9; return 1 + (c + 1) * (x - 1) ** 3 + c * (x - 1) ** 2; };
+const pop = (t, a, d = 0.3) => (t < a ? 0 : backOut((t - a) / d));
+const lerp = (a, b, k) => a + (b - a) * k;
+
+const out = document.getElementById("out"), ctx = out.getContext("2d");
+const rr = (x, y, w, h, r) => { ctx.beginPath(); ctx.roundRect(x, y, w, h, r); };
+const fill = (c) => { ctx.fillStyle = c; ctx.fill(); };
+const stroke = (c, w) => { ctx.strokeStyle = c; ctx.lineWidth = w; ctx.stroke(); };
+const circle = (x, y, r, c) => { ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); fill(c); };
+const ell = (x, y, rx, ry, c, rot = 0) => { ctx.beginPath(); ctx.ellipse(x, y, rx, ry, rot, 0, Math.PI * 2); fill(c); };
+const text = (s, x, y, size, color, weight = 700, align = "left", style = "") => { ctx.font = `${style} ${weight} ${size}px ${F}`; ctx.fillStyle = color; ctx.textAlign = align; ctx.textBaseline = "alphabetic"; ctx.fillText(s, x, y); };
+const alpha = (a, fn) => { if (a <= 0.001) return; ctx.save(); ctx.globalAlpha *= Math.min(1, a); fn(); ctx.restore(); };
+const around = (x, y, s, r, fn) => { ctx.save(); ctx.translate(x, y); ctx.rotate(r); ctx.scale(s, s); fn(); ctx.restore(); };
+const goldGrad = (x0, x1) => { const g = ctx.createLinearGradient(x0, 0, x1, 0); g.addColorStop(0, "#c47a1c"); g.addColorStop(0.35, "#b36d1a"); g.addColorStop(0.75, "#f2c63a"); g.addColorStop(1, "#d39b22"); return g; };
+
+// ---------- the client's logo, redrawn from their file (made for a dark background) ----------
+function logo(x, y, s, tagline = true, build = 1) {
+  around(x, y, s, 0, () => {
+    ctx.translate(-1000, -325);
+    [[97, 313], [184, 259], [270, 206]].forEach(([bx, top], i) => { const k = seg(build, i * 0.15, i * 0.15 + 0.35), h = (510 - top) * k; ctx.fillStyle = goldGrad(bx, bx + 32); ctx.fillRect(bx, 510 - h, 32, h); });
+    alpha(seg(build, 0.3, 0.7), () => {
+      ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 9; ctx.lineJoin = "round"; ctx.beginPath(); ctx.moveTo(300, 556); ctx.lineTo(25, 556); ctx.lineTo(25, 300); ctx.lineTo(345, 102); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(374, 86); ctx.lineTo(312, 98); ctx.lineTo(344, 140); ctx.closePath(); fill("#ffffff");
+    });
+    alpha(seg(build, 0.45, 0.85), () => {
+      ctx.font = `700 228px ${F}`; ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+      ctx.fillStyle = "#ffffff"; ctx.fillText("EQUI", 352, 408);
+      const gx = 352 + ctx.measureText("EQUI").width + 40; ctx.fillStyle = goldGrad(gx, 1955); ctx.fillText("GROWTH", gx, 408);
+      if (tagline) text("Empowering Your Financial Journey", 356, 538, 96, "rgba(255,255,255,.85)", 300, "left", "italic");
+    });
+  });
+}
+
+// ---------- people ----------
+function presenter(x, y, s, t, talk, gesture) {
+  around(x, y, s, 0, () => {
+    ctx.translate(Math.sin(t * 1.3) * 6, 0);
+    rr(-250, 260, 500, 520, 160); fill("#1f3b63");
+    ctx.beginPath(); ctx.moveTo(-70, 262); ctx.lineTo(0, 420); ctx.lineTo(70, 262); fill("#f6efe3");
+    ctx.beginPath(); ctx.moveTo(-70, 262); ctx.lineTo(-20, 470); ctx.lineTo(-120, 300); fill("#183052");
+    ctx.beginPath(); ctx.moveTo(70, 262); ctx.lineTo(20, 470); ctx.lineTo(120, 300); fill("#183052");
+    circle(0, 480, 11, GOLD);
+    rr(-48, 160, 96, 120, 30); fill("#8a5a3c");
+    ell(0, 40, 150, 175, "#2a1a14"); ell(0, 60, 128, 150, "#9a6646");
+    ell(-128, 70, 22, 34, "#8a5a3c"); ell(128, 70, 22, 34, "#8a5a3c");
+    ctx.beginPath(); ctx.ellipse(0, -10, 140, 110, 0, Math.PI, 0); fill("#2a1a14");
+    ell(-110, 10, 40, 90, "#2a1a14", 0.25); ell(110, 10, 40, 90, "#2a1a14", -0.25);
+    const blink = (t % 3.7) < 0.12 ? 0.15 : 1;
+    for (const dx of [-48, 48]) { ell(dx, 50, 15, 17 * blink, "#1c120e"); circle(dx + 5, 44, blink > 0.5 ? 5 : 0, "#fff"); ctx.strokeStyle = "#2a1a14"; ctx.lineWidth = 8; ctx.lineCap = "round"; ctx.beginPath(); ctx.moveTo(dx - 24, 14); ctx.quadraticCurveTo(dx, 2, dx + 24, 12); ctx.stroke(); }
+    ell(-78, 104, 22, 12, "rgba(220,90,80,.25)"); ell(78, 104, 22, 12, "rgba(220,90,80,.25)");
+    ctx.beginPath(); ctx.moveTo(0, 70); ctx.quadraticCurveTo(-10, 96, 4, 100); stroke("#7b4c30", 6);
+    const m = 6 + 26 * talk;
+    ell(0, 140, 40, m, "#5a1d1d"); ell(0, 140 - m * 0.55, 34, Math.max(3, m * 0.35), "#ffffff");
+    circle(-130, 110, 9, GOLD); circle(130, 110, 9, GOLD);
+    rr(-262, 330, 80, 330, 40); fill("#1f3b63");
+    ctx.save(); ctx.translate(210, 340); ctx.rotate(-0.15 - gesture * 1.2); rr(-40, 0, 80, 300, 40); fill("#1f3b63"); circle(0, 318, 46, "#9a6646"); ctx.restore();
+  });
+}
+// pictogram person, feet at (x, y); kind = adult | child | elder
+function figure(x, y, kind, color, s = 1) {
+  if (s <= 0) return;
+  around(x, y, s * (kind === "child" ? 0.68 : 1), 0, () => {
+    rr(-46, -150, 92, 150, [46, 46, 14, 14]); fill(color);
+    circle(0, -196, 40, kind === "elder" ? "#8a5a3c" : "#a06a48");
+    ctx.beginPath(); ctx.arc(0, -204, 42, Math.PI * 1.05, Math.PI * 1.95); fill(kind === "elder" ? "#d8d8d8" : "#2a1a14");
+    if (kind === "elder") { ctx.beginPath(); ctx.moveTo(62, -70); ctx.lineTo(62, 0); stroke("#e9dcc4", 8); }
+  });
+}
+function phone(x, y, s, rot, screen) {
+  around(x, y, s, rot, () => { rr(-110, -210, 220, 420, 30); fill("#11151c"); rr(-98, -192, 196, 384, 20); fill("#ffffff"); screen(); });
+}
+
+// ---------- shared pieces ----------
+function navyGround(t) {
+  const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, NAVY2); g.addColorStop(1, NAVY); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = "rgba(224,167,46,.05)"; for (let i = 0; i < 11; i++) { const x = ((i * 210 + t * 22) % (W + 300)) - 150; ctx.fillRect(x, 0, 60, H); }
+}
+function heading(s, u, y = 110) { alpha(seg(u, 0.1, 0.5), () => text(s, W / 2, y, 52, GOLD, 800, "center")); }
+function footnote(s, u, at = 0.6) { alpha(seg(u, at, at + 0.5), () => text(s, W / 2, 935, 26, "rgba(255,255,255,.6)", 500, "center")); }
+function card(cx, cy, w, h, p, fn, border = "rgba(224,167,46,.55)") {
+  if (p > 0) around(cx, cy, p, 0, () => { rr(-w / 2, -h / 2, w, h, 36); fill(CARD); stroke(border, 3); fn(); });
+}
+
+// ---------- scene 0: presenter in a living room, the question, the name ----------
+function livingRoom() {
+  ctx.fillStyle = "#efe2c8"; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = "#e6d4b2"; for (let x = 0; x < W; x += 90) ctx.fillRect(x, 0, 4, 760);
+  ctx.fillStyle = "#b98d5e"; ctx.fillRect(0, 760, W, 320);
+  rr(90, 170, 240, 180, 10); fill("#7a4a2a"); rr(104, 184, 212, 152, 6); fill("#cfe3ef");
+  figure(175, 320, "adult", "#d07b4a", 0.45); figure(225, 320, "child", "#5a8f6b", 0.45); figure(270, 320, "adult", "#3a6ea5", 0.45);
+  ctx.fillStyle = "#3a2a20"; ctx.fillRect(1010, 300, 10, 470); ctx.beginPath(); ctx.moveTo(945, 300); ctx.lineTo(1085, 300); ctx.lineTo(1050, 200); ctx.lineTo(980, 200); fill(GOLD);
+  rr(60, 610, 140, 160, 16); fill("#b35a3a"); for (const [dx, r] of [[-40, -0.5], [0, 0], [40, 0.5], [-20, -0.2], [20, 0.25]]) ell(130 + dx, 530, 26, 90, "#3f7a52", r);
+  rr(240, 640, 700, 220, 60); fill("#6d8fae"); rr(240, 580, 700, 130, 50); fill("#7c9dbb");
+}
+function scene0(t, u, L) {
+  livingRoom();
+  around(590, 0, lerp(1.05, 1, seg(u, 0, 3)), 0, () => presenter(0, 300, 0.95, t, talking(t), seg(u, 0.42 * L, 0.42 * L + 0.5) - seg(u, L - 0.5, L)));
+  // right-hand panel: the question, then the company name
+  const q = pop(u, 0.6, 0.35) * (1 - seg(u, 0.4 * L - 0.3, 0.4 * L));
+  if (q > 0) around(1460, 400, q, 0, () => {
+    rr(-400, -150, 800, 300, 44); fill(NAVY); ctx.beginPath(); ctx.moveTo(-400, 20); ctx.lineTo(-470, 60); ctx.lineTo(-400, 70); fill(NAVY);
+    text("Who would you want", 0, -20, 64, "#ffffff", 700, "center"); text("on your plan?", 0, 70, 64, GOLD, 800, "center");
+  });
+  const l = pop(u, 0.4 * L, 0.4);
+  if (l > 0) around(1460, 400, l, 0, () => { rr(-420, -170, 840, 340, 44); fill(NAVY); logo(0, -10, 0.38, true, seg(u, 0.4 * L, 0.4 * L + 1.2)); });
+  if (u > 0.62 * L) alpha(seg(u, 0.62 * L, 0.62 * L + 0.4), () => { rr(1160, 610, 600, 90, 45); fill(GOLD); text("Funeral cover for your family", 1460, 668, 34, INK, 800, "center"); });
+}
+
+// ---------- scene 1: the three ways to build a plan ----------
+const KIDS = ["#5a8f6b", "#d07b4a", "#8a6bb8", "#3f9aa8", "#c45b6b", "#7aa04a"];
+function scene1(t, u, L) {
+  navyGround(t); heading("THREE WAYS TO BUILD YOUR PLAN", u);
+  const a = pop(u, 0.15 * L), b = pop(u, 0.27 * L), c = pop(u, 0.5 * L);
+  const plan = (title, sub) => { text(title, -250, -230, 44, "#ffffff", 800); text(sub, -250, -186, 26, GOLD, 600); };
+  card(340, 540, 540, 620, a, () => { plan("Member only", "Cover for yourself"); figure(0, 200, "adult", "#3a6ea5", 0.9 * pop(u, 0.15 * L + 0.2)); });
+  card(960, 540, 540, 620, b, () => {
+    plan("Family", "You, your spouse + up to 6 children");
+    figure(-170, 120, "adult", "#3a6ea5", 0.6); figure(-100, 120, "adult", "#d07b4a", 0.6);
+    KIDS.forEach((col, i) => figure(-20 + i * 46, 120, "child", col, 0.6 * pop(u, 0.33 * L + i * 0.25)));
+    text("1 + 1 + 6", 0, 220, 40, GOLD, 800, "center");
+  });
+  card(1580, 540, 540, 620, c, () => {
+    plan("Extended family", "Adds parents + extended family");
+    figure(-200, 30, "adult", "#3a6ea5", 0.45); figure(-150, 30, "adult", "#d07b4a", 0.45);
+    KIDS.forEach((col, i) => figure(-90 + i * 36, 30, "child", col, 0.45));
+    [0, 1, 2, 3].forEach((i) => figure(-200 + i * 50, 190, "elder", ["#7a6a5a", "#9a7a5a", "#6a7a8a", "#8a6a7a"][i], 0.45 * pop(u, 0.68 * L + i * 0.2)));
+    [0, 1, 2, 3].forEach((i) => figure(30 + i * 50, 190, "adult", ["#5a8f6b", "#8a6bb8", "#3f9aa8", "#c45b6b"][i], 0.45 * pop(u, 0.85 * L + i * 0.2)));
+    alpha(seg(u, 0.7 * L, 0.75 * L), () => text("up to 4 parents", -125, 240, 22, "#d8d8d8", 600, "center"));
+    alpha(seg(u, 0.87 * L, 0.92 * L), () => text("up to 4 extended", 105, 240, 22, "#d8d8d8", 600, "center"));
+  });
+}
+
+// ---------- scene 2: ages and the four cover options ----------
+function medal(x, y, p, opt, amount) {
+  if (p > 0) around(x, y, p, 0, () => {
+    ctx.shadowColor = "rgba(224,167,46,.4)"; ctx.shadowBlur = 30; circle(0, 0, 125, GOLD); ctx.shadowColor = "transparent";
+    circle(0, 0, 108, "#f2c63a"); ctx.beginPath(); ctx.arc(0, 0, 108, 0, Math.PI * 2); stroke(GOLD_D, 4);
+    text(`OPTION ${opt}`, 0, -30, 24, INK, 700, "center"); text(amount, 0, 30, 46, INK, 800, "center"); text("cover", 0, 66, 22, INK, 600, "center");
+  });
+}
+function scene2(t, u, L) {
+  navyGround(t); heading("FOUR COVER OPTIONS", u);
+  alpha(seg(u, 0.05 * L, 0.1 * L), () => { rr(660, 150, 600, 70, 35); fill("rgba(255,255,255,.08)"); text("Main members aged 18 to 84", 960, 198, 32, "#ffffff", 600, "center"); });
+  const rows = [[400, 0.25, "Ages 18–64", ["R10 000", "R15 000", "R20 000", "R30 000"]], [720, 0.62, "Ages 65–84", ["R10 000", "R15 000", "R20 000", "R50 000"]]];
+  for (const [y, at, label, amts] of rows) {
+    alpha(seg(u, at * L, at * L + 0.4), () => { rr(120, y - 55, 380, 110, 55); fill(CARD); stroke(GOLD, 3); text(label, 310, y + 16, 44, "#ffffff", 800, "center"); });
+    amts.forEach((a, i) => medal(720 + i * 300, y, pop(u, at * L + 0.4 + i * 0.45), i + 1, a));
+  }
+}
+
+// ---------- scenes 3 & 4: monthly premium tables, exactly as in the client's plan table ----------
+const TABLES = {
+  young: { title: "MONTHLY PREMIUMS · MAIN MEMBER 18–64", cover: ["R10 000", "R15 000", "R20 000", "R30 000"],
+    rows: [["Member only", ["R70", "R100", "R140", "R200"]], ["Member, spouse + up to 6 children", ["R120", "R160", "R200", "R260"]], ["+ up to 4 parents & 4 extended", ["R230", "R320", "R420", "R550"]]] },
+  old: { title: "MONTHLY PREMIUMS · MAIN MEMBER 65–84", cover: ["R10 000", "R15 000", "R20 000", "R50 000"],
+    rows: [["Member only", ["R100", "R150", "R250", "R350"]], ["Member, spouse + up to 6 children", ["R200", "R300", "R400", "R450"]], ["+ up to 4 parents & 4 extended", ["R300", "R400", "R550", "R700"]]] },
+};
+function premiumTable(t, u, L, tb, beats) {
+  navyGround(t); heading(tb.title, u);
+  const x0 = 140, lw = 640, cw = 260, top = 200;
+  alpha(seg(u, 0.2, 0.7), () => {
+    rr(x0, top, lw + cw * 4, 130, [24, 24, 0, 0]); fill("#22335a");
+    text("Plan", x0 + 40, top + 80, 34, "#ffffff", 700);
+    tb.cover.forEach((c, i) => { const cx = x0 + lw + cw * i + cw / 2; text(`Option ${i + 1}`, cx, top + 52, 26, "rgba(255,255,255,.7)", 600, "center"); text(c, cx, top + 98, 34, GOLD, 800, "center"); });
+  });
+  tb.rows.forEach(([name, prices], r) => {
+    const p = seg(u, beats[r] * L, beats[r] * L + 0.4), y = top + 130 + r * 160;
+    alpha(p, () => {
+      ctx.save(); ctx.translate((1 - p) * -40, 0);
+      rr(x0, y, lw + cw * 4, 156, r === 2 ? [0, 0, 24, 24] : 0); fill(r % 2 ? "#1b2945" : "#1f2f50");
+      text(name, x0 + 40, y + 92, 32, "#ffffff", 700);
+      prices.forEach((pr, i) => {
+        const cx = x0 + lw + cw * i + cw / 2;
+        if (i === 0) { const g = 0.6 + 0.4 * Math.sin((u - beats[r] * L) * 4); rr(cx - 105, y + 30, 210, 96, 48); fill(`rgba(224,167,46,${0.25 + 0.2 * g})`); }
+        text(pr, cx, y + 96, 50, "#ffffff", 800, "center");
+      });
+      ctx.restore();
+    });
+  });
+  footnote("Premiums per month, from MyEquiGrowth's plan table. Terms and conditions apply.", u, 1.5);
+}
+const scene3 = (t, u, L) => premiumTable(t, u, L, TABLES.young, [0.32, 0.62, 0.82]);
+const scene4 = (t, u, L) => premiumTable(t, u, L, TABLES.old, [0.25, 0.6, 0.8]);
+
+// ---------- scene 5: value-added rewards ----------
+function icon(kind) {
+  if (kind === "cart") { ctx.beginPath(); ctx.moveTo(-80, -50); ctx.lineTo(-50, -50); ctx.lineTo(-20, 40); ctx.lineTo(70, 40); ctx.lineTo(90, -20); ctx.lineTo(-40, -20); stroke(INK, 12); circle(-10, 70, 14, INK); circle(60, 70, 14, INK); }
+  if (kind === "cross") { rr(-25, -75, 50, 150, 10); fill(GREEN); rr(-75, -25, 150, 50, 10); fill(GREEN); }
+  if (kind === "voucher") { rr(-95, -55, 190, 110, 14); fill(INK); ctx.setLineDash([10, 8]); ctx.beginPath(); ctx.moveTo(30, -50); ctx.lineTo(30, 50); stroke(GOLD, 4); ctx.setLineDash([]); text("%", -30, 22, 64, GOLD, 800, "center"); }
+  if (kind === "ball") { circle(0, 0, 75, "#ffffff"); ctx.beginPath(); ctx.arc(0, 0, 75, 0, Math.PI * 2); stroke(INK, 6); for (let i = 0; i < 5; i++) { const a = i * 1.2566 - 1.57; circle(Math.cos(a) * 48, Math.sin(a) * 48, 16, INK); } circle(0, 0, 22, INK); }
+}
+function scene5(t, u, L) {
+  navyGround(t); heading("VALUE-ADDED REWARDS", u);
+  alpha(seg(u, 0.05 * L, 0.12 * L), () => text("Depending on your package", W / 2, 175, 32, "#ffffff", 600, "center"));
+  const tiles = [["cart", "Grocery", "coupons", 0.3], ["cross", "Pharmacy", "coupons", 0.38], ["voucher", "Value & discount", "vouchers", 0.55], ["ball", "Premiership", "ticket discounts", 0.82]];
+  tiles.forEach(([k, a, b, at], i) => card(330 + i * 420, 540, 380, 470, pop(u, at * L), () => {
+    circle(0, -70, 120, "#fff6df"); around(0, -70, 0.9 + 0.05 * Math.sin(t * 3 + i), 0, () => icon(k));
+    text(a, 0, 120, 38, "#ffffff", 800, "center"); text(b, 0, 168, 32, GOLD, 700, "center");
+  }));
+  footnote("At participating stores. Benefits depend on your package.", u, 0.6 * L);
+}
+
+// ---------- scene 6: 24/7 home assist ----------
+function scene6(t, u, L) {
+  ctx.fillStyle = "#e4ecf2"; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = "#cfdbe4"; for (let y = 0; y < 780; y += 80) ctx.fillRect(0, y, W, 3);
+  ctx.fillStyle = "#9aa7b2"; ctx.fillRect(0, 780, W, 300);
+  // the leak, which stops once the expert arrives
+  const fixed = seg(u, 0.85 * L, 0.85 * L + 1);
+  ctx.fillStyle = "#6c7a86"; ctx.fillRect(200, 0, 40, 430); ctx.fillRect(200, 410, 300, 40); circle(500, 430, 34, "#55636e");
+  for (let i = 0; i < 9; i++) { const ph = (t * 1.6 + i / 9) % 1; ell(530 + Math.sin(i * 7) * 30, 470 + ph * 330, 10, 18, `rgba(70,150,220,${(1 - ph) * (1 - fixed)})`); }
+  ell(560, 830, 260 * seg(u, 0, 3) * (1 - 0.5 * fixed), 34, "rgba(70,150,220,.45)");
+  figure(1000, 860, "adult", "#3a6ea5", 2.2);
+  phone(910, 450, 0.85, -0.2, () => {
+    text("24/7", 0, -90, 60, INK, 800, "center"); text("HOME ASSIST", 0, -40, 24, GOLD_D, 800, "center");
+    circle(0, 60, 56 * (1 + 0.12 * Math.sin(t * 10)), GREEN); text("✆", 0, 82, 64, "#fff", 700, "center");
+  });
+  for (let i = 0; i < 3; i++) { const ph = (t * 1.2 + i / 3) % 1; ctx.beginPath(); ctx.arc(910, 450, 140 + ph * 140, -1.2, -0.2); stroke(`rgba(47,143,78,${1 - ph})`, 6); }
+  // the expert walks in with a toolbox
+  const walk = seg(u, 0.6 * L, 0.6 * L + 2);
+  if (walk > 0) { const x = lerp(2100, 1500, walk), bob = Math.abs(Math.sin(u * 8)) * 10 * (walk < 1 ? 1 : 0); figure(x, 860 - bob, "adult", "#e07a2e", 2.2); rr(x - 150, 720 - bob, 90, 60, 8); fill("#c0392b"); rr(x - 130, 705 - bob, 50, 20, 6); fill("#7f2a21"); }
+  const tag = pop(u, 0.1, 0.35);
+  if (tag > 0) around(W / 2, 90, tag, 0, () => { rr(-260, -50, 520, 100, 50); fill(NAVY); text("24/7 HOME ASSIST", 0, 16, 44, GOLD, 800, "center"); });
+  const ok = pop(u, 0.6 * L + 2, 0.35);
+  if (ok > 0) around(1450, 260, ok, 0, () => { rr(-330, -55, 660, 110, 55); fill(GREEN); text("✓ Qualified expert arranged", 0, 16, 40, "#fff", 800, "center"); });
+}
+
+// ---------- scene 7: how to sign up ----------
+function scene7(t, u, L) {
+  navyGround(t); heading("HOW TO SIGN UP", u);
+  const steps = [["Go to the website", "and choose Sign up", 0.12], ["Fill in your", "personal details", 0.3], ["Add your active mobile", "number and email", 0.45], ["Complete your profile,", "incl. bank details", 0.72]];
+  const step = steps.filter(([, , at]) => u >= at * L).length;
+  // laptop with the sign-up form filling in step by step
+  around(600, 560, pop(u, 0.2), 0, () => {
+    rr(-460, -300, 920, 580, 30); fill("#2a2f3a"); rr(-430, -270, 860, 520, 12); fill("#f5f6f8");
+    rr(-430, -270, 860, 60, [12, 12, 0, 0]); fill("#e2e5ea"); rr(-330, -255, 560, 32, 16); fill("#ffffff"); text(SITE, -310, -230, 20, "#555", 600);
+    text(step >= 1 ? "Sign up" : "Welcome", -380, -150, 40, INK, 800);
+    ["Full name", "ID number", "Mobile number", "Email address", "Bank details"].forEach((f, i) => {
+      const need = i < 2 ? 2 : i < 4 ? 3 : 4, y = -110 + i * 66;
+      text(f, -380, y + 6, 18, "#666", 600); rr(-150, y - 22, 500, 44, 10); fill("#ffffff"); stroke("#cfd3da", 2);
+      if (step >= need) { const k = seg(u, steps[need - 1][2] * L + i * 0.3, steps[need - 1][2] * L + i * 0.3 + 0.8); rr(-135, y - 7, 360 * k, 14, 7); fill("#9aa3b2"); }
+    });
+    rr(-780 / 2 + 400, 230, 200, 0, 0);
+    ctx.beginPath(); ctx.moveTo(-520, 280); ctx.lineTo(520, 280); ctx.lineTo(560, 320); ctx.lineTo(-560, 320); ctx.closePath(); fill("#3a404d");
+  });
+  steps.forEach(([a, b, at], i) => {
+    const p = pop(u, at * L); if (p <= 0) return;
+    around(1450, 300 + i * 150, p, 0, () => {
+      rr(-330, -60, 660, 120, 30); fill(i < step - 1 ? "#22335a" : CARD); stroke(i === step - 1 ? GOLD : "rgba(224,167,46,.35)", 3);
+      circle(-260, 0, 38, GOLD); text(String(i + 1), -260, 15, 40, INK, 800, "center");
+      text(a, -200, -8, 32, "#ffffff", 700); text(b, -200, 34, 28, GOLD, 600);
+    });
+  });
+}
+
+// ---------- scene 8: end card with the website and the FSP disclosure ----------
+function scene8(t, u) {
+  navyGround(t);
+  logo(W / 2, 270, 0.5, true, seg(u, 0.1, 1.3));
+  const a = pop(u, 1.0, 0.35);
+  if (a > 0) around(W / 2, 560, a, 0, () => text("Compare the plans. See who you can cover.", 0, 0, 60, "#ffffff", 800, "center"));
+  const b = pop(u, 1.8, 0.4);
+  if (b > 0) around(W / 2, 710, b * (1 + 0.02 * Math.sin(t * 5)), 0, () => { ctx.shadowColor = "rgba(224,167,46,.5)"; ctx.shadowBlur = 50; rr(-380, -70, 760, 140, 70); fill(GOLD); ctx.shadowColor = "transparent"; text(SITE, 0, 22, 60, INK, 800, "center"); });
+  // the disclosure stays up to the end, large enough to read on a screen
+  alpha(seg(u, 0.8, 1.3), () => { rr(260, 880, 1400, 130, 24); fill("rgba(255,255,255,.07)"); text(DISCLOSURE, W / 2, 935, 32, "#e8e8e8", 500, "center"); text("Terms and conditions apply.", W / 2, 985, 28, "rgba(255,255,255,.65)", 500, "center"); });
+}
+
+const SCENES = [scene0, scene1, scene2, scene3, scene4, scene5, scene6, scene7, scene8];
+
+// ---------- voice: each line placed after the previous one with a pause; scenes start just before their line ----------
+const RATE = 48000;
+let LINES = [], START = [], DURATION = 130, CAPS = [];
+async function loadVoice() {
+  const lines = await (await fetch("voice-long/lines.json")).json();
+  const ac = new OfflineAudioContext(1, RATE, RATE);
+  let prevEnd = 0.8 - GAP;
+  for (const l of lines) {
+    const buf = await ac.decodeAudioData(await (await fetch("voice-long/" + l.file)).arrayBuffer());
+    const d = buf.getChannelData(0), thr = 0.01;
+    let a = 0, b = d.length - 1; while (a < b && Math.abs(d[a]) < thr) a++; while (b > a && Math.abs(d[b]) < thr) b--;
+    l.buf = buf; l.from = Math.max(0, a / buf.sampleRate - 0.02); l.len = (b - a) / buf.sampleRate + 0.06;
+    l.at = prevEnd + GAP; prevEnd = l.at + l.len;
+  }
+  return lines;
+}
+// captions: each line's text split at sentence and clause ends, timed by length across the spoken line
+function buildCaptions() {
+  CAPS = [];
+  for (const l of LINES.slice(0, -1)) {
+    const parts = l.caption.match(/[^.?,]+[.?,]?/g).map((s) => s.trim()).filter(Boolean);
+    const merged = []; for (const p of parts) { const last = merged[merged.length - 1]; if (last && (last + " " + p).length < 58 && !/[.?]$/.test(last)) merged[merged.length - 1] = last + " " + p; else merged.push(p); }
+    const total = merged.reduce((n, s) => n + s.length, 0); let at = l.at;
+    for (const s of merged) { CAPS.push([at, s.replace(/,$/, "")]); at += (s.length / total) * l.len; }
+    CAPS.push([l.at + l.len + 0.3, ""]);
+  }
+}
+function captions(t) {
+  let i = CAPS.findIndex(([at]) => at > t) - 1; if (i < 0) return;
+  const [at, line] = CAPS[i]; if (!line) return;
+  ctx.font = `700 38px ${F}`; const w = ctx.measureText(line).width + 48;
+  alpha(seg(t, at, at + 0.12), () => { rr(W / 2 - w / 2, 1000 - 40, w, 76, 14); fill("rgba(10,14,22,.88)"); text(line, W / 2, 1012, 38, "#ffffff", 700, "center"); });
+}
+const talking = (t) => (LINES[0] && t >= LINES[0].at && t <= LINES[0].at + LINES[0].len ? 0.25 + 0.75 * Math.abs(Math.sin(t * 13) * Math.sin(t * 7.3)) : 0);
+
+function frame(t) {
+  ctx.clearRect(0, 0, W, H);
+  let i = START.findIndex((s) => s > t) - 1; if (i < 0) i = START.length - 1;
+  SCENES[i](t, t - START[i], LINES[i].len);
+  if (!params.has("nocaptions") && i < SCENES.length - 1) captions(t);
+  const u = t - START[i];
+  if (i > 0 && u < 0.4) { const x = (u / 0.4) * (W + 900) - 450; ctx.fillStyle = GOLD; ctx.beginPath(); ctx.moveTo(x - 200, 0); ctx.lineTo(x + 300, 0); ctx.lineTo(x - 100, H); ctx.lineTo(x - 600, H); ctx.fill(); }
+}
+async function mixVoice() {
+  const ac = new OfflineAudioContext(1, Math.ceil(RATE * DURATION), RATE);
+  for (const l of LINES) { const s = ac.createBufferSource(); s.buffer = l.buf; s.connect(ac.destination); s.start(l.at, l.from, l.len); }
+  return ac.startRendering();
+}
+
+// ---------- modes ----------
+const status = document.getElementById("status");
+await Promise.all(["700 60px", "800 60px", "600 30px", "500 30px", "italic 300 60px"].map((f) => document.fonts.load(`${f} Poppins`)));
+LINES = await loadVoice();
+START = LINES.map((l, i) => (i === 0 ? 0 : l.at - 0.6));
+DURATION = Math.ceil(LINES.at(-1).at + LINES.at(-1).len + HOLD);
+buildCaptions();
+window.timeline = () => ({ DURATION, START: START.map((s) => +s.toFixed(2)), lens: LINES.map((l) => +l.len.toFixed(2)) });
+window.renderAt = (t) => { frame(t); return t; };
+if (params.has("play")) { const start = performance.now(); const loop = () => { frame(((performance.now() - start) / 1000) % DURATION); requestAnimationFrame(loop); }; loop(); }
+else if (params.has("render")) status.textContent = await encode();
+else frame(Number(params.get("t") ?? 5));
+
+async function encode() {
+  const cfg = { codec: "avc1.640028", width: W, height: H, bitrate: 8_000_000, framerate: FPS };
+  if (!(await VideoEncoder.isConfigSupported(cfg)).supported) return "this browser cannot encode H.264";
+  const { Muxer, ArrayBufferTarget } = await import("https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/+esm");
+  const voice = !params.has("novoice");
+  const acfg = { codec: "mp4a.40.2", sampleRate: RATE, numberOfChannels: 1, bitrate: 128000 };
+  if (voice && !(await AudioEncoder.isConfigSupported(acfg)).supported) return "this browser cannot encode AAC audio";
+  const target = new ArrayBufferTarget(), muxer = new Muxer({ target, video: { codec: "avc", width: W, height: H },
+    ...(voice ? { audio: { codec: "aac", numberOfChannels: 1, sampleRate: RATE } } : {}), fastStart: "in-memory" });
+  let failed = null;
+  const enc = new VideoEncoder({ output: (c, m) => muxer.addVideoChunk(c, m), error: (e) => (failed = e) });
+  enc.configure(cfg);
+  for (let i = 0; i < DURATION * FPS; i++) {
+    frame(i / FPS);
+    const vf = new VideoFrame(out, { timestamp: Math.round(i * 1e6 / FPS), duration: Math.round(1e6 / FPS) });
+    enc.encode(vf, { keyFrame: i % 60 === 0 }); vf.close();
+    while (enc.encodeQueueSize > 8) await new Promise((r) => setTimeout(r, 5));
+    if (failed) return `encoder error: ${failed}`;
+    if (i % 30 === 0) status.textContent = `encoding ${Math.round(i / (DURATION * FPS) * 100)}%`;
+  }
+  await enc.flush();
+  if (voice) {
+    status.textContent = "mixing the voice";
+    const pcm = (await mixVoice()).getChannelData(0);
+    const aenc = new AudioEncoder({ output: (c, m) => muxer.addAudioChunk(c, m), error: (e) => (failed = e) });
+    aenc.configure(acfg);
+    for (let i = 0; i < pcm.length; i += 1024) {
+      const data = pcm.slice(i, i + 1024);
+      const ad = new AudioData({ format: "f32-planar", sampleRate: RATE, numberOfFrames: data.length, numberOfChannels: 1, timestamp: Math.round(i * 1e6 / RATE), data });
+      aenc.encode(ad); ad.close();
+    }
+    await aenc.flush();
+    if (failed) return `audio encoder error: ${failed}`;
+  }
+  muxer.finalize();
+  const file = `myequigrowth-presentation${params.has("nocaptions") ? "-no-captions" : ""}${voice ? "" : "-silent"}`;
+  const res = await fetch(`/save?file=${file}`, { method: "POST", body: target.buffer });
+  window.renderDone = await res.text();
+  return window.renderDone;
+}
+</script>
+</body>
+</html>

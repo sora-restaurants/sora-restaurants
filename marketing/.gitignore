@@ -1,0 +1,2 @@
+# Marketing videos are rendered from the HTML sources here; keep the large files out of git.
+*.mp4
