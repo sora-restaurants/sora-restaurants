@@ -2,7 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { KitchenOrder } from "../server/deps.ts";
+import { ColorModeToggle, useColorMode } from "../components/ColorModeToggle.tsx";
 import { type BoardState, type ColumnId, type Station, type StationOrder, columns } from "./board-state.ts";
+import { EYEBROW, STAFF_COLOR_KEY } from "./StaffSignIn.tsx";
 
 export type Connection = "connecting" | "live" | "reconnecting" | "denied";
 export type Target = "preparing" | "ready" | "served" | "rejected" | "cancelled";
@@ -22,16 +24,17 @@ const STOP: Record<ColumnId, { to: Target; label: string }> = {
   ready: { to: "cancelled", label: "Cancel" },
 };
 
-// SORA black and white: three stages told apart by fill (new = white, cooking = grey, ready = outlined), all high contrast.
+// Sora owner palette; each stage has its own solid fill so a glance across the pass reads the state.
+// New is terracotta (white text, 4.6:1 at this weight), cooking is the plain card, ready is deep green.
 const CARD: Record<ColumnId, string> = {
-  new: "kds-new bg-white text-black",
-  cooking: "bg-[#262626] text-white",
-  ready: "border-2 border-white bg-[#0a0a0a] text-white",
+  new: "kds-new bg-[#C45C26] text-white",
+  cooking: "border border-[var(--owner-border)] bg-[var(--owner-card)] text-[var(--owner-text)]",
+  ready: "bg-[#25451E] text-white",
 };
 const BUTTON: Record<ColumnId, string> = {
-  new: "bg-black text-white",
-  cooking: "bg-white text-black",
-  ready: "bg-white text-black",
+  new: "bg-white text-[#8B3F1D]",
+  cooking: "bg-[#C45C26] text-white",
+  ready: "bg-white text-[#25451E]",
 };
 
 type Props = {
@@ -50,34 +53,48 @@ export function KitchenBoard({ restaurant, board, connection, onAdvance, onSignO
   const [station, setStation] = useStation(screen);
   const cols = columns(board, station);
   const soundOn = useSoundUnlocked();
+  const { mode, toggle } = useColorMode(STAFF_COLOR_KEY);
   useWakeLock();
   useNewOrderChime(cols.find((c) => c.id === "new")?.orders.length ?? 0);
   const [activeColumn, setActiveColumn] = useState<ColumnId>("new");
 
   return (
-    <div className="grid h-dvh grid-rows-[auto_auto_auto_minmax(0,1fr)] bg-[#0a0a0a] font-[family-name:var(--font-geist)] font-bold text-white md:grid-rows-[auto_auto_minmax(0,1fr)]">
-      <header className="flex items-center justify-between gap-3 border-b border-[#262626] px-3 py-2 sm:px-4 sm:py-3">
-        <h1 className="truncate text-xl uppercase tracking-tight sm:text-3xl">{restaurant}</h1>
-        <div className="flex items-center gap-2"><label className="sr-only" htmlFor="kds-station">Screen</label><select id="kds-station" value={station} onChange={(e) => setStation(e.target.value as Station)} className="min-h-12 border-2 border-white bg-black px-2 text-sm uppercase"><option value="all">All</option><option value="kitchen">Kitchen</option><option value="bar">Bar</option></select><ConnectionPill connection={connection} /><a href="/staff" className="grid min-h-12 place-items-center border-2 border-white px-3 text-sm uppercase">Portals</a>{onSignOut && <button type="button" onClick={onSignOut} className="min-h-12 border-2 border-white px-3 text-sm uppercase">Sign out</button>}</div>
+    <div data-mode={mode} className="owner-shell grid h-dvh grid-rows-[auto_auto_auto_minmax(0,1fr)] bg-[var(--owner-bg)] font-[family-name:var(--font-manrope)] text-[var(--owner-text)] md:grid-rows-[auto_auto_minmax(0,1fr)]">
+      <header className="flex flex-wrap items-end justify-between gap-2 border-b border-[var(--owner-border)] px-3 py-2 sm:px-6 sm:py-4">
+        <div className="min-w-0">
+          <p className={EYEBROW}>{screen === "bar" ? "Bar" : "Kitchen"}</p>
+          <h1 className="truncate text-2xl font-black tracking-[-0.04em] sm:text-4xl">{restaurant}</h1>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="sr-only" htmlFor="kds-station">Screen</label>
+          <select id="kds-station" value={station} onChange={(e) => setStation(e.target.value as Station)} className="min-h-12 rounded-full border border-[var(--owner-border)] bg-[var(--owner-surface)] px-3 text-sm font-bold">
+            <option value="all">All</option><option value="kitchen">Kitchen</option><option value="bar">Bar</option>
+          </select>
+          <ConnectionPill connection={connection} />
+          <ColorModeToggle mode={mode} onToggle={toggle} className="border-[var(--owner-border)]" />
+          <a href="/staff" className="grid min-h-12 place-items-center rounded-full border border-[var(--owner-border)] px-4 text-sm font-bold">Portals</a>
+          {onSignOut && <button type="button" onClick={onSignOut} className="min-h-12 rounded-full border border-[var(--owner-border)] px-4 text-sm font-bold">Sign out</button>}
+        </div>
       </header>
 
-      {!soundOn && <p role="status" className="bg-[oklch(82%_0.17_78)] px-4 py-2 text-lg uppercase text-black">Tap anywhere to turn on the new-order sound</p>}
-      {connection === "reconnecting" ? (
-        <p role="alert" className="bg-[oklch(55%_0.22_28)] px-4 py-3 text-2xl uppercase">
-          Connection lost — reconnecting. Tickets may be out of date.
-        </p>
-      ) : (
-        <div />
-      )}
+      {/* One grid row for both banners, so the stage tabs and columns keep their rows. */}
+      <div>
+        {!soundOn && <p role="status" className="mx-2 mt-2 rounded-xl bg-[#F5DFC1] px-4 py-2 font-bold text-[#70420F] sm:mx-3">Tap anywhere to turn on the new-order sound</p>}
+        {connection === "reconnecting" && (
+          <p role="alert" className="mx-2 mt-2 rounded-xl bg-[#8B3F1D] px-4 py-3 text-xl font-black text-white sm:mx-3">
+            Connection lost — reconnecting. Tickets may be out of date.
+          </p>
+        )}
+      </div>
 
-      <nav aria-label="Kitchen stages" className="grid grid-cols-3 border-b border-[#262626] md:hidden">
+      <nav aria-label="Kitchen stages" className="mx-2 mt-2 grid grid-cols-3 gap-1 rounded-full bg-[var(--owner-surface)] p-1 shadow-sm md:hidden">
         {cols.map((col) => (
           <button
             key={col.id}
             type="button"
             onClick={() => setActiveColumn(col.id)}
             aria-pressed={activeColumn === col.id}
-            className={`min-h-14 border-r-2 border-white px-2 text-sm uppercase last:border-r-0 ${activeColumn === col.id ? "bg-white text-black" : "bg-black text-white"}`}
+            className={`min-h-12 rounded-full px-2 text-sm font-black ${activeColumn === col.id ? "bg-[var(--owner-text)] text-[var(--owner-bg)]" : ""}`}
           >
             {col.title} <span className="tabular-nums">({col.orders.length})</span>
           </button>
@@ -87,8 +104,8 @@ export function KitchenBoard({ restaurant, board, connection, onAdvance, onSignO
       {/* Phones show one stage at a time; larger kitchen screens keep three independently scrolling columns. */}
       <main className="min-h-0 overflow-hidden p-2 sm:p-3 md:grid md:grid-flow-col md:auto-cols-[minmax(20rem,1fr)] md:gap-3 md:overflow-x-auto">
         {cols.map((col) => (
-          <section key={col.id} aria-labelledby={`col-${col.id}`} className={`${activeColumn === col.id ? "flex" : "hidden"} h-full min-h-0 min-w-0 flex-col border-4 border-white md:flex`}>
-            <h2 id={`col-${col.id}`} className="hidden items-baseline justify-between bg-white px-4 py-2 text-3xl uppercase text-black md:flex">
+          <section key={col.id} aria-labelledby={`col-${col.id}`} className={`${activeColumn === col.id ? "flex" : "hidden"} h-full min-h-0 min-w-0 flex-col rounded-3xl bg-[var(--owner-surface)] shadow-sm md:flex`}>
+            <h2 id={`col-${col.id}`} className="hidden items-baseline justify-between px-5 pb-1 pt-4 text-3xl font-black tracking-tight md:flex">
               <span>{col.title}</span>
               <span className="tabular-nums" aria-label={`${col.orders.length} tickets`}>
                 {col.orders.length}
@@ -104,8 +121,8 @@ export function KitchenBoard({ restaurant, board, connection, onAdvance, onSignO
       </main>
 
       {board.revoked || connection === "denied" ? (
-        <div role="alertdialog" aria-label="Signed out" className="fixed inset-0 grid place-items-center bg-black/90 p-6 text-center">
-          <p className="text-4xl uppercase">This tablet no longer has kitchen access.</p>
+        <div role="alertdialog" aria-label="Signed out" className="fixed inset-0 grid place-items-center bg-black/80 p-6 text-center">
+          <p className="rounded-3xl bg-[var(--owner-surface)] p-8 text-3xl font-black">This tablet no longer has kitchen access.</p>
         </div>
       ) : null}
     </div>
@@ -138,21 +155,21 @@ function Ticket({ order, column, now, onAdvance }: { order: StationOrder; column
   }
 
   return (
-    <li className={`flex min-w-0 shrink-0 flex-col gap-3 p-3 sm:p-4 ${CARD[column]}`}>
+    <li className={`flex min-w-0 shrink-0 flex-col gap-3 rounded-2xl p-3 font-bold shadow-sm sm:p-4 ${CARD[column]}`}>
       <div className="flex min-w-0 items-baseline justify-between gap-3">
-        <p className="truncate text-3xl leading-none sm:text-4xl">{order.table}</p>
-        <p className="shrink-0 text-2xl tabular-nums leading-none sm:text-3xl" aria-label={`${minutes} minutes ago`}>
+        <p className="truncate text-3xl font-black leading-none tracking-tight sm:text-4xl">{order.table}</p>
+        <p className="shrink-0 text-2xl font-black tabular-nums leading-none sm:text-3xl" aria-label={`${minutes} minutes ago`}>
           {minutes}′
         </p>
       </div>
       <div className="flex items-center justify-between gap-3">
-        <p className="text-xl tabular-nums">#{order.publicRef}</p>
+        <p className="text-lg tabular-nums opacity-80">#{order.publicRef}</p>
         {/* Walk-out protection: staff see at a glance whether to collect payment. */}
-        <p className={`shrink-0 border-4 border-current px-2 text-lg uppercase ${order.paid ? "" : "bg-black text-white"}`}>
+        <p className="shrink-0 rounded-full border-2 border-current px-2 text-sm font-black uppercase">
           {order.paid ? "Paid" : "Pay at table"}
         </p>
       </div>
-      <ul className="flex min-w-0 flex-col gap-2 border-y-4 border-current py-3">
+      <ul className="flex min-w-0 flex-col gap-2 border-y border-current py-3">
         {order.items.map((item, i) => (
           <li key={i} className="min-w-0 text-xl leading-tight sm:text-2xl">
             {/* Dish names and notes wrap in full, never cut: a hidden "allergy" is worse than a taller card.
@@ -160,16 +177,16 @@ function Ticket({ order, column, now, onAdvance }: { order: StationOrder; column
             <span className="block break-words">
               {item.quantity}× {item.name}
             </span>
-            {item.notes ? <span className="mt-1 block break-words text-lg uppercase sm:text-xl">» {item.notes}</span> : null}
+            {item.notes ? <span className="mt-1 block break-words text-lg font-black uppercase sm:text-xl">» {item.notes}</span> : null}
           </li>
         ))}
       </ul>
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-2">
         <button
           type="button"
           onClick={() => send(action.to)}
           disabled={state === "sending" || confirming || !!order.waitingOn}
-          className={`min-h-14 min-w-14 w-full text-2xl uppercase transition-transform active:scale-[0.97] disabled:opacity-60 focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-white sm:min-h-16 sm:text-3xl ${BUTTON[column]}`}
+          className={`min-h-14 min-w-14 w-full rounded-xl text-2xl font-black transition-transform active:scale-[0.97] disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 sm:min-h-16 sm:text-3xl ${BUTTON[column]}`}
         >
           {order.waitingOn ? `Waiting for ${order.waitingOn}` : state === "sending" ? "…" : state === "failed" ? `Retry ${action.label}` : action.label}
         </button>
@@ -178,8 +195,8 @@ function Ticket({ order, column, now, onAdvance }: { order: StationOrder; column
           onClick={() => (confirming ? send(stop.to) : setConfirming(true))}
           disabled={state === "sending"}
           aria-label={confirming ? `Tap again to ${stop.label.toLowerCase()} ${order.table}` : `${stop.label} ${order.table}`}
-          className={`min-h-14 min-w-14 w-full border-4 px-3 text-xl uppercase transition-transform active:scale-[0.97] disabled:opacity-60 focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-white sm:min-h-16 sm:text-2xl ${
-            confirming ? "border-white bg-[oklch(50%_0.22_28)] text-white" : "border-current bg-transparent"
+          className={`min-h-14 min-w-14 w-full rounded-xl border-2 px-3 text-xl font-black transition-transform active:scale-[0.97] disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 sm:min-h-16 sm:text-2xl ${
+            confirming ? "border-[#B42318] bg-[#B42318] text-white" : "border-current bg-transparent"
           }`}
         >
           {confirming ? `Tap again to ${stop.label}` : `✕ ${stop.label}`}
@@ -192,8 +209,8 @@ function Ticket({ order, column, now, onAdvance }: { order: StationOrder; column
 function ConnectionPill({ connection }: { connection: Connection }) {
   const live = connection === "live";
   return (
-    <p role="status" className={`shrink-0 px-2 py-1 text-sm uppercase sm:px-3 sm:text-xl ${live ? "bg-[oklch(80%_0.21_145)] text-black" : "bg-[oklch(55%_0.22_28)] text-white"}`}>
-      {live ? "● Live" : connection === "connecting" ? "Connecting…" : connection === "denied" ? "No access" : "Offline"}
+    <p role="status" className={`shrink-0 rounded-full px-4 py-2 text-sm font-black uppercase tracking-wide ${live ? "bg-[#DDE8D8] text-[#25451E]" : "bg-[#F5DFC1] text-[#70420F]"}`}>
+      {live ? "● Live" : connection === "connecting" ? "Connecting…" : connection === "denied" ? "No access" : "○ Offline"}
     </p>
   );
 }

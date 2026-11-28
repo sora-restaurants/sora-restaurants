@@ -22,7 +22,8 @@ function supabaseAuth(url: string, anonKey: string): StaffAuth {
     mode: "supabase",
     getToken: async () => (await supabase().auth.getSession()).data.session?.access_token ?? null,
     signIn: async (email, password) => ((await supabase().auth.signInWithPassword({ email, password })).error ? BAD_LOGIN : null),
-    signOut: async () => { await supabase().auth.signOut(); },
+    // Local: clears this device even when the server no longer has the session (a global sign-out would fail there).
+    signOut: async () => { await supabase().auth.signOut({ scope: "local" }); },
     onChange: (listener) => {
       const { data } = supabase().auth.onAuthStateChange(() => listener());
       return () => data.subscription.unsubscribe();
@@ -54,6 +55,15 @@ function devAuth(): StaffAuth {
       return () => listeners.delete(listener);
     },
   };
+}
+
+/**
+ * Our staff APIs answer 401 only when the server no longer knows this session (expired, user or session deleted).
+ * The browser still holds it, so drop it: the screen then shows sign-in instead of "Offline" forever.
+ */
+export async function dropOn401(auth: StaffAuth, res: Response): Promise<Response> {
+  if (res.status === 401) await auth.signOut();
+  return res;
 }
 
 /** null when neither sign-in method is configured. */

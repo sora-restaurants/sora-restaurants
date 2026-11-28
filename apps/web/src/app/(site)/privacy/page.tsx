@@ -15,6 +15,8 @@ export default function PrivacyPage() {
       <p>With your consent, we use your enquiry to contact you about a demonstration or the Founding Restaurant Programme and assess whether SORA suits your restaurant. Sending an enquiry does not commit you to a purchase. We do not sell enquiry information or use it for unrelated marketing.</p>
       <h2>Hosting and access</h2>
       <p>The website runs on Vercel and applications are stored in Supabase. These providers process information to operate their services, and processing may take place outside South Africa. SORA administrators review enquiries through a password-protected dashboard. Enquiry records are restricted from public database access.</p>
+      <h2>Receipt emails from the QR menu</h2>
+      <p>If you enter an email address for your receipt when ordering, we use it only to send that one receipt through our email provider, Resend. SORA does not save the address with your order.</p>
       <h2>Technical information and cookies</h2>
       <p>While you fill in the enquiry form, your browser keeps a draft in the current tab so a refresh does not lose your answers. You can clear the draft using “Clear saved details” on the form. A successful submission removes the draft.</p>
       <p>To limit spam, the application stores a salted hash of the internet address used to submit an enquiry, together with its submission time. Vercel may process connection addresses and request logs to deliver and protect the website. The admin area uses a session cookie for sign-in. The application does not set advertising cookies.</p>

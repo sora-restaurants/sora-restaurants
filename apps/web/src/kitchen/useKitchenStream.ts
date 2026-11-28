@@ -11,7 +11,7 @@ const RETRY_MS = [1_000, 2_000, 5_000, 10_000];
  * Live board for one restaurant. EventSource cannot send an Authorization header, so this reads the
  * SSE stream with fetch and reconnects with backoff; each reconnect starts from a fresh snapshot.
  */
-export function useKitchenStream(restaurantId: string, getToken: () => Promise<string | null>) {
+export function useKitchenStream(restaurantId: string, getToken: () => Promise<string | null>, onUnauthorized?: () => void) {
   const [board, dispatch] = useReducer(applyBoardEvent, EMPTY_BOARD);
   const [connection, setConnection] = useState<Connection>("connecting");
 
@@ -28,6 +28,10 @@ export function useKitchenStream(restaurantId: string, getToken: () => Promise<s
             signal: controller.signal,
             cache: "no-store",
           });
+          if (res.status === 401 && onUnauthorized) {
+            onUnauthorized(); // the session is gone: sign-in replaces the board
+            return;
+          }
           if (res.status === 401 || res.status === 403) {
             setConnection("denied");
             return;
@@ -57,7 +61,7 @@ export function useKitchenStream(restaurantId: string, getToken: () => Promise<s
     }
     connect();
     return () => controller.abort();
-  }, [restaurantId, getToken]);
+  }, [restaurantId, getToken, onUnauthorized]);
 
   return { board, connection, dispatch };
 }

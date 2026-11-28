@@ -280,10 +280,10 @@
 @keyframes kds-pulse {
   0%,
   100% {
-    box-shadow: 0 0 0 0 oklch(100% 0 0);
+    box-shadow: 0 0 0 0 rgb(196 92 38 / 0.45);
   }
   50% {
-    box-shadow: 0 0 0 8px oklch(100% 0 0);
+    box-shadow: 0 0 0 8px rgb(196 92 38 / 0.45);
   }
 }
 .kds-new {
@@ -294,7 +294,7 @@
 @media (prefers-reduced-motion: reduce) {
   .kds-new {
     animation: none;
-    box-shadow: 0 0 0 8px oklch(100% 0 0);
+    box-shadow: 0 0 0 8px rgb(196 92 38 / 0.45);
   }
 }
 

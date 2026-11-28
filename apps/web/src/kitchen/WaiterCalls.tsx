@@ -1,14 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { newCalls, playCallChime, useCallSound, useSoundUnlocked } from "./call-chime.ts";
+import { EYEBROW, Screen, Shell, SignIn } from "./StaffSignIn.tsx";
 import { formatRand } from "../lib/money.ts";
 import { readChoice, saveChoice } from "./restaurant-choice.ts";
-import { Screen, SignIn } from "./StaffSignIn.tsx";
-import { type StaffAuth, staffAuth } from "./staff-auth.ts";
+import { dropOn401, type StaffAuth, staffAuth } from "./staff-auth.ts";
 
 type Call = { id: string; tableId: string; table: string; createdAt: string; restaurantId: string };
 type Unpaid = { id: string; publicRef: string; table: string; status: string; totalCents: number; restaurantId: string };
-type Share = { id: string; table: string; restaurantId: string; shareNo: number; ways: number; amountCents: number; items: { name: string; quantity: number }[] };
 type FloorTable = { id: string; label: string; restaurantId: string; restaurantName: string; openedAt: string | null; orders: number; inKitchen: number; unpaidCents: number; calling: boolean; ready: number; items: Line[] };
 type Line = { ref: string; status: string; name: string; quantity: number; notes: string; priceCents: number };
 const STATUS: Record<string, string> = { submitted: "New", accepted: "Accepted", preparing: "Cooking", ready: "Ready: take it out", served: "Served" };
@@ -30,14 +30,14 @@ function WaiterSession({ auth }: { auth: StaffAuth }) {
   }, [auth]);
 
   if (token === undefined) return <Screen>Loading…</Screen>;
-  if (!token) return <SignIn auth={auth} />;
-  return <CallList token={token} onSignOut={() => void auth.signOut()} />;
+  if (!token) return <SignIn auth={auth} title="Waiter sign in" demo="waiter@demo.test / demo-waiter-pass" />;
+  return <CallList token={token} auth={auth} />;
 }
 
-function CallList({ token, onSignOut }: { token: string; onSignOut: () => void }) {
+function CallList({ token, auth }: { token: string; auth: StaffAuth }) {
+  const onSignOut = () => void auth.signOut();
   const [allCalls, setCalls] = useState<Call[] | null>(null);
   const [allUnpaid, setUnpaid] = useState<Unpaid[]>([]);
-  const [allShares, setShares] = useState<Share[]>([]);
   const [allFloor, setFloor] = useState<FloorTable[]>([]);
   const [chosen, setChosen] = useState<string | null>(() => readChoice());
   // Staff at several restaurants see one at a time: the one this device works for (shared with kitchen and owner).
@@ -46,22 +46,29 @@ function CallList({ token, onSignOut }: { token: string; onSignOut: () => void }
   const mine = <T extends { restaurantId: string }>(rows: T[]) => (active ? rows.filter((r) => r.restaurantId === active) : rows);
   const calls = allCalls && mine(allCalls);
   const unpaid = mine(allUnpaid);
-  const shares = mine(allShares);
   const floor = mine(allFloor);
   const [offline, setOffline] = useState(false);
   const [now, setNow] = useState(() => Date.now());
+  const [sound, toggleSound] = useCallSound();
+  const unlocked = useSoundUnlocked();
+  const seen = useRef<Set<string> | null>(null);
+
+  // One chime per poll that brings a call never shown before; silent on first load.
+  useEffect(() => {
+    if (!allCalls) return;
+    const result = newCalls(seen.current, allCalls.map((c) => c.id));
+    seen.current = result.seen;
+    if (result.chime && sound) playCallChime();
+  }, [allCalls, sound]);
 
   const load = useCallback(async () => {
     try {
-      const res = await fetch("/api/staff/calls", { headers: { authorization: `Bearer ${token}` }, cache: "no-store" });
+      const res = await dropOn401(auth, await fetch("/api/staff/calls", { headers: { authorization: `Bearer ${token}` }, cache: "no-store" }));
+      if (res.status === 401) return; // session gone: the sign-in form takes over
       if (!res.ok) throw new Error(String(res.status));
       setCalls((await res.json()).calls);
       const owed = await fetch("/api/staff/unpaid", { headers: { authorization: `Bearer ${token}` }, cache: "no-store" });
-      if (owed.ok) {
-        const body = await owed.json();
-        setUnpaid(body.orders);
-        setShares(body.shares ?? []);
-      }
+      if (owed.ok) setUnpaid((await owed.json()).orders);
       const tables = await fetch("/api/staff/tables", { headers: { authorization: `Bearer ${token}` }, cache: "no-store" });
       if (tables.ok) setFloor((await tables.json()).tables);
       setOffline(false);
@@ -69,7 +76,7 @@ function CallList({ token, onSignOut }: { token: string; onSignOut: () => void }
       setOffline(true);
     }
     setNow(Date.now());
-  }, [token]);
+  }, [token, auth]);
 
   useEffect(() => {
     load();
@@ -87,89 +94,126 @@ function CallList({ token, onSignOut }: { token: string; onSignOut: () => void }
     await fetch(`/api/staff/orders/${order.id}/paid`, { method: "POST", headers: { authorization: `Bearer ${token}` } }).catch(() => {});
   }
 
-  async function settleShare(share: Share) {
-    setShares((list) => list.filter((s) => s.id !== share.id));
-    await fetch(`/api/staff/shares/${share.id}/paid`, { method: "POST", headers: { authorization: `Bearer ${token}` } }).catch(() => {});
-  }
 
+
+  const owed = unpaid.length;
   return (
-    <main className="min-h-dvh bg-[#0a0a0a] p-4 font-[family-name:var(--font-geist)] font-bold text-white">
-      <header className="mb-4 flex items-center justify-between gap-4 border-b-4 border-white pb-3">
-        <h1 className="text-3xl uppercase">Waiter calls</h1>
-        <p role="status" className={`px-3 py-1 text-xl uppercase ${offline ? "bg-[oklch(55%_0.22_28)]" : "bg-[oklch(80%_0.21_145)] text-black"}`}>
-          {offline ? "Offline" : "● Live"}
-        </p>
-        {restaurants.length > 1 && (
-          <select aria-label="Restaurant" value={active} onChange={(e) => { saveChoice(e.target.value); setChosen(e.target.value); }}
-            className="min-h-12 border-2 border-white bg-black px-2 text-sm uppercase">
-            {restaurants.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
-          </select>
-        )}
-        <a href="/staff" className="grid min-h-12 place-items-center border-2 border-white px-3 text-sm uppercase">Portals</a>
-        <button type="button" onClick={onSignOut} className="min-h-12 border-2 border-white px-3 text-sm uppercase">Sign out</button>
+    <Shell>{(toggle) => (<>
+      {/* Same Sora shell as the owner dashboard: eyebrow + heading, rounded surfaces, terracotta actions. */}
+      <header className="flex flex-wrap items-end justify-between gap-3 border-b border-[var(--owner-border)] pb-4">
+        <div>
+          <p className={EYEBROW}>Floor service</p>
+          <h1 className="mt-1 text-4xl font-black tracking-[-0.04em] sm:text-5xl">Waiter</h1>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <p role="status" className={`rounded-full px-4 py-2 text-sm font-black uppercase tracking-wide ${offline ? "bg-[#F5DFC1] text-[#70420F]" : "bg-[#DDE8D8] text-[#25451E]"}`}>
+            {offline ? "○ Offline" : "● Live"}
+          </p>
+          <button type="button" onClick={toggleSound} aria-pressed={sound} className="min-h-12 rounded-full border border-[var(--owner-border)] px-4 text-sm font-bold">
+            <span aria-hidden="true">{sound ? "🔔" : "🔕"}</span> {sound ? "Sound on" : "Sound off"}
+          </button>
+          {restaurants.length > 1 && (
+            <select aria-label="Restaurant" value={active} onChange={(e) => { saveChoice(e.target.value); setChosen(e.target.value); }}
+              className="min-h-12 rounded-full border border-[var(--owner-border)] bg-[var(--owner-surface)] px-3 text-sm font-bold">
+              {restaurants.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
+            </select>
+          )}
+          {toggle}
+          <a href="/staff" className="grid min-h-12 place-items-center rounded-full border border-[var(--owner-border)] px-4 text-sm font-bold">Portals</a>
+          <button type="button" onClick={onSignOut} className="min-h-12 rounded-full border border-[var(--owner-border)] px-4 text-sm font-bold">Sign out</button>
+        </div>
       </header>
-      {calls === null ? (
-        <p className="text-2xl">Loading…</p>
-      ) : calls.length === 0 ? (
-        <p className="text-2xl text-[oklch(75%_0_0)]">No tables waiting.</p>
-      ) : (
-        <ol className="grid gap-3 sm:grid-cols-2">
-          {calls.map((call) => {
-            const minutes = Math.max(0, Math.floor((now - Date.parse(call.createdAt)) / 60_000));
-            const t = floor.find((f) => f.id === call.tableId);
-            return (
-              <li key={call.id} className="flex flex-col gap-3 bg-white p-4 text-black rounded-[4px]">
-                <div className="flex items-baseline justify-between gap-3">
-                  <p className="truncate text-4xl">{call.table}</p>
-                  <p className="shrink-0 text-3xl tabular-nums">{ago(minutes)}</p>
+      {/* Floats over the page so it can't move a button under a finger when it disappears. */}
+      {sound && !unlocked && <p role="status" className="pointer-events-none fixed inset-x-3 bottom-3 z-20 mx-auto max-w-md rounded-xl bg-[#F5DFC1] p-3 text-center font-bold text-[#70420F] shadow-xl">Tap anywhere to turn on the call sound</p>}
+      {offline && <p role="alert" className="mt-4 rounded-xl bg-[#F5DFC1] p-3 font-bold text-[#70420F]">Connection lost, retrying. Calls may be out of date.</p>}
+
+      <div className="mt-4 grid gap-4">
+        <Section eyebrow="Needs you now" title="Calls" count={calls?.length ?? 0}>
+          {calls === null ? (
+            <Empty>Loading…</Empty>
+          ) : calls.length === 0 ? (
+            <Empty>No tables waiting.</Empty>
+          ) : (
+            <ol className="grid gap-3 sm:grid-cols-2">
+              {calls.map((call) => {
+                const t = floor.find((f) => f.id === call.tableId);
+                return (
+                <li key={call.id} className="flex flex-col gap-3 rounded-2xl bg-[#C45C26] p-4 text-white shadow-sm">
+                  <CardHead title={call.table} right={`${minutesSince(call.createdAt, now)}′`} />
+                  {t && <Needs table={t} />}
+                  {t && <Lines items={t.items} />}
+                  <button type="button" onClick={() => answer(call)} className={`${TAP} bg-white text-[#8B3F1D]`}>
+                    On my way
+                  </button>
+                </li>
+                );
+              })}
+            </ol>
+          )}
+        </Section>
+
+        {/* Walk-out protection: everything still to collect, oldest first. */}
+        <Section eyebrow="Collect" title="Unpaid" count={owed}>
+          {owed === 0 ? (
+            <Empty>Nothing to collect.</Empty>
+          ) : (
+            <ol className="grid gap-3 sm:grid-cols-2">
+              {unpaid.map((order) => (
+                <UnpaidRow key={order.id} table={order.table} amountCents={order.totalCents} onPaid={() => settle(order)}
+                  detail={`#${order.publicRef} · ${order.status === "served" ? "served" : "still in the kitchen"}`} />
+              ))}
+            </ol>
+          )}
+        </Section>
+
+        {/* The floor: seated tables first, each with what it needs and everything it has ordered. */}
+        <Section eyebrow="Floor" title="Tables" count={floor.filter((t) => t.openedAt).length}>
+          <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {floor.map((t) => (
+              <li key={t.id} className={`flex flex-col gap-2 rounded-2xl border border-[var(--owner-border)] bg-[var(--owner-card)] p-3 ${t.openedAt ? "" : "opacity-60"}`}>
+                <div className="flex items-start justify-between gap-2">
+                  <h3 className="truncate text-xl font-black">{t.label}</h3>
+                  {t.openedAt && <p className="shrink-0 font-bold tabular-nums text-[var(--owner-muted)]">{minutesSince(t.openedAt, now)}′</p>}
                 </div>
-                {t && <Needs table={t} />}
-                {t && <Lines items={t.items} />}
-                <button type="button" onClick={() => answer(call)} className="min-h-16 bg-black text-3xl uppercase text-white rounded-[4px] active:scale-[0.97]">
-                  On my way
-                </button>
+                {t.openedAt ? <><Needs table={t} /><Lines items={t.items} /></> : <p className="text-sm text-[var(--owner-muted)]">Closed</p>}
               </li>
-            );
-          })}
-        </ol>
-      )}
+            ))}
+          </ul>
+        </Section>
+      </div>
+    </>)}</Shell>
+  );
+}
 
-      {/* The floor: seated tables first, each with what it needs and everything it has ordered. */}
-      <h2 className="mb-3 mt-8 border-b-4 border-white pb-2 text-3xl uppercase">Tables</h2>
-      <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {floor.map((t) => (
-          <li key={t.id} className={`flex flex-col gap-2 p-4 rounded-[4px] ${t.calling ? "bg-[oklch(82%_0.17_78)] text-black" : t.openedAt ? "border-4 border-white" : "border-2 border-[oklch(40%_0_0)] text-[oklch(60%_0_0)]"}`}>
-            <div className="flex items-baseline justify-between gap-3">
-              <p className="truncate text-3xl">{t.label}</p>
-              <p className="shrink-0 text-xl tabular-nums">
-                {t.openedAt ? `${ago(Math.max(0, Math.floor((now - Date.parse(t.openedAt)) / 60_000)))} seated` : "Closed"}
-              </p>
-            </div>
-            {t.openedAt && <Needs table={t} />}
-            {t.openedAt && <Lines items={t.items} />}
-          </li>
-        ))}
-      </ul>
+// Thumb-sized action in the owner dashboard's button shape.
+const TAP = "min-h-14 w-full rounded-xl text-xl font-black transition-transform active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2";
 
-      {/* Walk-out protection: everything still to collect, oldest first. */}
-      <h2 className="mb-3 mt-8 border-b-4 border-white pb-2 text-3xl uppercase">
-        Unpaid <span className="tabular-nums">{unpaid.length + shares.length}</span>
-      </h2>
-      {unpaid.length + shares.length === 0 ? (
-        <p className="text-2xl text-[oklch(75%_0_0)]">Nothing to collect.</p>
-      ) : (
-        <ol className="grid gap-3 sm:grid-cols-2">
-          {unpaid.map((order) => (
-            <UnpaidRow key={order.id} table={order.table} amountCents={order.totalCents} onPaid={() => settle(order)}
-              detail={`#${order.publicRef} · ${order.status === "served" ? "served" : "still in the kitchen"}`} />
-          ))}
-          {shares.map((share) => (
-            <UnpaidRow key={share.id} table={share.table} amountCents={share.amountCents} onPaid={() => settleShare(share)}
-              detail={`Person ${share.shareNo} of ${share.ways}${share.items.length ? " · " + share.items.map((i) => `${i.quantity}× ${i.name}`).join(", ") : ""}`} />
-          ))}
-        </ol>
-      )}
-    </main>
+const minutesSince = (iso: string, now: number) => Math.max(0, Math.floor((now - Date.parse(iso)) / 60_000));
+
+/** Owner-dashboard page shell, with its light/dark tokens and toggle. */
+/** An owner-dashboard section card: eyebrow, heading and a count. */
+function Section({ eyebrow, title, count, children }: { eyebrow: string; title: string; count: number; children: ReactNode }) {
+  return (
+    <section aria-label={title} className="rounded-3xl bg-[var(--owner-surface)] p-4 shadow-sm sm:p-6">
+      <div className="mb-3 flex items-end justify-between gap-3">
+        <div><p className={EYEBROW}>{eyebrow}</p><h2 className="mt-1 text-3xl font-black tracking-tight">{title}</h2></div>
+        <p className="text-3xl font-black tabular-nums">{count}</p>
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function Empty({ children }: { children: ReactNode }) {
+  return <p className="rounded-2xl border border-dashed border-[var(--owner-border)] p-4 text-[var(--owner-muted)]">{children}</p>;
+}
+
+function CardHead({ title, right }: { title: string; right: string }) {
+  return (
+    <div className="flex min-w-0 items-baseline justify-between gap-3">
+      <p className="truncate text-3xl font-black tracking-tight">{title}</p>
+      <p className="shrink-0 text-2xl font-black tabular-nums">{right}</p>
+    </div>
   );
 }
 
@@ -182,22 +226,20 @@ function UnpaidRow({ table, amountCents, detail, onPaid }: { table: string; amou
     return () => clearTimeout(id);
   }, [confirming]);
   return (
-    <li className="flex flex-col gap-3 border-4 border-white p-4">
-      <div className="flex items-baseline justify-between gap-3">
-        <p className="truncate text-4xl">{table}</p>
-        <p className="shrink-0 text-3xl tabular-nums">{formatRand(amountCents)}</p>
-      </div>
-      <p className="text-xl uppercase text-[oklch(75%_0_0)]">{detail}</p>
+    <li className="flex flex-col gap-3 rounded-2xl border border-[var(--owner-border)] bg-[var(--owner-card)] p-4">
+      <CardHead title={table} right={formatRand(amountCents)} />
+      <p className="text-[var(--owner-muted)]">{detail}</p>
       <button
         type="button"
         onClick={() => (confirming ? onPaid() : setConfirming(true))}
-        className={`min-h-16 text-3xl uppercase active:scale-[0.97] ${confirming ? "bg-[oklch(80%_0.21_145)] text-black" : "bg-white text-black"}`}
+        className={`${TAP} ${confirming ? "bg-[#25451E] text-white" : "bg-[var(--owner-text)] text-[var(--owner-bg)]"}`}
       >
         {confirming ? "Tap again: paid" : "Mark paid"}
       </button>
     </li>
   );
 }
+
 
 /** What the table is waiting on, most urgent first. */
 function Needs({ table: t }: { table: FloorTable }) {
@@ -207,10 +249,10 @@ function Needs({ table: t }: { table: FloorTable }) {
     t.inKitchen - t.ready > 0 && `${t.inKitchen - t.ready} order${t.inKitchen - t.ready > 1 ? "s" : ""} cooking`,
     t.unpaidCents > 0 && `Owes ${formatRand(t.unpaidCents)}`,
   ].filter(Boolean) as string[];
-  if (!needs.length) return <p className="text-lg uppercase opacity-70">{t.items.length ? "All served, nothing owed" : "Seated, nothing ordered yet"}</p>;
+  if (!needs.length) return <p className="text-sm opacity-80">{t.items.length ? "All served, nothing owed" : "Seated, nothing ordered yet"}</p>;
   return (
     <ul className="flex flex-wrap gap-2">
-      {needs.map((n) => <li key={n} className="bg-black px-2 py-1 text-base uppercase text-white rounded-[4px]">{n}</li>)}
+      {needs.map((n) => <li key={n} className="rounded-full bg-[#F5DFC1] px-3 py-1 text-xs font-black uppercase tracking-wide text-[#70420F]">{n}</li>)}
     </ul>
   );
 }
@@ -219,18 +261,16 @@ function Needs({ table: t }: { table: FloorTable }) {
 function Lines({ items }: { items: Line[] }) {
   if (!items.length) return null;
   return (
-    <ul className="divide-y divide-current/20 border-t-2 border-current/30 text-lg">
+    <ul className="divide-y divide-current/20 border-t border-current/30 text-base">
       {items.map((i, n) => (
         <li key={n} className="flex items-baseline justify-between gap-3 py-1.5">
           <span className="min-w-0">
             <span className="tabular-nums">{i.quantity}×</span> {i.name}
-            {i.notes && <span className="block text-base font-normal opacity-80">{i.notes}</span>}
+            {i.notes && <span className="block text-sm opacity-80">{i.notes}</span>}
           </span>
-          <span className={`shrink-0 text-sm uppercase ${i.status === "ready" ? "bg-[oklch(80%_0.21_145)] px-1.5 text-black" : "opacity-70"}`}>{STATUS[i.status] ?? i.status}</span>
+          <span className={`shrink-0 text-xs font-black uppercase ${i.status === "ready" ? "rounded-full bg-[#DDE8D8] px-2 text-[#25451E]" : "opacity-70"}`}>{STATUS[i.status] ?? i.status}</span>
         </li>
       ))}
     </ul>
   );
 }
-
-const ago = (minutes: number) => (minutes < 60 ? `${minutes}′` : `${Math.floor(minutes / 60)}h ${minutes % 60}′`);

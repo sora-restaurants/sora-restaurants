@@ -10,7 +10,6 @@ import { Receipt } from "../order/Receipt.tsx";
 import type { Receipt as ReceiptData } from "../../server/order-status.ts";
 import { newIdempotencyKey } from "../../lib/idempotency-key.ts";
 import { formatRand } from "../../lib/money.ts";
-import { BillSplit } from "../order/BillSplit.tsx";
 import { demoReviewsFor, type DemoReview } from "./demo-reviews.ts";
 import { demoWaitMinutes } from "./demo-extras.ts";
 import { MenuBrowser } from "./MenuBrowser.tsx";
@@ -85,7 +84,6 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
   }, [paid, statusToken]);
   const [basketOpen, setBasketOpen] = useState(false);
   const [paymentChoice, setPaymentChoice] = useState<"pay_later" | "pay_now">("pay_later");
-  const [splitWays, setSplitWays] = useState<1 | 2 | 3 | 4>(1);
   const [emailReceipt, setEmailReceipt] = useState("");
   const [weeklySpecials, setWeeklySpecials] = useState(false);
   const [tipPercent, setTipPercent] = useState<0 | 10 | 15 | 20>(0);
@@ -169,7 +167,7 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
       if (attempt.current !== thisAttempt) return;
       if (result.ok) {
         // Saved before the pay step shows, so the receipt always has the tip the guest chose.
-        await saveCheckoutAction({ statusToken: result.statusToken, paymentChoice, tipPercent, splitWays }).catch(() => {});
+        await saveCheckoutAction({ statusToken: result.statusToken, paymentChoice, tipPercent, splitWays: 1 }).catch(() => {});
         if (attempt.current !== thisAttempt) return;
         const wait = demoWaitMinutes(count);
         setStatus({ kind: "placed", publicRef: result.publicRef, statusToken: result.statusToken, itemCount: count, totalCents: estimate + Math.round(estimate * tipPercent / 100), payNow: paymentChoice === "pay_now", paid: false, stage: "received", wait });
@@ -329,7 +327,7 @@ export function Menu({ menu, theme, qrToken, preview = false }: Props) {
         </div>
       )}
       <OrderDock triggerRef={basketTrigger} count={count} estimate={estimate} status={status} onOpen={() => setBasketOpen(true)} onDismiss={() => { if (status.kind === "placed" && (status.stage === "served" || status.stage === "cancelled")) { try { sessionStorage.removeItem(trackKey); } catch { /* storage blocked */ } } setStatus({ kind: "idle" }); }} onPaid={() => setStatus((s) => s.kind === "placed" ? { ...s, paid: true } : s)} />
-      {basketOpen && <BasketSheet returnFocusRef={basketTrigger} lines={lines} cart={cart} notes={notes} estimate={estimate} status={status} paymentChoice={paymentChoice} splitWays={splitWays} emailReceipt={emailReceipt} weeklySpecials={weeklySpecials} tipPercent={tipPercent} onPaymentChoice={setPaymentChoice} onSplit={setSplitWays} onEmail={setEmailReceipt} onWeekly={setWeeklySpecials} onTip={setTipPercent} onChange={setQuantity} onClose={closeBasket} onPlace={placeOrder} showPayNow={DEMO_PAYMENTS || qrToken === "preview"} />}
+      {basketOpen && <BasketSheet returnFocusRef={basketTrigger} lines={lines} cart={cart} notes={notes} estimate={estimate} status={status} paymentChoice={paymentChoice} emailReceipt={emailReceipt} weeklySpecials={weeklySpecials} tipPercent={tipPercent} onPaymentChoice={setPaymentChoice} onEmail={setEmailReceipt} onWeekly={setWeeklySpecials} onTip={setTipPercent} onChange={setQuantity} onClose={closeBasket} onPlace={placeOrder} showPayNow={DEMO_PAYMENTS || qrToken === "preview"} />}
     </div>
   );
 }
@@ -717,7 +715,6 @@ function OrderDock({ triggerRef, count, estimate, status, onOpen, onDismiss, onP
             <span className="mt-1 block text-sm opacity-75">Ref <strong className="tracking-wide text-bg">{status.publicRef}</strong>{status.paid ? " · Demo payment, not charged" : ""}{status.stage === "received" || status.stage === "preparing" ? ` · usually ready in ${status.wait} min` : ""}</span>
           </p>
           <span className="flex shrink-0 flex-wrap justify-end gap-2">
-            {status.statusToken && !status.payNow && <BillSplit token={status.statusToken} />}
             <button type="button" onClick={onDismiss} className="min-h-tap shrink-0 rounded-full border border-bg/30 px-4 font-semibold">Order more</button>
           </span>
         </div>
@@ -734,7 +731,7 @@ function OrderDock({ triggerRef, count, estimate, status, onOpen, onDismiss, onP
   return <div className="fixed inset-x-0 bottom-0 z-30 bg-linear-to-t from-bg via-bg to-transparent px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-8"><button ref={triggerRef} type="button" onClick={onOpen} aria-haspopup="dialog" className="mx-auto flex min-h-16 w-full max-w-(--t-max) items-center justify-between gap-4 rounded-theme bg-accent px-5 font-bold text-on-accent shadow-2xl active:scale-[0.99] focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ink"><span className="flex items-center gap-3"><span className="grid size-8 place-items-center rounded-full bg-on-accent text-sm text-accent">{count}</span>View your order</span><span className="tabular-nums">{formatCents(estimate)} <span aria-hidden="true">→</span></span></button></div>;
 }
 
-function BasketSheet({ returnFocusRef, lines, cart, notes, estimate, status, paymentChoice, splitWays, emailReceipt, weeklySpecials, tipPercent, onPaymentChoice, onSplit, onEmail, onWeekly, onTip, onChange, onClose, onPlace, showPayNow }: { showPayNow: boolean; returnFocusRef: React.RefObject<HTMLButtonElement | null>; lines: MenuItem[]; cart: Record<string, number>; notes: Record<string, string[][]>; estimate: number; status: Status; paymentChoice: "pay_later" | "pay_now"; splitWays: 1|2|3|4; emailReceipt: string; weeklySpecials: boolean; tipPercent: 0|10|15|20; onPaymentChoice: (c: "pay_later" | "pay_now") => void; onSplit: (n: 1|2|3|4) => void; onEmail: (v: string) => void; onWeekly: (v: boolean) => void; onTip: (p: 0|10|15|20) => void; onChange: (id: string, q: number) => void; onClose: () => void; onPlace: () => void }) {
+function BasketSheet({ returnFocusRef, lines, cart, notes, estimate, status, paymentChoice, emailReceipt, weeklySpecials, tipPercent, onPaymentChoice, onEmail, onWeekly, onTip, onChange, onClose, onPlace, showPayNow }: { showPayNow: boolean; returnFocusRef: React.RefObject<HTMLButtonElement | null>; lines: MenuItem[]; cart: Record<string, number>; notes: Record<string, string[][]>; estimate: number; status: Status; paymentChoice: "pay_later" | "pay_now"; emailReceipt: string; weeklySpecials: boolean; tipPercent: 0|10|15|20; onPaymentChoice: (c: "pay_later" | "pay_now") => void; onEmail: (v: string) => void; onWeekly: (v: boolean) => void; onTip: (p: 0|10|15|20) => void; onChange: (id: string, q: number) => void; onClose: () => void; onPlace: () => void }) {
   const dialogRef = useRef<HTMLElement | null>(null);
   const closeRef = useRef<HTMLButtonElement | null>(null);
   const descriptionId = useId();
@@ -775,10 +772,7 @@ function BasketSheet({ returnFocusRef, lines, cart, notes, estimate, status, pay
       )}
       {step === 2 && (
         <>
-          {showPayNow && <div className="mb-4 grid grid-cols-2 gap-2">
-            <button type="button" onClick={() => onPaymentChoice("pay_later")} className={`min-h-12 rounded-theme border-2 px-3 text-sm font-bold ${paymentChoice === "pay_later" ? "border-accent bg-accent text-on-accent" : "border-line"}`}>Pay after my meal</button>
-            <button type="button" onClick={() => onPaymentChoice("pay_now")} className={`min-h-12 rounded-theme border-2 px-3 text-sm font-bold ${paymentChoice === "pay_now" ? "border-accent bg-accent text-on-accent" : "border-line"}`}>Pay now</button>
-          </div>}
+          <p className="mb-4 rounded-theme border-2 border-line px-3 py-3 text-sm font-bold">Your waiter will bring the bill when you are ready.</p>
           <div className="mb-4">
             <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">Add a tip</p>
             <div className="flex gap-2">
@@ -787,15 +781,6 @@ function BasketSheet({ returnFocusRef, lines, cart, notes, estimate, status, pay
               ))}
             </div>
             {tipPercent > 0 && <p className="mt-2 text-sm text-muted">Tip {formatCents(Math.round(estimate * tipPercent / 100))} · total {formatCents(estimate + Math.round(estimate * tipPercent / 100))}</p>}
-          </div>
-          <div className="mb-4">
-            <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">Split the bill</p>
-            <div className="flex gap-2">
-              {([1, 2, 3, 4] as const).map((n) => (
-                <button key={n} type="button" onClick={() => onSplit(n)} className={`min-h-10 flex-1 rounded-theme border-2 text-sm font-bold ${splitWays === n ? "border-accent bg-accent text-on-accent" : "border-line"}`}>{n === 1 ? "No split" : `${n} ways`}</button>
-              ))}
-            </div>
-            {splitWays > 1 && <p className="mt-2 text-sm text-muted">About {formatCents(Math.round((estimate + Math.round(estimate * tipPercent / 100)) / splitWays))} each</p>}
           </div>
           {totalLine}
           <div className="flex gap-2">
@@ -809,6 +794,7 @@ function BasketSheet({ returnFocusRef, lines, cart, notes, estimate, status, pay
           <div className="mb-4">
             <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-muted">Email for your receipt (optional)</label>
             <input type="email" value={emailReceipt} onChange={(e) => onEmail(e.target.value)} placeholder="you@email.com" className="w-full rounded-theme border border-line bg-bg px-3 py-2 text-sm" />
+            <p className="mt-1 text-xs text-muted">Used only to send this receipt, not stored with your order. <a href="/privacy" target="_blank" rel="noopener" className="underline">Privacy</a></p>
           </div>
           <label className="mb-4 flex items-center gap-2 text-sm">
             <input type="checkbox" checked={weeklySpecials} onChange={(e) => onWeekly(e.target.checked)} className="size-4 accent-accent" />

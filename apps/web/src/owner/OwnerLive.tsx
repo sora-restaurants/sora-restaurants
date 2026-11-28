@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { type StaffAuth, staffAuth } from "../kitchen/staff-auth.ts";
+import { dropOn401, type StaffAuth, staffAuth } from "../kitchen/staff-auth.ts";
 import { readChoice, saveChoice } from "../kitchen/restaurant-choice.ts";
 import { SignIn } from "../kitchen/StaffSignIn.tsx";
 import { OwnerDashboard } from "./OwnerDashboard.tsx";
@@ -22,13 +22,13 @@ function OwnerSession({ auth }: { auth: StaffAuth }) {
   useEffect(() => { const refresh = () => auth.getToken().then(setToken); refresh(); return auth.onChange(refresh); }, [auth]);
   useEffect(() => {
     if (!token) return;
-    fetch(`/api/owner${q}`, { headers: { authorization: `Bearer ${token}` } })
+    fetch(`/api/owner${q}`, { headers: { authorization: `Bearer ${token}` } }).then((res) => dropOn401(auth, res))
       .then(async (res) => res.ok ? (await res.json()).snapshot : "forbidden").then((s) => {
         // The kitchen and waiter screens on this device follow the branch shown here.
         if (s && s !== "forbidden") saveChoice(s.restaurantId);
         setSnapshot(s);
       });
-  }, [token, q]);
+  }, [token, q, auth]);
   if (token === undefined) return <OwnerScreen>Loading…</OwnerScreen>;
   if (!token) return <SignIn auth={auth} />;
   if (snapshot === "forbidden") return <OwnerScreen>This account has no owner or manager access.</OwnerScreen>;
