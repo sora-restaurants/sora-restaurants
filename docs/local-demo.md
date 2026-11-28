@@ -20,10 +20,10 @@ pnpm dev             # terminal 2: app on http://localhost:3000   (pnpm dev:lan 
 
 | Page | URL |
 |---|---|
-| Customer menu, Demo Bistro Table 4 | http://localhost:3000/t/demo-table-4-token |
+| Customer menu, Donna's Table 4 | http://localhost:3000/t/demo-table-4-token |
 | Kitchen board | http://localhost:3000/kitchen |
 
-Kitchen logins (seeded, local only): `kitchen@demo.test` / `demo-kitchen-pass` (Demo Bistro),
+Kitchen logins (seeded, local only): `kitchen@demo.test` / `demo-kitchen-pass` (Donna's),
 `kitchen@other.test` / `other-kitchen-pass` (Other Grill), `waiter@demo.test` / `demo-waiter-pass` (refused by the board).
 
 ## How the dev login stays safe
@@ -42,13 +42,13 @@ Kitchen logins (seeded, local only): `kitchen@demo.test` / `demo-kitchen-pass` (
 | Check | Result |
 |---|---|
 | Menu loads from the database; unknown QR token | 200; 404 |
-| Kitchen sign-in as `kitchen@demo.test` | board live, Demo Bistro |
-| Order from the Table 4 menu (2× Bunny chow, 1× Rooibos iced tea) | "Order sent to the kitchen", ref 4C459C |
+| Kitchen sign-in as `kitchen@demo.test` | board live, Donna's |
+| Order from the Table 4 menu (2× Primavera Salad, 1× Coca-Cola) | "Order sent to the kitchen", ref 4C459C |
 | Ticket appears on the board | yes, in New, within one poll |
 | Start, Ready, Served | New → Cooking → Ready → off the board |
 | Database row | `served`, total 28500, VAT 3717, history submitted → accepted → preparing → ready → served |
 | Three simultaneous submits, same idempotency key | 201, 200, 200; one order created |
-| Other Grill's kitchen: own restaurants / Demo Bistro board / cancel Demo Bistro order / tampered token | Other Grill only / 403 / 404 / 401 |
+| Other Grill's kitchen: own restaurants / Donna's board / cancel Donna's order / tampered token | Other Grill only / 403 / 404 / 401 |
 | `next build` with the dev settings present | refused, names the three settings |
 | Not yet done | a real phone over Wi-Fi (`pnpm dev:lan`) |
 

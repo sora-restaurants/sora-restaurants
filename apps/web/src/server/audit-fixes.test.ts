@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import type { PGlite } from "@electric-sql/pglite";
 import { freshDb } from "../../../../supabase/tests/db.ts";
-import { BUNNY_CHOW } from "../../../../supabase/tests/fixtures.ts";
+import { PRIMAVERA } from "../../../../supabase/tests/fixtures.ts";
 import { sendReceiptAction } from "../app/actions/send-receipt.ts";
 import { ownerCommand } from "./owner-operations.ts";
 import { submitOrder } from "./submit-order.ts";
@@ -10,7 +10,7 @@ import { markPaid } from "./unpaid.ts";
 
 let db: PGlite;
 beforeEach(async () => { db = await freshDb(); });
-const order = (n: number) => ({ qrToken: "demo-table-4-token", idempotencyKey: `flood-key-${n}`, items: [{ menuItemId: BUNNY_CHOW, quantity: 1 }] });
+const order = (n: number) => ({ qrToken: "demo-table-4-token", idempotencyKey: `flood-key-${n}`, items: [{ menuItemId: PRIMAVERA, quantity: 1 }] });
 const staff = (path: string, token = "token-waiter") => new Request(`http://sora.test${path}`, { method: "POST", headers: { authorization: `Bearer ${token}` } });
 
 describe("audit fixes", () => {

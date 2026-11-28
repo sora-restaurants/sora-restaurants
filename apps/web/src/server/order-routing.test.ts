@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import type { PGlite } from "@electric-sql/pglite";
 import { freshDb } from "../../../../supabase/tests/db";
-import { BUNNY_CHOW, DEMO, DEMO_USER, OTHER, ROOIBOS } from "../../../../supabase/tests/fixtures";
+import { PRIMAVERA, DEMO, DEMO_USER, OTHER, COKE } from "../../../../supabase/tests/fixtures";
 import type { Deps } from "./deps";
 import { advanceOrder } from "./advance-order";
 import { kitchenStream } from "./kitchen-stream";
@@ -20,8 +20,8 @@ const T4 = () => ({
   qrToken: "demo-table-4-token",
   idempotencyKey: "key-t4-0001",
   items: [
-    { menuItemId: BUNNY_CHOW, quantity: 2 },
-    { menuItemId: ROOIBOS, quantity: 1, notes: "no ice" },
+    { menuItemId: PRIMAVERA, quantity: 2 },
+    { menuItemId: COKE, quantity: 1, notes: "no ice" },
   ],
 });
 
@@ -60,7 +60,7 @@ describe("checkout", () => {
 
   it("quantity outside 1-50 is rejected", async () => {
     for (const quantity of [0, -5, 51, 1_000_000, 2.5]) {
-      const input = { ...T4(), items: [{ menuItemId: BUNNY_CHOW, quantity }] };
+      const input = { ...T4(), items: [{ menuItemId: PRIMAVERA, quantity }] };
       expect(await submitOrder(input, deps), String(quantity)).toEqual({
         ok: false, httpStatus: 400, error: "invalid_items",
       });
@@ -75,7 +75,7 @@ describe("checkout", () => {
   });
 
   it("malformed body is 400", async () => {
-    const stringQty = { ...T4(), items: [{ menuItemId: BUNNY_CHOW, quantity: "2" }] };
+    const stringQty = { ...T4(), items: [{ menuItemId: PRIMAVERA, quantity: "2" }] };
     for (const input of ["{", stringQty, { ...T4(), items: [] }]) {
       expect(await submitOrder(input, deps)).toEqual({ ok: false, httpStatus: 400, error: "invalid_items" });
     }
@@ -121,7 +121,7 @@ describe("kitchen board", () => {
     expect(snapshot.event).toBe("snapshot");
     expect(snapshot.data.orders).toHaveLength(1);
     expect(snapshot.data.orders[0]).toMatchObject({ table: "Table 4", totalCents: 28500 });
-    expect(snapshot.data.orders[0].items).toContainEqual({ name: "Rooibos iced tea", quantity: 1, notes: "no ice", station: "bar", prep: "new" });
+    expect(snapshot.data.orders[0].items).toContainEqual({ name: "Coca-Cola", quantity: 1, notes: "no ice", station: "bar", prep: "new" });
   });
 
   it("Restaurant B credentials on A's board get 403 and no data", async () => {
@@ -130,7 +130,7 @@ describe("kitchen board", () => {
     expect(res.status).toBe(403);
     const body = await res.text();
     expect(body).not.toContain(placed.ok ? placed.publicRef : "unreachable");
-    expect(body).not.toContain("Bunny");
+    expect(body).not.toContain("Primavera");
   });
 
   it("B's own board does not include A's order", async () => {

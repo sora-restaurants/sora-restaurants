@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import type { PGlite } from "@electric-sql/pglite";
 import { freshDb } from "../../../../supabase/tests/db";
-import { BUNNY_CHOW } from "../../../../supabase/tests/fixtures";
+import { PRIMAVERA } from "../../../../supabase/tests/fixtures";
 import { advanceOrder } from "./advance-order.ts";
 import type { Deps } from "./deps.ts";
 import { submitOrder } from "./submit-order.ts";
@@ -15,7 +15,7 @@ beforeEach(async () => {
   db = await freshDb();
   deps = testDeps(db);
   await submitOrder(
-    { qrToken: "demo-table-4-token", idempotencyKey: "key-adv-0001", items: [{ menuItemId: BUNNY_CHOW, quantity: 1 }] },
+    { qrToken: "demo-table-4-token", idempotencyKey: "key-adv-0001", items: [{ menuItemId: PRIMAVERA, quantity: 1 }] },
     deps,
   );
   orderId = (await db.query<{ id: string }>("select id from orders")).rows[0].id;

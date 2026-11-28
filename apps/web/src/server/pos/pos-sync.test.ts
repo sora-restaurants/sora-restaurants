@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import type { PGlite } from "@electric-sql/pglite";
 import { freshDb } from "../../../../../supabase/tests/db";
-import { BUNNY_CHOW, ROOIBOS } from "../../../../../supabase/tests/fixtures";
+import { PRIMAVERA, COKE } from "../../../../../supabase/tests/fixtures";
 import type { Deps } from "../deps.ts";
 import { submitOrder } from "../submit-order.ts";
 import { testDeps } from "../test-deps";
@@ -17,7 +17,7 @@ beforeEach(async () => {
 
 const order = (key: string) =>
   submitOrder(
-    { qrToken: "demo-table-4-token", idempotencyKey: key, items: [{ menuItemId: BUNNY_CHOW, quantity: 2 }, { menuItemId: ROOIBOS, quantity: 1 }] },
+    { qrToken: "demo-table-4-token", idempotencyKey: key, items: [{ menuItemId: PRIMAVERA, quantity: 2 }, { menuItemId: COKE, quantity: 1 }] },
     deps,
   );
 const jobs = async () => (await db.query("select status, attempts, external_ref from pos_sync_jobs order by created_at")).rows;
@@ -47,10 +47,10 @@ describe("POS sync", () => {
     const { adapter, received } = till();
     expect(await syncPendingOrders(deps, adapter)).toEqual({ sent: 1, failed: 0 });
     expect(received).toHaveLength(1);
-    expect(received[0]).toMatchObject({ table: "Table 4", totalCents: 28500, vatCents: 3717, restaurant: "Demo Bistro" });
+    expect(received[0]).toMatchObject({ table: "Table 4", totalCents: 28500, vatCents: 3717, restaurant: "Donna's" });
     expect(received[0].lines).toEqual([
-      { name: "Bunny chow", quantity: 2, unitPriceCents: 12500, notes: "" },
-      { name: "Rooibos iced tea", quantity: 1, unitPriceCents: 3500, notes: "" },
+      { name: "Coca-Cola", quantity: 1, unitPriceCents: 3500, notes: "" },
+      { name: "Primavera Salad", quantity: 2, unitPriceCents: 12500, notes: "" },
     ]);
     expect(await jobs()).toEqual([{ status: "sent", attempts: 1, external_ref: "TILL-1" }]);
     await syncPendingOrders(deps, adapter);

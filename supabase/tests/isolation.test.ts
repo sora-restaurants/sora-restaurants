@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import type { PGlite } from "@electric-sql/pglite";
 import { asStaff, freshDb } from "./db";
-import { BUNNY_CHOW, DEMO, DEMO_USER, OTHER, OTHER_USER, RUMP, submitOrder } from "./fixtures";
+import { PRIMAVERA, DEMO, DEMO_USER, OTHER, OTHER_USER, RUMP, submitOrder } from "./fixtures";
 
 let db: PGlite;
 let demoOrderId: string;
@@ -9,7 +9,7 @@ let otherOrderId: string;
 
 beforeEach(async () => {
   db = await freshDb();
-  await submitOrder(db, "demo-table-1-token", "key-demo-001", [{ menuItemId: BUNNY_CHOW, quantity: 1 }]);
+  await submitOrder(db, "demo-table-1-token", "key-demo-001", [{ menuItemId: PRIMAVERA, quantity: 1 }]);
   await submitOrder(db, "other-table-1-token", "key-other-01", [{ menuItemId: RUMP, quantity: 1 }]);
   const ids = (await db.query<{ id: string; restaurant_id: string }>("select id, restaurant_id from orders")).rows;
   demoOrderId = ids.find((r) => r.restaurant_id === DEMO)!.id;
@@ -55,7 +55,7 @@ describe("cross-restaurant isolation", () => {
     await expect(
       db.query(
         "insert into order_items (restaurant_id, order_id, menu_item_id, name_snapshot, unit_price_cents, quantity) values ($1, $2, $3, 'x', 1, 1)",
-        [DEMO, otherOrderId, BUNNY_CHOW],
+        [DEMO, otherOrderId, PRIMAVERA],
       ),
     ).rejects.toThrow(/foreign key/);
   });

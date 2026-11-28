@@ -5,7 +5,7 @@ export const OTHER = "b0000000-0000-0000-0000-000000000001";
 export const DEMO_USER = "c0000000-0000-0000-0000-000000000001";
 export const OTHER_USER = "c0000000-0000-0000-0000-000000000002";
 export const OWNER_USER = "c0000000-0000-0000-0000-000000000004";
-export const BUNNY_CHOW = "a2000000-0000-0000-0000-000000000001";
+export const PRIMAVERA = "a2000000-0000-0000-0000-000000000001";
 export const RUMP = "b2000000-0000-0000-0000-000000000001";
 
 type Line = { menuItemId: string; quantity: number; notes?: string };
@@ -19,5 +19,5 @@ export async function submitOrder(db: PGlite, tableToken: string, key: string, i
   return rows[0].r;
 }
 
-export const ROOIBOS = "a2000000-0000-0000-0000-000000000003";
+export const COKE = "a2000000-0000-0000-0000-000000000003";
 export const WAITER_USER = "c0000000-0000-0000-0000-000000000003";

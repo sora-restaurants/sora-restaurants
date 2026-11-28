@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import type { PGlite } from "@electric-sql/pglite";
 import { freshDb } from "../../../../supabase/tests/db";
-import { BUNNY_CHOW, OWNER_USER, ROOIBOS } from "../../../../supabase/tests/fixtures";
+import { PRIMAVERA, OWNER_USER, COKE } from "../../../../supabase/tests/fixtures";
 import { columns } from "../kitchen/board-state";
 import type { Deps } from "./deps";
 import { advanceOrder } from "./advance-order";
@@ -15,10 +15,10 @@ beforeEach(async () => {
   deps = testDeps(db);
 });
 
-const DRINKS_MENU = "a1000000-0000-0000-0000-000000000002";
-const MAINS_MENU = "a1000000-0000-0000-0000-000000000001";
+const DRINKS_MENU = "a1000000-0000-0000-0000-00000000000c"; // Soft drinks & juice (Coca-Cola)
+const MAINS_MENU = "a1000000-0000-0000-0000-000000000002"; // Insalate (Primavera Salad)
 
-async function order(items = [{ menuItemId: BUNNY_CHOW, quantity: 1 }, { menuItemId: ROOIBOS, quantity: 2 }]) {
+async function order(items = [{ menuItemId: PRIMAVERA, quantity: 1 }, { menuItemId: COKE, quantity: 2 }]) {
   const placed = await submitOrder({ qrToken: "demo-table-4-token", idempotencyKey: `k-${Math.random()}`, items }, deps);
   if (!placed.ok) throw new Error(placed.error);
   return (await db.query<{ id: string }>("select id from orders where public_ref = $1", [placed.publicRef])).rows[0].id;
@@ -33,7 +33,7 @@ const status = async (id: string) => (await db.query<{ status: string }>("select
 describe("bar routing", () => {
   it("sends drinks to the bar and food to the kitchen", async () => {
     const id = await order();
-    expect((await lines(id)).map((l) => [l.name_snapshot, l.station])).toEqual([["Bunny chow", "kitchen"], ["Rooibos iced tea", "bar"]]);
+    expect((await lines(id)).map((l) => [l.name_snapshot, l.station])).toEqual([["Coca-Cola", "bar"], ["Primavera Salad", "kitchen"]]);
   });
 
   it("guesses by whole words only", async () => {
@@ -47,18 +47,18 @@ describe("bar routing", () => {
   it("a category set to Kitchen or Bar overrides the name guess; Auto goes back to guessing", async () => {
     await db.query("update menus set station = 'kitchen' where id = $1", [DRINKS_MENU]);
     await db.query("update menus set station = 'bar' where id = $1", [MAINS_MENU]);
-    expect((await lines(await order())).map((l) => l.station)).toEqual(["bar", "kitchen"]);
+    expect((await lines(await order())).map((l) => l.station)).toEqual(["kitchen", "bar"]);
 
     await deps.db.asUser(OWNER_USER, "select set_menu_station($1, 'auto')", [DRINKS_MENU]);
     await deps.db.asUser(OWNER_USER, "select set_menu_station($1, 'auto')", [MAINS_MENU]);
-    expect((await lines(await order())).map((l) => l.station)).toEqual(["kitchen", "bar"]);
+    expect((await lines(await order())).map((l) => l.station)).toEqual(["bar", "kitchen"]);
   });
 
   it("each station moves its own part; the order is ready only when both are", async () => {
     const id = await order();
     expect((await move(id, "preparing", "bar")).status).toBe(200);
     expect(await status(id)).toBe("preparing");
-    expect((await lines(id)).map((l) => l.prep_status)).toEqual(["new", "preparing"]);
+    expect((await lines(id)).map((l) => l.prep_status)).toEqual(["preparing", "new"]);
 
     expect((await move(id, "ready", "bar")).status).toBe(200);
     expect(await status(id)).toBe("preparing");
@@ -76,9 +76,9 @@ describe("bar routing", () => {
     const board = { revoked: false, orders: { [id]: { id, publicRef: "X", table: "T4", status: await status(id), totalCents: 0, createdAt: "", paid: false, payAtTable: false, items } } };
     const where = (station: "all" | "kitchen" | "bar") => Object.fromEntries(columns(board, station).map((c) => [c.id, c.orders.map((o) => o.items.map((i) => i.name))]));
 
-    expect(where("bar")).toEqual({ new: [], cooking: [], ready: [["Rooibos iced tea"]] });
-    expect(where("kitchen")).toEqual({ new: [["Bunny chow"]], cooking: [], ready: [] }); // the kitchen has not started
-    expect(where("all")).toEqual({ new: [], cooking: [["Bunny chow", "Rooibos iced tea"]], ready: [] });
+    expect(where("bar")).toEqual({ new: [], cooking: [], ready: [["Coca-Cola"]] });
+    expect(where("kitchen")).toEqual({ new: [["Primavera Salad"]], cooking: [], ready: [] }); // the kitchen has not started
+    expect(where("all")).toEqual({ new: [], cooking: [["Coca-Cola", "Primavera Salad"]], ready: [] });
     expect(columns(board, "bar")[2].orders[0].waitingOn).toBe("kitchen");
   });
 

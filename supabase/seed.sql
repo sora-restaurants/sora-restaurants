@@ -1,11 +1,16 @@
 -- Local-only demo data. Two restaurants so isolation can be checked by hand and in tests.
--- Test logins (local only): kitchen@demo.test / demo-kitchen-pass  (Demo Bistro)
+-- The demo restaurant carries Donna Modern Italian's (Salt Rock, Ballito) published menu for sales pitches:
+--   food  https://donnamodernitalian.co.za/wp-content/uploads/2026/01/DONNA-MENU.pdf (Dec 2025 edition)
+--   drink https://donnamodernitalian.co.za/wp-content/uploads/2026/01/2026_Drinks-Menu_Donna.pdf
+-- plus breakfast, wine and cellar lists (same site, 2026). Paid extras and sizes are owner-set options.
+-- No Donna photos or logo: those need their permission.
+-- Test logins (local only): kitchen@demo.test / demo-kitchen-pass  (Donna's)
 --                           kitchen@other.test / other-kitchen-pass (Other Grill)
---                           waiter@demo.test / demo-waiter-pass (Demo Bistro, waiter)
---                           owner@demo.test / demo-owner-pass (Demo Bistro, owner)
+--                           waiter@demo.test / demo-waiter-pass (Donna's, waiter)
+--                           owner@demo.test / demo-owner-pass (Donna's, owner)
 
 insert into restaurants (id, name, slug, vat_registered, theme) values
-  ('a0000000-0000-0000-0000-000000000001', 'Demo Bistro', 'demo-bistro', true, 'rustic-traditional'),
+  ('a0000000-0000-0000-0000-000000000001', 'Donna''s', 'donnas-ballito', true, 'luxury-minimal'),
   ('b0000000-0000-0000-0000-000000000001', 'Other Grill', 'other-grill', false, 'fast-casual-vibrant');
 
 insert into tables (restaurant_id, label, qr_token) values
@@ -14,32 +19,424 @@ insert into tables (restaurant_id, label, qr_token) values
   ('a0000000-0000-0000-0000-000000000001', 'Table 4', 'demo-table-4-token'),
   ('b0000000-0000-0000-0000-000000000001', 'Table 1', 'other-table-1-token');
 
+insert into menus (id, restaurant_id, name, sort_order)
+select ('a1000000-0000-0000-0000-0000000000' || v.m)::uuid, 'a0000000-0000-0000-0000-000000000001', v.name, v.sort
+from (values
+  ('0e', 'Breakfast & brunch', 1), ('0f', 'Toasties & wraps', 2), ('01', 'Antipasti', 3), ('02', 'Insalate', 4),
+  ('03', 'Primi', 5), ('04', 'Pizze', 6), ('05', 'Secondi', 7), ('06', 'Sides', 8), ('07', 'Kids', 9), ('08', 'Dolci', 10),
+  ('09', 'Waffles, shakes & gelato', 11), ('0a', 'Cocktails', 12), ('10', 'Mimosas & bubbles', 13),
+  ('11', 'Wine by the glass', 14), ('12', 'White wine', 15), ('13', 'Rosé & semi-sweet', 16), ('14', 'Red wine', 17),
+  ('15', 'Cellar list', 18), ('0b', 'Beer & cider', 19), ('16', 'Spirits & shooters', 20),
+  ('0c', 'Soft drinks & juice', 21), ('0d', 'Coffee & tea', 22)
+) v(m, name, sort);
+
 insert into menus (id, restaurant_id, name, sort_order) values
-  ('a1000000-0000-0000-0000-000000000001', 'a0000000-0000-0000-0000-000000000001', 'Mains', 1),
-  ('a1000000-0000-0000-0000-000000000002', 'a0000000-0000-0000-0000-000000000001', 'Drinks', 2),
   ('b1000000-0000-0000-0000-000000000001', 'b0000000-0000-0000-0000-000000000001', 'Grill', 1);
 
+-- Tests rely on item ...001 (Primavera Salad, R125), ...003 (Coca-Cola, R35) and ...012 (a dish the owner edits).
+insert into menu_items (id, restaurant_id, menu_id, name, description, price_cents, image_url, dietary_tags, sort_order)
+select ('a2000000-0000-0000-0000-000000000' || v.id)::uuid, 'a0000000-0000-0000-0000-000000000001',
+  ('a1000000-0000-0000-0000-0000000000' || v.m)::uuid, v.name, v.description, v.rand * 100, v.img, v.tags::text[], v.sort
+from (values
+  ('101', '01', 'Salmon Tartare', 'Chopped salmon, diced cucumber.', 145, null::text, '{}', 1),
+  ('102', '01', 'Mussels', 'Full mussels in a white wine and cream sauce.', 110, null, '{}', 2),
+  ('103', '01', 'Calamari', 'Tubes and heads, grilled or fried, with lemon butter, lemon & herb or peri-peri.', 115, null, '{}', 3),
+  ('104', '01', 'Beef Carpaccio', 'Thin raw beef, rocket, Parmesan, capers, olive oil and balsamic reduction.', 150, null, '{}', 4),
+  ('105', '01', 'Involtini di Melanzane', 'Ricotta rolled in eggplant with herbs, béchamel and Napolitana sauce.', 110, null, '{vegetarian}', 5),
+  ('106', '01', 'Creamy Prawn Tails', 'Prawn tails in creamy garlic sauce, baked under three cheeses, with ciabatta toast.', 135, null, '{}', 6),
+  ('107', '01', 'Focaccia Garlic & Herb', 'Freshly baked focaccia with garlic, olive oil and herbs.', 75, null, '{vegetarian}', 7),
+  ('108', '01', 'Focaccia Prima Donna', 'Focaccia topped with prosciutto, rocket, gorgonzola and fresh tomato.', 175, null, '{}', 8),
+  ('109', '01', '4 Oysters with Donna''s Relish', 'Served with Donna''s secret vinaigrette.', 150, null, '{}', 9),
+  ('110', '02', 'Burrata con Pomodoro', 'Burrata with tomatoes, basil, crispy onions, roasted garlic and balsamic reduction.', 180, null, '{vegetarian}', 1),
+  ('111', '02', 'Caesar Salad', 'Romaine, creamy Caesar dressing, croutons, Parmesan and anchovies.', 120, null, '{}', 2),
+  ('001', '02', 'Primavera Salad', 'Lettuce, mini mozzarella, cherry tomatoes, artichokes, olives, fried zucchini, Dijon vinaigrette.', 125, null, '{vegetarian}', 3),
+  ('112', '02', 'Panzanella Salad', 'Cherry tomatoes, cucumber, red onion, basil, rustic bread and mini mozzarella.', 110, null, '{vegetarian}', 4),
+  ('113', '03', 'Prawn Linguine', 'Homemade linguine, prawns, creamy garlic, anchovy, lemon and white wine, chilli flakes.', 250, null, '{}', 1),
+  ('114', '03', 'Seafood Linguine', 'Homemade linguine with prawns, mussels and calamari, creamy or Napolitana.', 275, null, '{}', 2),
+  ('115', '03', 'Beef Lasagna', 'Layers of pasta, beef mince and cheese.', 170, null, '{}', 3),
+  ('116', '03', 'Rigatoni al Burrata', 'Rigatoni in tomato and cream sauce with burrata.', 195, null, '{vegetarian}', 4),
+  ('117', '03', 'Butternut Ravioli', 'Roasted pumpkin and Parmigiano ravioli, sage brown butter, toasted walnuts.', 180, null, '{vegetarian}', 5),
+  ('118', '03', 'Smoked Salmon Penne', 'Creamy garlic sauce with Ouzo, dill, smoked salmon and a touch of Napolitana.', 195, null, '{}', 6),
+  ('119', '03', 'Chicken & Mushroom Tagliatelle', 'Homemade tagliatelle, chicken strips and mushrooms in a creamy rosemary sauce.', 175, null, '{}', 7),
+  ('012', '03', 'Mushroom Risotto', 'Exotic mushrooms, fortified wine, sage, butter, Parmesan and truffle oil.', 165, null, '{vegetarian}', 8),
+  ('120', '03', 'Prawn Risotto', 'Prawns grilled in garlic, lemon and white wine on a Napolitana risotto.', 235, null, '{}', 9),
+  ('121', '03', 'Gnocchi alla Sorrentina', 'Gnocchi in Napolitana with chilli, sun-dried tomato, mozzarella and basil.', 175, null, '{vegetarian}', 10),
+  ('122', '03', 'Gnocchi Quattro Formaggi', 'Gnocchi in a creamy four-cheese garlic sauce with toasted pine nuts.', 185, null, '{vegetarian}', 11),
+  ('123', '03', 'Al Ragù Bolognese', 'Homemade spaghetti with traditional pork and beef ragù.', 165, null, '{}', 12),
+  ('124', '03', 'Aglio Olio Spaghetti', 'Homemade spaghetti, olive oil, garlic, fresh chilli, lemon zest and Parmesan.', 150, null, '{vegetarian}', 13),
+  ('125', '03', 'All''Arrabbiata', 'Penne with fresh chilli, garlic and Parmesan in Napolitana sauce.', 170, null, '{vegetarian}', 14),
+  ('126', '04', 'Margherita', 'Tomato, mozzarella and basil.', 140, null, '{vegetarian}', 1),
+  ('127', '04', 'Three Cheese', 'Mozzarella, cheddar, provolone and honey chilli.', 170, null, '{vegetarian}', 2),
+  ('128', '04', 'Seafood Pizza', 'Cream cheese white sauce, mozzarella, prawns, mussels, calamari and onion jam.', 265, null, '{}', 3),
+  ('129', '04', 'Chicken & Jalapeño', 'Tomato, mozzarella, chicken, jalapeño, avocado, red onion and sour cream.', 195, null, '{}', 4),
+  ('130', '04', 'Bacon, Avo & Feta', 'Tomato, mozzarella, bacon, avocado and feta.', 195, null, '{}', 5),
+  ('131', '04', 'Chicken Teriyaki', 'White sauce, mozzarella, teriyaki chicken, sesame, pickled ginger, Japanese mayo.', 180, null, '{}', 6),
+  ('132', '04', 'Sicilian', 'Tomato, mozzarella, caramelised onion, capers, olives and anchovies.', 180, null, '{}', 7),
+  ('133', '04', 'Hawaiian', 'Tomato, mozzarella, ham and pineapple.', 170, null, '{}', 8),
+  ('134', '04', 'Vegetarian', 'Tomato, mozzarella, mushrooms, peppers, onion jam, olives and avocado.', 160, null, '{vegetarian}', 9),
+  ('135', '04', 'Mushroom & Salami', 'Tomato, mozzarella, onions, mushrooms and salami.', 195, null, '{}', 10),
+  ('136', '04', 'Steak Pizza', 'Steak strips, onion jam, Peppadews, balsamic reduction, Parmesan and rocket.', 195, null, '{}', 11),
+  ('137', '05', 'Fillet & Pesto Linguine', 'Homemade basil-pesto linguine with thinly sliced seared beef fillet (125g).', 195, null, '{}', 1),
+  ('138', '05', 'Chicken Masala', 'Flattened chicken fillet in a creamy masala wine sauce with buttered tagliatelle.', 180, null, '{}', 2),
+  ('139', '05', 'Lamb Chops', 'Herb-crusted lamb chops with a side of your choice.', 320, null, '{}', 3),
+  ('140', '05', 'Sole', 'Grilled sole with lemon butter, lemon herb & caper or peri-peri, and a side.', 275, null, '{}', 4),
+  ('141', '05', 'Kingklip', 'Grilled kingklip fillet with your choice of sauce and a side.', 250, null, '{}', 5),
+  ('142', '05', 'Queen Prawns', 'Grilled queen prawns with lemon butter, lemon & herb or peri-peri, and a side.', 260, null, '{}', 6),
+  ('143', '05', 'Calamari Main', 'Tubes and heads, grilled or fried, with your choice of sauce and a side.', 180, null, '{}', 7),
+  ('144', '05', 'Baby Chicken', 'Baby chicken with lemon butter, lemon & herb or peri-peri, and a side.', 225, null, '{}', 8),
+  ('145', '05', 'Fillet', '250g beef fillet with pepper or mushroom sauce and a side.', 295, null, '{}', 9),
+  ('146', '05', 'Seafood Platter for One', '4 queen prawns, calamari, mussels and hake with your choice of sauce and a side.', 345, null, '{}', 10),
+  ('147', '05', 'Hake', 'Hake fillet, grilled or fried, with your choice of sauce and a side.', 155, null, '{}', 11),
+  ('148', '05', 'Seared Salmon', 'Seared salmon with an Asian sauce and a side.', 260, null, '{}', 12),
+  ('149', '06', 'Chips', '', 40, null, '{vegan}', 1),
+  ('150', '06', 'Medi Veg', '', 40, null, '{vegan}', 2),
+  ('151', '06', 'Side Salad', '', 40, null, '{vegetarian}', 3),
+  ('152', '06', 'Rice', '', 40, null, '{vegan}', 4),
+  ('153', '06', 'Creamed Spinach & Butternut', '', 45, null, '{vegetarian}', 5),
+  ('154', '07', 'Kids Spaghetti Bolognese', 'Spaghetti with traditional pork and beef Bolognese.', 95, null, '{}', 1),
+  ('155', '07', 'Kids Napoletana Penne', 'Penne in a tomato sauce.', 90, null, '{vegetarian}', 2),
+  ('156', '07', 'Baby Margherita', 'Mini Margherita pizza with tomato and mozzarella.', 95, null, '{vegetarian}', 3),
+  ('157', '07', 'Mac and Cheese', 'Macaroni in a creamy cheese sauce.', 95, null, '{vegetarian}', 4),
+  ('158', '07', 'Kids Chicken Strips', 'Breaded chicken strips with fries.', 95, null, '{}', 5),
+  ('159', '08', 'Tiramisu', 'Coffee-soaked ladyfingers layered with mascarpone.', 95, null, '{vegetarian}', 1),
+  ('160', '08', 'Deconstructed Crème Brûlée', 'Creamy vanilla custard with a caramelised sugar crust.', 95, null, '{vegetarian}', 2),
+  ('161', '08', 'Cannoli', 'Crisp pastry shells filled with Oreo or pistachio ricotta.', 55, null, '{vegetarian}', 3),
+  ('162', '08', 'Affogato', 'Vanilla gelato drowned in espresso with toasted almond flakes.', 70, null, '{vegetarian}', 4),
+  ('163', '08', 'Blueberry Cheesecake', '', 95, null, '{vegetarian}', 5),
+  ('164', '08', 'Chocolate Brownie', 'With a scoop of vanilla ice cream and chocolate sauce.', 95, null, '{vegetarian}', 6),
+  ('165', '08', 'Italian Doughnuts', 'Filled with custard or chocolate.', 50, null, '{vegetarian}', 7),
+  ('166', '09', 'Oreo Waffle', 'Vanilla gelato, Crispearls, Oreo and chocolate sauce. Half or full portion.', 65, null, '{vegetarian}', 1),
+  ('167', '09', 'Childhood Sweetheart Waffle', 'Chocolate and vanilla gelato, mini marshmallows, chocolate sauce. Half or full.', 65, null, '{vegetarian}', 2),
+  ('168', '09', 'Plain Waffle', 'With maple syrup or honey.', 60, null, '{vegetarian}', 3),
+  ('169', '09', 'Create Your Own Waffle', 'Two scoops of gelato and two add-ons.', 100, null, '{vegetarian}', 4),
+  ('170', '09', 'Strawberry Milkshake', 'Strawberry syrup, mini marshmallows and whipped cream.', 65, null, '{vegetarian}', 5),
+  ('171', '09', 'Peanut Butter & Banana Milkshake', 'Peanut butter, banana, whipped cream and caramel.', 65, null, '{vegetarian}', 6),
+  ('172', '09', 'Chocolate Milkshake', 'Chocolate syrup and whipped cream.', 65, null, '{vegetarian}', 7),
+  ('173', '09', 'Oreo Milkshake', 'Oreo crumbs, whipped cream and chocolate sauce.', 65, null, '{vegetarian}', 8),
+  ('174', '09', 'Gelato, Two Scoops', 'Extra cup R5.', 75, null, '{vegetarian}', 9),
+  ('175', '0a', 'The Donna', 'Absolut with pineapple, a medley of berries and citrus.', 110, null, '{contains alcohol}', 1),
+  ('176', '0a', 'Aperol Spritz', 'Aperol, Prosecco and soda.', 100, null, '{contains alcohol}', 2),
+  ('177', '0a', 'Espresso Martini', 'Vodka, Kahlua and cold-brew espresso.', 110, null, '{contains alcohol}', 3),
+  ('178', '0a', 'Negroni', 'Gin, Campari and rosemary-infused vermouth over a big block of ice.', 105, null, '{contains alcohol}', 4),
+  ('179', '0a', 'Pornstar Martini', 'Passionfruit, vodka and vanilla with a shot of Prosecco.', 135, null, '{contains alcohol}', 5),
+  ('180', '0a', 'Amaretto Sour', 'Disaronno with citrus and fresh orange juice.', 105, null, '{contains alcohol}', 6),
+  ('181', '0a', 'Absolut Bliss', 'Pomegranate-raspberry vodka, pineapple and lemon.', 110, null, '{contains alcohol}', 7),
+  ('182', '0a', 'Bees Knees', 'Gin, lime juice and honey syrup.', 105, null, '{contains alcohol}', 8),
+  ('183', '0a', 'Elevated Paloma', 'Tequila, lime and grapefruit cordial, topped with orange soda.', 130, null, '{contains alcohol}', 9),
+  ('184', '0a', 'Fruitful Evening', 'Hennessy VS, Kahlua, espresso, berry reduction, honey-cinnamon and citrus.', 145, null, '{contains alcohol}', 10),
+  ('185', '0a', 'Gin Bull', 'Fresh lime, gin and Red Bull Watermelon.', 95, null, '{contains alcohol}', 11),
+  ('186', '0a', 'Italian Bird', 'Campari, sherry, pineapple, lime and rum.', 105, null, '{contains alcohol}', 12),
+  ('187', '0a', 'Italian Caipirinha', 'Sangria, lime and rum with a touch of red wine.', 105, null, '{contains alcohol}', 13),
+  ('188', '0a', 'Margarita', 'Shaken with tequila.', 110, null, '{contains alcohol}', 14),
+  ('189', '0a', 'Old Fashioned', 'Bourbon, cherry syrup and cacao bitters with cherry-oak smoke.', 105, null, '{contains alcohol}', 15),
+  ('190', '0a', 'Peach Rita', 'Blanco tequila, lime and Red Bull White Peach.', 95, null, '{contains alcohol}', 16),
+  ('191', '0a', 'The Spicy Diplomat', 'Hennessy VS, pineapple, fresh basil and jalapeño.', 145, null, '{contains alcohol}', 17),
+  ('192', '0a', 'Whiskey Sour', 'Whiskey, sweet and sour, with a silky foam top.', 105, null, '{contains alcohol}', 18),
+  ('193', '0b', 'Castle Lite', '', 42, null, '{contains alcohol}', 1),
+  ('194', '0b', 'Corona', '', 52, null, '{contains alcohol}', 2),
+  ('195', '0b', 'Heineken Draught 500ml', '', 55, null, '{contains alcohol}', 3),
+  ('196', '0b', 'Stella Artois', '', 46, null, '{contains alcohol}', 4),
+  ('197', '0b', 'Windhoek Draught', '', 52, null, '{contains alcohol}', 5),
+  ('198', '0b', 'Black Label', '', 42, null, '{contains alcohol}', 6),
+  ('199', '0b', 'Guinness', '', 60, null, '{contains alcohol}', 7),
+  ('200', '0b', 'Savanna Dry', '', 52, null, '{contains alcohol}', 8),
+  ('201', '0b', 'Hunters Dry', '', 48, null, '{contains alcohol}', 9),
+  ('202', '0b', 'Heineken 0.0', 'Alcohol-free.', 46, null, '{}', 10),
+  ('003', '0c', 'Coca-Cola', '', 35, null, '{vegan}', 1),
+  ('203', '0c', 'Coke Zero', '', 35, null, '{vegan}', 2),
+  ('204', '0c', 'Crème Soda', '', 35, null, '{vegan}', 3),
+  ('205', '0c', 'Fanta Orange', '', 35, null, '{vegan}', 4),
+  ('206', '0c', 'Peach Ice Tea', '', 40, null, '{vegan}', 5),
+  ('207', '0c', 'Appletiser', '', 42, null, '{vegan}', 6),
+  ('208', '0c', 'Red Bull', 'Original, Sugar Free or Summer Edition.', 45, null, '{}', 7),
+  ('209', '0c', 'Valpré Still or Sparkling 750ml', '', 60, null, '{vegan}', 8),
+  ('210', '0c', 'San Pellegrino 750ml', '', 90, null, '{vegan}', 9),
+  ('211', '0c', 'Orange Juice', '', 38, null, '{vegan}', 10),
+  ('212', '0d', 'Espresso', '', 32, null, '{vegan}', 1),
+  ('213', '0d', 'Americano', '', 38, null, '{vegan}', 2),
+  ('214', '0d', 'Cappuccino', '', 44, null, '{vegetarian}', 3),
+  ('215', '0d', 'Flat White', '', 38, null, '{vegetarian}', 4),
+  ('216', '0d', 'Latte', '', 44, null, '{vegetarian}', 5),
+  ('217', '0d', 'Red Cappuccino', '', 44, null, '{vegetarian}', 6),
+  ('218', '0d', 'Hot Chocolate', '', 44, null, '{vegetarian}', 7),
+  ('219', '0d', 'Rooibos Tea', '', 38, null, '{vegan}', 8),
+  ('220', '0d', 'Earl Grey', '', 38, null, '{vegan}', 9)
+) v(id, m, name, description, rand, img, tags, sort);
+
+-- Breakfast, wine, cellar, spirits and the rest of the drinks list (prices in rand; glass and bottle are separate items).
+insert into menu_items (id, restaurant_id, menu_id, name, description, price_cents, image_url, dietary_tags, sort_order)
+select ('a2000000-0000-0000-0000-000000000' || v.id)::uuid, 'a0000000-0000-0000-0000-000000000001',
+  ('a1000000-0000-0000-0000-0000000000' || v.m)::uuid, v.name, v.description, v.rand * 100, null, v.tags::text[], v.sort
+from (values
+  ('221', '0e', 'Seasonal Fruit Bowl', 'Fresh fruit, Greek yoghurt, crunchy granola and honey.', 79, '{vegetarian}', 1),
+  ('222', '0e', 'Berry Best Smoothie', 'Strawberry, blueberry, blackberry, banana, yoghurt and dates.', 69, '{vegetarian}', 2),
+  ('223', '0e', 'Tropical Green Smoothie', 'Mango, pineapple, baby spinach, banana and ginger.', 69, '{vegan}', 3),
+  ('224', '0e', 'Peanut Oat Smoothie', 'Peanut butter, banana, cinnamon, dates and yoghurt.', 69, '{vegetarian}', 4),
+  ('225', '0e', 'Sweet & Simple Pancakes', 'Fluffy pancakes with maple syrup and powdered sugar.', 65, '{vegetarian}', 5),
+  ('226', '0e', 'Retro Classic Pancakes', 'Caramelised banana, bacon and maple syrup.', 79, '{}', 6),
+  ('227', '0e', 'Blueberry Pancakes', 'Topped with berry compote.', 79, '{vegetarian}', 7),
+  ('228', '0e', 'Avo & Poached Egg', 'Toasted sourdough, sliced avo and a soft poached egg. Until 12pm.', 75, '{vegetarian}', 8),
+  ('229', '0e', 'Salmon & Egg', 'Toasted sourdough, scrambled eggs and smoked salmon. Until 12pm.', 110, '{}', 9),
+  ('230', '0e', 'Mince & Egg', 'Toasted sourdough with savoury mince and a poached egg. Until 12pm.', 80, '{}', 10),
+  ('231', '0e', 'Sunrise', 'Two poached eggs, two rashers of bacon, grilled tomato, sourdough. Until 12pm.', 69, '{}', 11),
+  ('232', '0e', 'The Hungry Don', 'Two eggs, streaky bacon, beef sausage, tomato, mushrooms, sourdough. Until 12pm.', 115, '{}', 12),
+  ('233', '0e', 'Veggie Breakfast', 'Two poached eggs, tomato, mushrooms, avocado and sourdough. Until 12pm.', 75, '{vegetarian}', 13),
+  ('234', '0e', 'Eggs Benedict', 'English muffin, two poached eggs, salmon and house hollandaise. Until 12pm.', 120, '{}', 14),
+  ('235', '0e', 'Breakfast Wrap', 'Toasted tortilla with bacon, scrambled eggs and melted cheddar. Until 12pm.', 69, '{}', 15),
+  ('236', '0f', 'Ham, Cheese & Tomato Toastie', 'Country ham, tomato, cheddar and mozzarella. With chips or salad.', 60, '{}', 1),
+  ('237', '0f', 'Chicken & Mayo Toastie', 'Grilled chicken, mayonnaise and rocket. With chips or salad.', 75, '{}', 2),
+  ('238', '0f', 'Salami & Pesto Toastie', 'Salami, basil pesto, mozzarella and rocket. With chips or salad.', 69, '{}', 3),
+  ('239', '0f', 'Halloumi Wrap', 'Grilled halloumi, lettuce, carrot, cucumber and tzatziki. With chips or salad.', 89, '{vegetarian}', 4),
+  ('240', '0f', 'Sweet Chilli Grilled Chicken Wrap', 'Chicken strips, feta and sweet chilli mayo. With chips or salad.', 90, '{}', 5),
+  ('241', '0f', 'Bacon, Avo & Feta Wrap', 'Crispy bacon, feta and avo with garlic mayo. With chips or salad.', 99, '{}', 6),
+  ('242', '0f', 'Philly Cheesesteak Wrap', 'Steak strips, fire-roasted peppers, onions and cheddar. With chips or salad.', 99, '{}', 7),
+  ('243', '08', 'Gelato, One Scoop', '', 45, '{vegetarian}', 8),
+  ('244', '09', 'Vanilla Milkshake', '', 65, '{vegetarian}', 10),
+  ('245', '09', 'Banana Milkshake', '', 65, '{vegetarian}', 11),
+  ('246', '09', 'Bubblegum Milkshake', '', 65, '{vegetarian}', 12),
+  ('247', '09', 'Lime Milkshake', '', 65, '{vegetarian}', 13),
+  ('248', '09', 'Bar One Milkshake', '', 65, '{vegetarian}', 14),
+  ('249', '10', 'Mimosa', 'Until 1pm.', 40, '{contains alcohol}', 1),
+  ('250', '10', 'Bottomless Mimosas', 'Until 1pm.', 175, '{contains alcohol}', 2),
+  ('251', '10', 'Martini Prosecco, glass', '', 98, '{contains alcohol}', 3),
+  ('252', '10', 'Martini Prosecco, bottle', 'R375 with breakfast until 1pm.', 600, '{contains alcohol}', 4),
+  ('253', '10', 'Valdo Prosecco, bottle', '', 600, '{contains alcohol}', 5),
+  ('254', '10', 'Graham Beck Brut, glass', 'Cap Classique.', 98, '{contains alcohol}', 6),
+  ('255', '10', 'Graham Beck Nectar, glass', 'Cap Classique.', 98, '{contains alcohol}', 7),
+  ('256', '10', 'Pongracz Brut, glass', 'Cap Classique.', 98, '{contains alcohol}', 8),
+  ('257', '10', 'Pongracz Rosé, glass', 'Cap Classique.', 98, '{contains alcohol}', 9),
+  ('258', '10', 'Steenberg 1682 Chardonnay', 'Cap Classique, bottle.', 650, '{contains alcohol}', 10),
+  ('259', '10', 'Boschendal Brut', 'Cap Classique, bottle.', 650, '{contains alcohol}', 11),
+  ('260', '10', 'Boschendal Luxe Nectar', 'Cap Classique, bottle.', 650, '{contains alcohol}', 12),
+  ('261', '10', 'Graham Beck Brut, bottle', 'Cap Classique.', 600, '{contains alcohol}', 13),
+  ('262', '10', 'Graham Beck Nectar, bottle', 'Cap Classique.', 600, '{contains alcohol}', 14),
+  ('263', '10', 'Pongracz Brut, bottle', 'Cap Classique.', 600, '{contains alcohol}', 15),
+  ('264', '10', 'Pongracz Rosé, bottle', 'Cap Classique.', 600, '{contains alcohol}', 16),
+  ('265', '10', 'Pongracz Nectar, bottle', 'Cap Classique.', 600, '{contains alcohol}', 17),
+  ('266', '10', 'Quoin Rock Festive Series Brut', 'Cap Classique, bottle.', 750, '{contains alcohol}', 18),
+  ('267', '10', 'GH Mumm Brut', 'Champagne, bottle.', 2000, '{contains alcohol}', 19),
+  ('268', '10', 'GH Mumm Demi-Sec', 'Champagne, bottle.', 2500, '{contains alcohol}', 20),
+  ('269', '10', 'GH Mumm Rosé', 'Champagne, bottle.', 2400, '{contains alcohol}', 21),
+  ('270', '10', 'Moët Brut', 'Champagne, bottle.', 2000, '{contains alcohol}', 22),
+  ('271', '10', 'Moët Nectar', 'Champagne, bottle.', 2500, '{contains alcohol}', 23),
+  ('272', '10', 'Moët Ice', 'Champagne, bottle.', 2500, '{contains alcohol}', 24),
+  ('273', '10', 'Veuve Clicquot Brut', 'Champagne, bottle.', 2250, '{contains alcohol}', 25),
+  ('274', '10', 'Veuve Clicquot Rich', 'Champagne, bottle.', 3000, '{contains alcohol}', 26),
+  ('275', '10', 'Dom Pérignon', 'Champagne, bottle.', 10500, '{contains alcohol}', 27),
+  ('276', '11', 'Durbanville Hills Sauvignon Blanc', 'Glass.', 80, '{contains alcohol}', 1),
+  ('277', '11', 'Oak Valley Fountain of Youth Sauvignon Blanc', 'Glass.', 105, '{contains alcohol}', 2),
+  ('278', '11', 'Iona Sauvignon Blanc', 'Glass.', 145, '{contains alcohol}', 3),
+  ('279', '11', 'Hartenberg Chardonnay', 'Glass.', 135, '{contains alcohol}', 4),
+  ('280', '11', 'Fat Bastard Chardonnay', 'Glass.', 95, '{contains alcohol}', 5),
+  ('281', '11', 'Durbanville Hills Chenin Blanc', 'Glass.', 80, '{contains alcohol}', 6),
+  ('282', '11', 'Cederberg Chenin Blanc', 'Glass.', 95, '{contains alcohol}', 7),
+  ('283', '11', 'Nederburg Classic Rosé', 'Glass.', 80, '{contains alcohol}', 8),
+  ('284', '11', 'Boschendal Rosé', 'Glass.', 85, '{contains alcohol}', 9),
+  ('285', '11', 'Babylonstoren Rosé', 'Glass.', 150, '{contains alcohol}', 10),
+  ('286', '11', 'Porcupine Ridge Merlot', 'Glass.', 80, '{contains alcohol}', 11),
+  ('287', '11', 'Hermanuspietersfontein Merlot', 'Glass.', 105, '{contains alcohol}', 12),
+  ('288', '11', 'Alvi''s Drift Shiraz', 'Glass.', 85, '{contains alcohol}', 13),
+  ('289', '11', 'Durbanville Hills Shiraz', 'Glass.', 80, '{contains alcohol}', 14),
+  ('290', '11', 'Spier Cabernet Sauvignon', 'Glass.', 90, '{contains alcohol}', 15),
+  ('291', '11', 'Warwick First Lady Cabernet Sauvignon', 'Glass.', 110, '{contains alcohol}', 16),
+  ('292', '11', 'Beyerskloof Pinotage', 'Glass.', 100, '{contains alcohol}', 17),
+  ('293', '11', 'Warwick First Lady Pinotage', 'Glass.', 110, '{contains alcohol}', 18),
+  ('294', '11', 'Haute Cabrière Pinot Noir', 'Glass.', 115, '{contains alcohol}', 19),
+  ('295', '12', 'Durbanville Hills Sauvignon Blanc', 'Sauvignon Blanc, bottle.', 215, '{contains alcohol}', 1),
+  ('296', '12', 'Oak Valley Fountain of Youth', 'Sauvignon Blanc, bottle.', 300, '{contains alcohol}', 2),
+  ('297', '12', 'Iona', 'Sauvignon Blanc, bottle.', 410, '{contains alcohol}', 3),
+  ('298', '12', 'Fryer''s Cove', 'Sauvignon Blanc, bottle.', 420, '{contains alcohol}', 4),
+  ('299', '12', 'Springfield Special Cuvée', 'Sauvignon Blanc, bottle.', 420, '{contains alcohol}', 5),
+  ('300', '12', 'Ghost Corner Wild Fermented', 'Sauvignon Blanc, bottle.', 725, '{contains alcohol}', 6),
+  ('301', '12', 'Hartenberg Chardonnay', 'Chardonnay, bottle.', 395, '{contains alcohol}', 7),
+  ('302', '12', 'Haute Cabrière Reserve', 'Chardonnay, bottle.', 475, '{contains alcohol}', 8),
+  ('303', '12', 'Springfield Wild Yeast', 'Chardonnay, bottle.', 515, '{contains alcohol}', 9),
+  ('304', '12', 'Tokara Reserve Collection', 'Chardonnay, bottle.', 780, '{contains alcohol}', 10),
+  ('305', '12', 'Fat Bastard Chardonnay', 'Chardonnay, bottle.', 265, '{contains alcohol}', 11),
+  ('306', '12', 'Le Chant', 'Chenin Blanc, bottle.', 515, '{contains alcohol}', 12),
+  ('307', '12', 'Durbanville Hills Chenin Blanc', 'Chenin Blanc, bottle.', 215, '{contains alcohol}', 13),
+  ('308', '12', 'Cederberg Chenin Blanc', 'Chenin Blanc, bottle.', 260, '{contains alcohol}', 14),
+  ('309', '12', 'De Morgenzon DMZ', 'Chenin Blanc, bottle.', 295, '{contains alcohol}', 15),
+  ('310', '12', 'Ken Forrester Old Vine Reserve', 'Chenin Blanc, bottle.', 395, '{contains alcohol}', 16),
+  ('311', '12', 'Pierre Jourdan Tranquille', 'Pinot Noir/Chardonnay blend, bottle.', 210, '{contains alcohol}', 17),
+  ('312', '12', 'Boschendal Blanc de Noir', 'White blend, bottle.', 225, '{contains alcohol}', 18),
+  ('313', '12', 'Haute Cabrière Chardonnay/Pinot Noir', 'White blend, bottle.', 310, '{contains alcohol}', 19),
+  ('314', '12', 'Terra del Capo Pinot Grigio', 'Bottle.', 275, '{contains alcohol}', 20),
+  ('315', '12', 'Cederberg Bukettraube', 'Sweet, bottle.', 325, '{contains alcohol}', 21),
+  ('316', '13', 'Nederburg Classic Rosé', 'Bottle.', 210, '{contains alcohol}', 1),
+  ('317', '13', 'Boschendal Rose Garden Rosé', 'Bottle.', 225, '{contains alcohol}', 2),
+  ('318', '13', 'Durbanville Hills Merlot Rosé', 'Bottle.', 215, '{contains alcohol}', 3),
+  ('319', '13', 'Babylonstoren Rosé', 'Bottle.', 435, '{contains alcohol}', 4),
+  ('320', '13', 'De Krans Moscato Sweet White', 'Bottle.', 245, '{contains alcohol}', 5),
+  ('321', '14', 'Porcupine Ridge Merlot', 'Merlot, bottle.', 210, '{contains alcohol}', 1),
+  ('322', '14', 'Hermanuspietersfontein Merlot', 'Merlot, bottle.', 295, '{contains alcohol}', 2),
+  ('323', '14', 'Steenberg Merlot', 'Merlot, bottle.', 525, '{contains alcohol}', 3),
+  ('324', '14', 'Alvi''s Drift Shiraz', 'Shiraz, bottle.', 225, '{contains alcohol}', 4),
+  ('325', '14', 'Durbanville Hills Shiraz', 'Shiraz, bottle.', 215, '{contains alcohol}', 5),
+  ('326', '14', 'Zevenwacht Shiraz', 'Shiraz, bottle.', 395, '{contains alcohol}', 6),
+  ('327', '14', 'Cederberg Shiraz', 'Shiraz, bottle.', 690, '{contains alcohol}', 7),
+  ('328', '14', 'Babylonstoren Shiraz', 'Shiraz, bottle.', 950, '{contains alcohol}', 8),
+  ('329', '14', 'Spier Cabernet Sauvignon', 'Cabernet Sauvignon, bottle.', 235, '{contains alcohol}', 9),
+  ('330', '14', 'Warwick First Lady Cabernet Sauvignon', 'Cabernet Sauvignon, bottle.', 310, '{contains alcohol}', 10),
+  ('331', '14', 'Fat Bastard Cabernet Sauvignon', 'Cabernet Sauvignon, bottle.', 360, '{contains alcohol}', 11),
+  ('332', '14', 'Springfield Whole Berry', 'Cabernet Sauvignon, bottle.', 545, '{contains alcohol}', 12),
+  ('333', '14', 'Beyerskloof Pinotage', 'Pinotage, bottle.', 275, '{contains alcohol}', 13),
+  ('334', '14', 'Warwick First Lady Pinotage', 'Pinotage, bottle.', 310, '{contains alcohol}', 14),
+  ('335', '14', 'Kanonkop Kadette Pinotage', 'Pinotage, bottle.', 415, '{contains alcohol}', 15),
+  ('336', '14', 'Beyerskloof Reserve Pinotage', 'Pinotage, bottle.', 470, '{contains alcohol}', 16),
+  ('337', '14', 'Haute Cabrière Pinot Noir', 'Pinot Noir, bottle.', 315, '{contains alcohol}', 17),
+  ('338', '14', 'Oak Valley Sounds of Silence', 'Pinot Noir, bottle.', 435, '{contains alcohol}', 18),
+  ('339', '14', 'Fryer''s Cove Grenache Cinsault', 'Bottle.', 385, '{contains alcohol}', 19),
+  ('340', '14', 'Anura Malbec', 'Bottle.', 545, '{contains alcohol}', 20),
+  ('341', '14', 'Terra del Capo Sangiovese', 'Bottle.', 350, '{contains alcohol}', 21),
+  ('342', '14', 'Chamonix Rouge', 'Red blend, bottle.', 260, '{contains alcohol}', 22),
+  ('343', '14', 'Nederburg Double Barrel Reserve', 'Red blend, bottle.', 345, '{contains alcohol}', 23),
+  ('344', '14', 'Boschendal Nicolas', 'Red blend, bottle.', 550, '{contains alcohol}', 24),
+  ('345', '14', 'Rupert & Rothschild Classique', 'Red blend, bottle.', 595, '{contains alcohol}', 25),
+  ('346', '14', 'Rupert & Rothschild Optima', 'Red blend, bottle.', 695, '{contains alcohol}', 26),
+  ('347', '14', 'Raats Red Jasper', 'Red blend, bottle.', 895, '{contains alcohol}', 27),
+  ('348', '14', 'Vilafonté Seriously Old Dirt', 'Red blend, bottle.', 645, '{contains alcohol}', 28),
+  ('349', '14', 'Quoin Rock Simonsberg Blend', 'Red blend, bottle.', 650, '{contains alcohol}', 29),
+  ('350', '14', 'Hartenberg Red Blend', 'Red blend, bottle.', 350, '{contains alcohol}', 30),
+  ('351', '15', 'Donkiesbaai Steen 2021', 'Chenin, bottle.', 950, '{contains alcohol}', 1),
+  ('352', '15', 'Minuty Rosé', 'Bottle.', 795, '{contains alcohol}', 2),
+  ('353', '15', 'Anura Signature Merlot', 'Bottle.', 1025, '{contains alcohol}', 3),
+  ('354', '15', 'Anthonij Rupert Merlot', 'Bottle.', 1225, '{contains alcohol}', 4),
+  ('355', '15', 'Shannon Mount Bullet Merlot', 'Bottle.', 1475, '{contains alcohol}', 5),
+  ('356', '15', 'Ghost Corner Syrah', 'Bottle.', 1150, '{contains alcohol}', 6),
+  ('357', '15', 'Anthonij Rupert Syrah', 'Bottle.', 1225, '{contains alcohol}', 7),
+  ('358', '15', 'Spier 21 Gables Cabernet Sauvignon', 'Bottle.', 995, '{contains alcohol}', 8),
+  ('359', '15', 'Warwick Blue Lady Cabernet Sauvignon', 'Bottle.', 1550, '{contains alcohol}', 9),
+  ('360', '15', 'Anthonij Rupert Cabernet Sauvignon', 'Bottle.', 1795, '{contains alcohol}', 10),
+  ('361', '15', 'Boschendal Black Angus', 'Red blend, bottle.', 1250, '{contains alcohol}', 11),
+  ('362', '15', 'Vilafonté Series C', 'Red blend, bottle.', 4875, '{contains alcohol}', 12),
+  ('363', '15', 'Kanonkop Paul Sauer', 'Red blend, bottle.', 2495, '{contains alcohol}', 13),
+  ('364', '15', 'Black Series Red Blend 2017', 'Red blend, bottle.', 1650, '{contains alcohol}', 14),
+  ('365', '0b', 'Heineken Draught 350ml', '', 45, '{contains alcohol}', 11),
+  ('366', '0b', 'Heineken', '', 45, '{contains alcohol}', 12),
+  ('367', '0b', 'Heineken Silver', '', 46, '{contains alcohol}', 13),
+  ('368', '0b', 'Windhoek Lager', '', 44, '{contains alcohol}', 14),
+  ('369', '0b', 'Amstel', '', 44, '{contains alcohol}', 15),
+  ('370', '0b', 'Sol', '', 46, '{contains alcohol}', 16),
+  ('371', '0b', 'Hansa', '', 42, '{contains alcohol}', 17),
+  ('372', '0b', 'Brutal Fruit', '', 45, '{contains alcohol}', 18),
+  ('373', '0b', 'Ice Tropez', '', 185, '{contains alcohol}', 19),
+  ('374', '0b', 'Savanna 0.0', 'Alcohol-free.', 52, '{}', 20),
+  ('375', '0b', 'Corona Cero', 'Alcohol-free.', 52, '{}', 21),
+  ('376', '16', 'Absolut', 'Vodka.', 40, '{contains alcohol}', 1),
+  ('377', '16', 'Cruz', 'Vodka.', 40, '{contains alcohol}', 2),
+  ('378', '16', 'Grey Goose', 'Vodka.', 60, '{contains alcohol}', 3),
+  ('379', '16', 'Cîroc', 'Vodka.', 60, '{contains alcohol}', 4),
+  ('380', '16', 'Belvedere', 'Vodka.', 60, '{contains alcohol}', 5),
+  ('381', '16', 'Beefeater', 'Gin.', 40, '{contains alcohol}', 6),
+  ('382', '16', 'Tanqueray', 'Gin.', 40, '{contains alcohol}', 7),
+  ('383', '16', 'Tanqueray Ten', 'Gin.', 60, '{contains alcohol}', 8),
+  ('384', '16', 'Bombay', 'Gin.', 42, '{contains alcohol}', 9),
+  ('385', '16', 'Malfy', 'Gin.', 48, '{contains alcohol}', 10),
+  ('386', '16', 'Inverroche', 'Gin.', 60, '{contains alcohol}', 11),
+  ('387', '16', 'Hendrick''s', 'Gin.', 60, '{contains alcohol}', 12),
+  ('388', '16', 'Klipdrift Premium', 'Brandy.', 40, '{contains alcohol}', 13),
+  ('389', '16', 'Richelieu', 'Brandy.', 40, '{contains alcohol}', 14),
+  ('390', '16', '1920', 'Brandy.', 45, '{contains alcohol}', 15),
+  ('391', '16', 'Captain Morgan Spiced Gold', 'Rum.', 35, '{contains alcohol}', 16),
+  ('392', '16', 'Captain Morgan Dark Rum', 'Rum.', 35, '{contains alcohol}', 17),
+  ('393', '16', 'Bacardi', 'Rum.', 40, '{contains alcohol}', 18),
+  ('394', '16', 'Hennessy VS', 'Cognac.', 65, '{contains alcohol}', 19),
+  ('395', '16', 'Martell VS', 'Cognac.', 60, '{contains alcohol}', 20),
+  ('396', '16', 'D''USSÉ VSOP', 'Cognac.', 98, '{contains alcohol}', 21),
+  ('397', '16', 'Rémy Martin VSOP', 'Cognac.', 98, '{contains alcohol}', 22),
+  ('398', '16', 'Hennessy VSOP', 'Cognac.', 98, '{contains alcohol}', 23),
+  ('399', '16', 'Martell Blue Swift', 'Cognac.', 98, '{contains alcohol}', 24),
+  ('400', '16', 'El Jimador', 'Shooter.', 45, '{contains alcohol}', 25),
+  ('401', '16', 'Olmeca', 'Shooter.', 45, '{contains alcohol}', 26),
+  ('402', '16', 'Don Julio', 'Shooter.', 115, '{contains alcohol}', 27),
+  ('403', '16', 'Jägermeister', 'Shooter.', 45, '{contains alcohol}', 28),
+  ('404', '16', 'Volcán', 'Shooter.', 100, '{contains alcohol}', 29),
+  ('405', '16', 'Herradura', 'Shooter.', 95, '{contains alcohol}', 30),
+  ('406', '16', 'Bain''s', 'Whisky.', 35, '{contains alcohol}', 31),
+  ('407', '16', 'Buffalo Trace', 'Bourbon.', 45, '{contains alcohol}', 32),
+  ('408', '16', 'Monkey Shoulder', 'Whisky.', 45, '{contains alcohol}', 33),
+  ('409', '16', 'Glenlivet Founder''s Reserve', 'Whisky.', 65, '{contains alcohol}', 34),
+  ('410', '16', 'Glenmorangie Original', 'Whisky.', 75, '{contains alcohol}', 35),
+  ('411', '16', 'Woodford Reserve', 'Bourbon.', 55, '{contains alcohol}', 36),
+  ('412', '16', 'Woodford Rye', 'Whiskey.', 52, '{contains alcohol}', 37),
+  ('413', '16', 'Tullamore D.E.W.', 'Whiskey.', 40, '{contains alcohol}', 38),
+  ('414', '16', 'Jack Daniel''s', 'Whiskey.', 45, '{contains alcohol}', 39),
+  ('415', '16', 'Jameson', 'Whiskey.', 45, '{contains alcohol}', 40),
+  ('416', '16', 'Jameson Triple Triple', 'Whiskey.', 50, '{contains alcohol}', 41),
+  ('417', '16', 'Jameson Select Reserve', 'Whiskey.', 62, '{contains alcohol}', 42),
+  ('418', '16', 'Johnnie Walker Black', 'Whisky.', 50, '{contains alcohol}', 43),
+  ('419', '16', 'Johnnie Walker Gold', 'Whisky.', 85, '{contains alcohol}', 44),
+  ('420', '16', 'Glenlivet 12', 'Whisky.', 75, '{contains alcohol}', 45),
+  ('421', '16', 'Macallan 12', 'Whisky.', 150, '{contains alcohol}', 46),
+  ('422', '16', 'Glenfiddich 12', 'Whisky.', 75, '{contains alcohol}', 47),
+  ('423', '16', 'Singleton 12', 'Whisky.', 75, '{contains alcohol}', 48),
+  ('424', '16', 'Chivas Regal 12', 'Whisky.', 50, '{contains alcohol}', 49),
+  ('425', '16', 'Aberlour 12', 'Whisky.', 105, '{contains alcohol}', 50),
+  ('426', '16', 'Glenmorangie 14', 'Whisky.', 98, '{contains alcohol}', 51),
+  ('427', '0c', 'Lemon Ice Tea', '', 40, '{vegan}', 11),
+  ('428', '0c', 'Schweppes Soda Water', '', 29, '{vegan}', 12),
+  ('429', '0c', 'Schweppes Tonic Water', '', 29, '{vegan}', 13),
+  ('430', '0c', 'Schweppes Lemonade', '', 29, '{vegan}', 14),
+  ('431', '0c', 'Schweppes Ginger Ale', '', 29, '{vegan}', 15),
+  ('432', '0c', 'Grapetiser', '', 42, '{vegan}', 16),
+  ('433', '0c', 'Valpré Still or Sparkling 350ml', '', 35, '{vegan}', 17),
+  ('434', '0c', 'Acqua Panna Still 750ml', '', 90, '{vegan}', 18),
+  ('435', '0c', 'Apple Juice', '', 38, '{vegan}', 19),
+  ('436', '0c', 'Cranberry Juice', '', 38, '{vegan}', 20),
+  ('437', '0d', 'Cortado', '', 42, '{vegetarian}', 10),
+  ('438', '0d', 'Double Espresso', '', 38, '{vegan}', 11),
+  ('439', '0d', 'Caffè Mocha', '', 44, '{vegetarian}', 12),
+  ('440', '0d', 'Macchiato', '', 44, '{vegetarian}', 13),
+  ('441', '0d', 'Babyccino', '', 18, '{vegetarian}', 14),
+  ('442', '0d', 'Milo', '', 44, '{vegetarian}', 15),
+  ('443', '0d', 'Ceylon Tea', '', 38, '{vegan}', 16),
+  ('444', '0d', 'Green Tea', '', 40, '{vegan}', 17),
+  ('445', '0d', 'Lemon & Honey', '', 20, '{vegetarian}', 18)
+) v(id, m, name, description, rand, tags, sort);
+
+-- Donna's printed extras and sizes, as owner-set paid options (labels may not contain commas).
+insert into menu_item_options (restaurant_id, menu_item_id, label, price_cents, sort_order)
+select 'a0000000-0000-0000-0000-000000000001', ('a2000000-0000-0000-0000-000000000' || v.id)::uuid, v.label, v.rand * 100, v.sort
+from (values
+  ('107', 'Add mozzarella', 25, 1), ('109', 'Extra oyster', 40, 1),
+  ('111', 'Add grilled chicken strips', 40, 1), ('112', 'Add grilled chicken strips', 40, 1),
+  ('116', 'Add chicken', 40, 1), ('012', 'Add black truffle', 180, 1), ('138', 'Add black truffle', 180, 1),
+  ('121', 'Add sliced beef fillet', 80, 1), ('122', 'Add bacon', 30, 1), ('124', 'Add bacon', 30, 1),
+  ('126', 'Add burrata', 105, 1),
+  ('166', 'Full portion', 30, 1), ('167', 'Full portion', 30, 1),
+  ('170', 'Large', 10, 1), ('171', 'Large', 10, 1), ('172', 'Large', 10, 1), ('173', 'Large', 10, 1),
+  ('244', 'Large', 15, 1), ('245', 'Large', 15, 1), ('246', 'Large', 15, 1), ('247', 'Large', 15, 1), ('248', 'Large', 15, 1)
+) v(id, label, rand, sort);
+
+-- Gluten-free pasta or pizza base (R20) on every pasta and pizza; thin base on request.
+insert into menu_item_options (restaurant_id, menu_item_id, label, price_cents, sort_order)
+select restaurant_id, id, o.label, o.cents, o.sort from menu_items
+cross join (values ('Gluten-free', 2000, 2), ('Thin base', 0, 3)) o(label, cents, sort)
+where menu_id in ('a1000000-0000-0000-0000-000000000003', 'a1000000-0000-0000-0000-000000000004')
+  and (o.label = 'Gluten-free' or menu_id = 'a1000000-0000-0000-0000-000000000004');
+
+-- Sides with each Secondi plate that comes with "a side of your choice".
+insert into menu_item_options (restaurant_id, menu_item_id, label, price_cents, sort_order)
+select restaurant_id, id, o.label, 0, o.sort from menu_items
+cross join (values ('Chips', 1), ('Medi veg', 2), ('Salad', 3), ('Rice', 4)) o(label, sort)
+where menu_id = 'a1000000-0000-0000-0000-000000000005' and description like '%side%';
+
+-- Waffle and gelato add-ons, and a cappuccino with breakfast.
+insert into menu_item_options (restaurant_id, menu_item_id, label, price_cents, sort_order)
+select restaurant_id, id, o.label, o.cents, o.sort from menu_items
+cross join (values ('Whipped cream', 1500, 5), ('Marshmallows', 1500, 6), ('Astros', 1500, 7), ('Oreo biscuit', 1500, 8),
+  ('Choc chips', 1500, 9), ('Sauce', 1200, 10)) o(label, cents, sort)
+where id in ('a2000000-0000-0000-0000-000000000166', 'a2000000-0000-0000-0000-000000000167', 'a2000000-0000-0000-0000-000000000168',
+  'a2000000-0000-0000-0000-000000000169', 'a2000000-0000-0000-0000-000000000174', 'a2000000-0000-0000-0000-000000000243')
+  and not (o.label = 'Whipped cream' and id in ('a2000000-0000-0000-0000-000000000174', 'a2000000-0000-0000-0000-000000000243'));
+
+insert into menu_item_options (restaurant_id, menu_item_id, label, price_cents, sort_order)
+select restaurant_id, id, 'Add a cappuccino (until 12pm)', 2000, 9 from menu_items
+where menu_id = 'a1000000-0000-0000-0000-00000000000e' and name not like '%Smoothie%';
+
 insert into menu_items (id, restaurant_id, menu_id, name, description, price_cents, sort_order) values
-  ('a2000000-0000-0000-0000-000000000001', 'a0000000-0000-0000-0000-000000000001', 'a1000000-0000-0000-0000-000000000001', 'Bunny chow', 'Quarter loaf, mutton curry', 12500, 1),
-  ('a2000000-0000-0000-0000-000000000002', 'a0000000-0000-0000-0000-000000000001', 'a1000000-0000-0000-0000-000000000001', 'Boerewors roll', 'With chakalaka', 8900, 2),
-  ('a2000000-0000-0000-0000-000000000003', 'a0000000-0000-0000-0000-000000000001', 'a1000000-0000-0000-0000-000000000002', 'Rooibos iced tea', '', 3500, 1),
   ('b2000000-0000-0000-0000-000000000001', 'b0000000-0000-0000-0000-000000000001', 'b1000000-0000-0000-0000-000000000001', 'Rump 300g', '', 21000, 1);
-
-insert into menus (id, restaurant_id, name, sort_order) values
-  ('a1000000-0000-0000-0000-000000000003', 'a0000000-0000-0000-0000-000000000001', 'Sora favourites', 0),
-  ('a1000000-0000-0000-0000-000000000004', 'a0000000-0000-0000-0000-000000000001', 'Dessert', 3);
-
-insert into menu_items (id, restaurant_id, menu_id, name, description, price_cents, image_url, dietary_tags, sort_order) values
-  ('a2000000-0000-0000-0000-000000000010', 'a0000000-0000-0000-0000-000000000001', 'a1000000-0000-0000-0000-000000000003', 'Cape Malay Chicken Curry', 'Fragrant turmeric and toasted spices, sambals, steamed basmati and warm roti.', 16800, '/menu/cape-malay-chicken-curry.jpg', '{}', 1),
-  ('a2000000-0000-0000-0000-000000000011', 'a0000000-0000-0000-0000-000000000001', 'a1000000-0000-0000-0000-000000000003', 'Flame-Grilled Beef Burger', 'Mature cheddar, caramelised onion, house pickles and smoked paprika mayo, served with hand-cut chips.', 14500, '/menu/flame-grilled-beef-burger.jpg', '{}', 2),
-  ('a2000000-0000-0000-0000-000000000012', 'a0000000-0000-0000-0000-000000000001', 'a1000000-0000-0000-0000-000000000003', 'Charred Cauliflower', 'Tahini yoghurt, apricot harissa, toasted almonds and fresh herbs.', 12800, '/menu/charred-cauliflower.jpg', '{vegetarian}', 3),
-  ('a2000000-0000-0000-0000-000000000013', 'a0000000-0000-0000-0000-000000000001', 'a1000000-0000-0000-0000-000000000004', 'Rooibos Crème Brûlée', 'Silky rooibos custard with a crisp caramel top and seasonal berries.', 8500, '/menu/rooibos-creme-brulee.jpg', '{vegetarian}', 1),
-  ('a2000000-0000-0000-0000-000000000014', 'a0000000-0000-0000-0000-000000000001', 'a1000000-0000-0000-0000-000000000002', 'Fresh Lemon & Mint Cooler', 'Fresh lemon, garden mint and sparkling water over ice.', 4800, '/menu/fresh-lemon-mint-cooler.jpg', '{vegan}', 0),
-  ('a2000000-0000-0000-0000-000000000015', 'a0000000-0000-0000-0000-000000000001', 'a1000000-0000-0000-0000-000000000002', 'Cape Citrus Tonic', 'Grapefruit, naartjie peel, thyme and premium tonic over ice.', 5600, '/menu/cape-citrus-tonic.jpg', '{vegan}', 2),
-  ('a2000000-0000-0000-0000-000000000016', 'a0000000-0000-0000-0000-000000000001', 'a1000000-0000-0000-0000-000000000002', 'South African Chenin Blanc', 'A chilled glass with bright stone fruit, citrus and a clean mineral finish.', 7800, '/menu/south-african-chenin-blanc.jpg', '{contains alcohol}', 3);
-
-update menu_items set image_url = '/menu/rooibos-iced-tea.jpg', description = 'House-brewed rooibos over ice with fresh orange and rosemary.'
-where id = 'a2000000-0000-0000-0000-000000000003';
 
 insert into auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
   raw_app_meta_data, raw_user_meta_data, created_at, updated_at,
@@ -69,3 +466,71 @@ select t.restaurant_id, t.id,
     then 'c0000000-0000-0000-0000-000000000004'::uuid
     else 'c0000000-0000-0000-0000-000000000002'::uuid end
 from tables t;
+
+-- Stock photos for Donna's (same file the live project runs).
+-- Stock photos for Donna's dishes (Unsplash licence: free for commercial use). Not Donna's own photos: those need
+-- their permission. Matched by category and dish name; first match wins. Safe to run again. Run on the live project
+-- after donnas-hosted.sql; seed.sql runs it too.
+update menu_items i set image_url = 'https://images.unsplash.com/photo-' || (case
+    when m.name = 'Pizze' and i.name ~* 'margherita' then '1574071318508-1cdbab80d002'
+    when m.name = 'Pizze' and i.sort_order % 2 = 0 then '1565299624946-b28f40a0ae38'
+    when m.name = 'Pizze' then '1513104890138-7c749659a591'
+    when i.name ~* 'smoothie' then '1505252585461-04db1eb84625'
+    when i.name ~* 'milkshake' then '1572490122747-3968b75cc699'
+    when i.name ~* 'pancake' then '1567620905732-2d1ec7ab7445'
+    when i.name ~* 'fruit bowl' then '1490474418585-ba9bad8fd0ea'
+    when i.name ~* 'wrap' then '1626700051175-6818013e1d4f'
+    when i.name ~* 'toastie' then '1528735602780-2552fd46c7af'
+    when m.name = 'Breakfast & brunch' and i.name ~* 'avo|salmon|mince' then '1525351484163-7529414344d8'
+    when m.name = 'Breakfast & brunch' then '1533089860892-a7c6f0a88666'
+    when i.name ~* 'margherita' then '1574071318508-1cdbab80d002'
+    when i.name ~* 'lasagna' then '1574894709920-11b28e7367e3'
+    when i.name ~* 'risotto' then '1476124369491-e7addf5db371'
+    when i.name ~* 'ravioli|gnocchi' then '1587740908075-9e245070dfaa'
+    when i.name ~* 'mac and cheese' then '1543339494-b4cd4f7ba686'
+    when i.name ~* 'penne|rigatoni|arrabbiata' then '1621996346565-e3dbc646d9a9'
+    when i.name ~* 'linguine|spaghetti|tagliatelle|bolognese|ragù' then '1612874742237-6526221588e3'
+    when i.name ~* 'calamari' then '1599487488170-d11ec9c172f0'
+    when i.name ~* 'salmon' then '1467003909585-2f8a72700288'
+    when i.name ~* 'prawn|seafood platter' then '1565680018434-b513d5e5fd47'
+    when i.name ~* 'oyster|mussels' then '1615141982883-c7ad0e69fd62'
+    when i.name ~* 'sole|kingklip|hake' then '1519708227418-c8fd9a32b7a2'
+    when i.name ~* 'fillet|lamb' then '1558030006-450675393462'
+    when i.name ~* 'chicken' then '1532550907401-a500c9a57435'
+    when i.name ~* 'carpaccio|prima donna' then '1541529086526-db283c563270'
+    when i.name ~* 'focaccia' then '1509440159596-0249088772ff'
+    when i.name ~* 'involtini|burrata' then '1506280754576-f6fa8a873550'
+    when i.name ~* 'caesar' then '1514516345957-556ca7d90a29'
+    when m.name = 'Insalate' or i.name ~* 'salad' then '1546793665-c74683f339c1'
+    when i.name ~* 'chips' then '1573080496219-bb080dd4f877'
+    when m.name = 'Sides' then '1512621776951-a57141f2eefd'
+    when i.name ~* 'tiramisu|brûlée' then '1571877227200-a0d98ea607e9'
+    when i.name ~* 'cheesecake' then '1578985545062-69928b1d9587'
+    when i.name ~* 'brownie|cannoli|doughnut' then '1606313564200-e75d5e30476c'
+    when i.name ~* 'waffle' then '1562376552-0d160a2f238d'
+    when i.name ~* 'gelato|affogato' then '1563805042-7684c019e1cb'
+    when m.name = 'Cocktails' and i.sort_order % 2 = 0 then '1551538827-9c037cb4f32a'
+    when m.name = 'Cocktails' then '1514362545857-3bc16c4c7d1b'
+    when m.name = 'Mimosas & bubbles' then '1547595628-c61a29f496f0'
+    when i.name ~* 'rosé|rose garden|moscato' or m.name = 'Rosé & semi-sweet' then '1558001373-7b93ee48ffa0'
+    when m.name = 'White wine' or i.name ~* 'sauvignon blanc|chardonnay|chenin|steen' then '1566995541428-f2246c17cda1'
+    when m.name = 'Cellar list' then '1506377247377-2a5b3b417ebb'
+    when m.name in ('Red wine', 'Wine by the glass') then '1510812431401-41d2bd2722f3'
+    when m.name = 'Beer & cider' and i.sort_order % 2 = 0 then '1535958636474-b021ee887b13'
+    when m.name = 'Beer & cider' then '1608270586620-248524c67de9'
+    when m.name = 'Spirits & shooters' then '1514362453360-8f94243c9996'
+    when i.name ~* 'juice' then '1600271886742-f049cd451bba'
+    when i.name ~* 'ice tea' then '1556679343-c7306c1976bc'
+    when i.name ~* 'water|valpré|pellegrino|panna' then '1548839140-29a749e1cf4d'
+    when i.name ~* 'lemonade|tonic|ginger' then '1621263764928-df1444c5e859'
+    when m.name = 'Soft drinks & juice' then '1629203851122-3726ecdf080e'
+    when i.name ~* 'cappuccino' then '1534778101976-62847782c213'
+    when i.name ~* 'flat white' then '1572442388796-11668a67e53d'
+    when i.name ~* 'latte|mocha|macchiato|cortado' then '1461023058943-07fcbe16d735'
+    when i.name ~* 'espresso|americano' then '1510591509098-f4fdc6d0ff04'
+    when i.name ~* 'chocolate|milo|babyccino' then '1542990253-0d0f5be5f0ed'
+    when m.name = 'Coffee & tea' then '1544787219-7f47ccb76574'
+  end) || '?auto=format&fit=crop&w=800&q=70'
+from menus m
+where m.id = i.menu_id and m.restaurant_id = i.restaurant_id
+  and i.restaurant_id in (select id from restaurants where name = 'Donna''s');
